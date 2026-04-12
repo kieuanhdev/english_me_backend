@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Bảng điều khiển — EnglishMe Admin</title>
+	<link rel="stylesheet" th:href="@{/admin/css/admin.css}" />
+</head>
+<body class="dashboard-body">
+	<div class="admin-shell">
+		<header class="admin-topbar">
+			<div>
+				<strong>EnglishMe Admin</strong>
+				<br />
+				<span id="user-line">Đang tải…</span>
+			</div>
+			<button type="button" class="btn-ghost" id="btn-logout">Đăng xuất</button>
+		</header>
+		<main class="admin-main">
+			<div class="panel">
+				<h2>Chào mừng</h2>
+				<p>Bạn đã đăng nhập với quyền quản trị. Phần quản lý nội dung (từ vựng, bài học, …) có thể bổ sung API và menu tại đây sau.</p>
+			</div>
+		</main>
+	</div>
+	<script th:src="@{/admin/js/dashboard.js}" defer></script>
+</body>
+</html>

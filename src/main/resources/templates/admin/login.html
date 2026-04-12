@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Đăng nhập quản trị — EnglishMe</title>
+	<link rel="stylesheet" th:href="@{/admin/css/admin.css}" />
+</head>
+<body>
+	<div class="admin-card">
+		<div class="admin-brand">
+			<h1>EnglishMe</h1>
+			<span class="admin-badge">Admin</span>
+		</div>
+		<p class="admin-sub">
+			Đăng nhập bằng tài khoản có quyền <strong>ADMIN</strong>.
+			<br />Cách làm: đăng ký qua <code>POST /api/auth/register</code> (mặc định role <code>USER</code>), sau đó trong DB cập nhật cột <code>roles</code> của bảng <code>app_user</code> thành <code>ADMIN</code> hoặc <code>USER,ADMIN</code>.
+		</p>
+		<form id="login-form" novalidate>
+			<div class="field">
+				<label for="email">Email</label>
+				<input id="email" name="email" type="email" autocomplete="username" required />
+			</div>
+			<div class="field">
+				<label for="password">Mật khẩu</label>
+				<input id="password" name="password" type="password" autocomplete="current-password" required />
+			</div>
+			<button type="submit" class="btn-primary" id="btn-submit">Đăng nhập</button>
+		</form>
+		<div id="alert" class="alert alert-error" role="alert"></div>
+		<div class="admin-footer">API: <code>/api/auth</code> · Swagger: <a th:href="@{/swagger-ui/index.html}" style="color: var(--accent);">/swagger-ui</a></div>
+	</div>
+	<script th:src="@{/admin/js/login.js}" defer></script>
+</body>
+</html>

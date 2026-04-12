@@ -4,24 +4,27 @@ server:
 spring:
   application:
     name: englishme
-  # Copy application-local.example.yml → application-local.yml (ở thư mục gốc project) để ghi DB thật; file đó không commit.
   config:
     import: optional:file:./application-local.yml
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/englishme}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/englishme?currentSchema=englishme}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
-      # Dev: Hibernate tự tạo/sửa bảng theo entity. Production nên đặt JPA_DDL_AUTO=validate và quản lý schema riêng (migration/tooling).
       ddl-auto: ${JPA_DDL_AUTO:update}
     properties:
       hibernate:
         jdbc:
           time_zone: UTC
-        # Trùng với DB_SCHEMA để entity map đúng schema (vd englishme thay vì public).
-        default_schema: ${DB_SCHEMA:public}
+        default_schema: ${DB_SCHEMA:englishme}
+        hbm2ddl:
+          create_namespaces: true
+        format_sql: ${HIBERNATE_FORMAT_SQL:true}
     open-in-view: false
+    show-sql: false
+  thymeleaf:
+    cache: ${THYMELEAF_CACHE:false}
 
 app:
   cors:
@@ -29,7 +32,11 @@ app:
   security:
     jwt:
       issuer: ${JWT_ISSUER:englishme}
-      # Base64 ≥ 32 bytes khi decode; mặc định chỉ cho dev — production hãy set JWT_SECRET qua env.
       secret: ${JWT_SECRET:Q2hhbmdlVGhpc0RldlNlY3JldEZvckxvY2FsT25seTEyMzQ1Njc4OTA=}
       access-token-ttl-seconds: ${JWT_ACCESS_TTL:900}
-      refresh-token-ttl-seconds: ${JWT_REFRESH_TTL:1209600} # 14 days
+      refresh-token-ttl-seconds: ${JWT_REFRESH_TTL:1209600}
+
+logging:
+  level:
+    org.hibernate.SQL: ${LOG_SQL_HIBERNATE:DEBUG}
+    org.hibernate.orm.jdbc.bind: ${LOG_SQL_BIND:TRACE}
