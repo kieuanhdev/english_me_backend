@@ -38,7 +38,7 @@
 				showError('Phản hồi không hợp lệ.');
 				return;
 			}
-			const meRes = await fetch('/api/auth/me', {
+			const meRes = await fetch('/api/users/me', {
 				headers: { Authorization: 'Bearer ' + accessToken },
 			});
 			const me = await meRes.json().catch(function () { return {}; });

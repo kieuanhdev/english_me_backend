@@ -6,7 +6,7 @@
 	}
 	var userLine = document.getElementById('user-line');
 
-	fetch('/api/auth/me', { headers: { Authorization: 'Bearer ' + token } })
+	fetch('/api/users/me', { headers: { Authorization: 'Bearer ' + token } })
 		.then(function (r) {
 			if (r.status === 401) {
 				localStorage.removeItem('admin_access_token');
