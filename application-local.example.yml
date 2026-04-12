@@ -1,0 +1,22 @@
+# Đổi tên file này thành: application-local.yml (cùng thư mục với pom.xml)
+# File application-local.yml đã được .gitignore — an toàn khi push Git.
+
+# Schema: mặc định Hibernate ddl-auto=update (không dùng Flyway). Nếu user không có quyền trên public:
+# 1) CREATE SCHEMA IF NOT EXISTS englishme AUTHORIZATION your_user;
+# 2) URL thêm ?currentSchema=englishme và set spring.jpa.properties.hibernate.default_schema + DB_SCHEMA như dưới.
+
+spring:
+  datasource:
+    url: jdbc:postgresql://YOUR_HOST:5432/englishme?currentSchema=englishme
+    username: YOUR_USER
+    password: YOUR_PASSWORD
+  jpa:
+    properties:
+      hibernate:
+        default_schema: englishme
+
+# Tuỳ chọn: ghi đè JWT khi deploy (không bắt buộc nếu dùng default trong application.yml)
+# app:
+#   security:
+#     jwt:
+#       secret: YOUR_BASE64_AT_LEAST_32_BYTES
