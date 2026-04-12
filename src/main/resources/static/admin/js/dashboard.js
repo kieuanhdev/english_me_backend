@@ -18,9 +18,7 @@
 		})
 		.then(function (me) {
 			if (!me || !me.email) return;
-			var roles = me.roles || [];
-			var admin = roles.indexOf('ADMIN') >= 0;
-			if (!admin) {
+			if (me.role !== 'ADMIN') {
 				localStorage.removeItem('admin_access_token');
 				localStorage.removeItem('admin_refresh_token');
 				window.location.href = '/admin/login';

@@ -14,7 +14,7 @@
 		</div>
 		<p class="admin-sub">
 			Đăng nhập bằng tài khoản có quyền <strong>ADMIN</strong>.
-			<br />Cách làm: đăng ký qua <code>POST /api/auth/register</code> (mặc định role <code>USER</code>), sau đó trong DB cập nhật cột <code>roles</code> của bảng <code>app_user</code> thành <code>ADMIN</code> hoặc <code>USER,ADMIN</code>.
+			<br />Cách làm: đăng ký qua <code>POST /api/auth/register</code> (mặc định <code>role = USER</code>), sau đó trong DB cập nhật cột <code>role</code> của bảng <code>users</code> thành <code>ADMIN</code>.
 		</p>
 		<form id="login-form" novalidate>
 			<div class="field">

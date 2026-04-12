@@ -1,8 +1,10 @@
 package vn.id.kieuanhdev.englishme.entity.auth;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.ConstraintMode;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -22,10 +24,14 @@ public class RefreshToken {
 	private UUID id;
 
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
-	@JoinColumn(name = "user_id", nullable = false)
+	@JoinColumn(
+		name = "user_id",
+		nullable = false,
+		foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT)
+	)
 	private User user;
 
-	@Column(nullable = false, unique = true, length = 200)
+	@Column(nullable = false, unique = true, length = 500)
 	private String token;
 
 	@Column(name = "expires_at", nullable = false)
@@ -39,8 +45,12 @@ public class RefreshToken {
 
 	@PrePersist
 	void prePersist() {
-		if (id == null) id = UUID.randomUUID();
-		if (createdAt == null) createdAt = Instant.now();
+		if (id == null) {
+			id = UUID.randomUUID();
+		}
+		if (createdAt == null) {
+			createdAt = Instant.now();
+		}
 	}
 
 	public boolean isRevoked() {

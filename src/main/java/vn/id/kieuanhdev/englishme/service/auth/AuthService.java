@@ -1,7 +1,6 @@
 package vn.id.kieuanhdev.englishme.service.auth;
 
 import java.time.Instant;
-import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -15,7 +14,6 @@ import vn.id.kieuanhdev.englishme.dto.auth.RegisterRequest;
 import vn.id.kieuanhdev.englishme.entity.auth.RefreshToken;
 import vn.id.kieuanhdev.englishme.entity.auth.Role;
 import vn.id.kieuanhdev.englishme.entity.auth.User;
-import vn.id.kieuanhdev.englishme.entity.auth.UserRoles;
 import vn.id.kieuanhdev.englishme.repository.auth.RefreshTokenRepository;
 import vn.id.kieuanhdev.englishme.repository.auth.UserRepository;
 
@@ -37,10 +35,9 @@ public class AuthService {
 
 		User user = new User();
 		user.setEmail(email);
-		user.setFullName(req.fullName());
+		user.setFullName(req.fullName().trim());
 		user.setPasswordHash(passwordEncoder.encode(req.password()));
-		user.setRoles(UserRoles.format(Set.of(Role.USER)));
-
+		user.setRole(Role.USER);
 		user = userRepository.save(user);
 		return issueTokens(user);
 	}
@@ -51,7 +48,8 @@ public class AuthService {
 		var user = userRepository.findByEmail(email)
 			.orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
-		if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
+		var hash = user.getPasswordHash();
+		if (hash == null || !passwordEncoder.matches(req.password(), hash)) {
 			throw new BadCredentialsException("Invalid credentials");
 		}
 		return issueTokens(user);
@@ -85,7 +83,7 @@ public class AuthService {
 	}
 
 	private AuthResponse issueTokens(User user) {
-		var accessToken = jwtService.createAccessToken(user.getId(), user.getEmail(), UserRoles.parse(user.getRoles()));
+		var accessToken = jwtService.createAccessToken(user.getId(), user.getEmail(), user.getRole());
 
 		var refresh = new RefreshToken();
 		refresh.setUser(user);

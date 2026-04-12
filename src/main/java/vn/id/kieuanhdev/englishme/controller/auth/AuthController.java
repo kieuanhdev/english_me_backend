@@ -14,7 +14,6 @@ import vn.id.kieuanhdev.englishme.dto.auth.LoginRequest;
 import vn.id.kieuanhdev.englishme.dto.auth.MeResponse;
 import vn.id.kieuanhdev.englishme.dto.auth.RefreshRequest;
 import vn.id.kieuanhdev.englishme.dto.auth.RegisterRequest;
-import vn.id.kieuanhdev.englishme.entity.auth.UserRoles;
 import vn.id.kieuanhdev.englishme.repository.auth.UserRepository;
 import vn.id.kieuanhdev.englishme.service.auth.AuthService;
 
@@ -52,6 +51,14 @@ public class AuthController {
 		}
 		var userId = (UUID) authentication.getPrincipal();
 		var user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
-		return new MeResponse(user.getId(), user.getEmail(), user.getFullName(), UserRoles.parse(user.getRoles()));
+		return new MeResponse(
+			user.getId(),
+			user.getEmail(),
+			user.getFullName(),
+			user.getRole(),
+			user.getStatus(),
+			user.getAvatarUrl(),
+			user.getCefrLevel()
+		);
 	}
 }

@@ -46,12 +46,7 @@
 				showError(me.message || 'Không lấy được thông tin tài khoản.');
 				return;
 			}
-			const roles = me.roles || [];
-			let isAdmin = false;
-			for (let i = 0; i < roles.length; i++) {
-				if (roles[i] === 'ADMIN') { isAdmin = true; break; }
-			}
-			if (!isAdmin) {
+			if (me.role !== 'ADMIN') {
 				showError('Tài khoản này không có quyền quản trị viên.');
 				return;
 			}

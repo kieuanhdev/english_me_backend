@@ -7,8 +7,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.springframework.stereotype.Service;
@@ -25,10 +25,9 @@ public class JwtService {
 		this.key = decodeSecret(props.secret());
 	}
 
-	public String createAccessToken(UUID userId, String email, Set<Role> roles) {
+	public String createAccessToken(UUID userId, String email, Role role) {
 		var now = Instant.now();
 		var exp = now.plus(props.accessTtl());
-
 		return Jwts.builder()
 			.issuer(props.issuer())
 			.subject(userId.toString())
@@ -36,7 +35,7 @@ public class JwtService {
 			.expiration(Date.from(exp))
 			.claims(Map.of(
 				"email", email,
-				"roles", roles.stream().map(Enum::name).toList()
+				"roles", List.of(role.name())
 			))
 			.signWith(key, Jwts.SIG.HS256)
 			.compact();
