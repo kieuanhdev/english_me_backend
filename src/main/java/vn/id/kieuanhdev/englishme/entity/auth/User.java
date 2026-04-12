@@ -7,8 +7,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,9 +28,6 @@ public class User {
 	@Column(name = "password_hash", nullable = false, length = 200)
 	private String passwordHash;
 
-	/**
-	 * Stored as a comma-separated string in DB. Example: "USER,ADMIN"
-	 */
 	@Column(nullable = false, columnDefinition = "text")
 	private String roles;
 
@@ -53,26 +48,5 @@ public class User {
 	@PreUpdate
 	void preUpdate() {
 		updatedAt = Instant.now();
-	}
-
-	public Set<Role> getRoleSet() {
-		if (roles == null || roles.isBlank()) return Set.of();
-		return java.util.Arrays.stream(roles.split(","))
-			.map(String::trim)
-			.filter(s -> !s.isBlank())
-			.map(Role::valueOf)
-			.collect(java.util.stream.Collectors.toUnmodifiableSet());
-	}
-
-	public void setRoleSet(Set<Role> roleSet) {
-		if (roleSet == null || roleSet.isEmpty()) {
-			this.roles = "";
-			return;
-		}
-		this.roles = roleSet.stream()
-			.filter(Objects::nonNull)
-			.map(Enum::name)
-			.sorted()
-			.collect(java.util.stream.Collectors.joining(","));
 	}
 }

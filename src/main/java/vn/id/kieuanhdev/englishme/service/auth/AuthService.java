@@ -15,6 +15,7 @@ import vn.id.kieuanhdev.englishme.dto.auth.RegisterRequest;
 import vn.id.kieuanhdev.englishme.entity.auth.RefreshToken;
 import vn.id.kieuanhdev.englishme.entity.auth.Role;
 import vn.id.kieuanhdev.englishme.entity.auth.User;
+import vn.id.kieuanhdev.englishme.entity.auth.UserRoles;
 import vn.id.kieuanhdev.englishme.repository.auth.RefreshTokenRepository;
 import vn.id.kieuanhdev.englishme.repository.auth.UserRepository;
 
@@ -38,7 +39,7 @@ public class AuthService {
 		user.setEmail(email);
 		user.setFullName(req.fullName());
 		user.setPasswordHash(passwordEncoder.encode(req.password()));
-		user.setRoleSet(Set.of(Role.USER));
+		user.setRoles(UserRoles.format(Set.of(Role.USER)));
 
 		user = userRepository.save(user);
 		return issueTokens(user);
@@ -67,8 +68,6 @@ public class AuthService {
 		}
 
 		var user = rt.getUser();
-
-		// rotate refresh token
 		rt.setRevokedAt(now);
 		refreshTokenRepository.save(rt);
 
@@ -86,7 +85,7 @@ public class AuthService {
 	}
 
 	private AuthResponse issueTokens(User user) {
-		var accessToken = jwtService.createAccessToken(user.getId(), user.getEmail(), user.getRoleSet());
+		var accessToken = jwtService.createAccessToken(user.getId(), user.getEmail(), UserRoles.parse(user.getRoles()));
 
 		var refresh = new RefreshToken();
 		refresh.setUser(user);
