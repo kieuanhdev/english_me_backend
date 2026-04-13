@@ -55,6 +55,13 @@ public class Deck {
 	@Column(name = "is_system", nullable = false)
 	private boolean isSystem = false;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "cloned_from_deck_id")
+	private Deck clonedFrom;
+
+	@Column(name = "word_count", nullable = false)
+	private int wordCount = 0;
+
 	@Column(name = "deleted_at")
 	private Instant deletedAt;
 

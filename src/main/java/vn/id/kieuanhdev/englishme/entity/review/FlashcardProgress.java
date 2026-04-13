@@ -72,6 +72,9 @@ public class FlashcardProgress {
 	@Column(nullable = false, length = 20)
 	private FlashcardProgressStatus status;
 
+	@Column(name = "is_active", nullable = false)
+	private boolean active = true;
+
 	@PrePersist
 	void prePersist() {
 		if (id == null) {
