@@ -63,7 +63,7 @@ public class DeckService {
 		if (flashcardRepository.existsByDeck_IdAndVocabulary_IdAndDeletedAtIsNull(deckId, req.vocabularyId())) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "Word already in deck");
 		}
-		var vocabulary = vocabularyRepository.findById(req.vocabularyId())
+		var vocabulary = vocabularyRepository.findByIdAndDeletedAtIsNull(req.vocabularyId())
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Vocabulary not found"));
 		var flashcard = copyVocabularyToFlashcard(deck, vocabulary);
 		flashcardRepository.save(flashcard);
