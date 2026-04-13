@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Kho từ vựng — EnglishMe Admin</title>
+	<link rel="stylesheet" th:href="@{/admin/css/admin.css}" />
+</head>
+<body class="dashboard-body">
+	<div class="admin-shell">
+		<header class="admin-topbar">
+			<div>
+				<strong>EnglishMe Admin</strong>
+				<div class="admin-nav">
+					<a th:href="@{/admin/dashboard}">Trang chủ</a>
+					<span>·</span>
+					<a th:href="@{/admin/vocabularies}">Kho từ vựng</a>
+					<span>·</span>
+					<a th:href="@{/admin/decks}">Deck / học viên</a>
+				</div>
+				<span id="user-line" class="admin-nav" style="margin-top: 0.35rem">…</span>
+			</div>
+			<button type="button" class="btn-ghost" id="btn-logout">Đăng xuất</button>
+		</header>
+		<main class="admin-main wide">
+			<div id="flash" class="flash" role="status"></div>
+
+			<div class="panel deck-section">
+				<h2>Tìm kiếm</h2>
+				<div class="toolbar">
+					<div class="field">
+						<label for="q">Từ khóa (word / nghĩa)</label>
+						<input id="q" type="search" placeholder="Để trống = tất cả" />
+					</div>
+					<label class="checkbox-field">
+						<input id="includeDeleted" type="checkbox" />
+						Hiện cả bản ghi đã xóa mềm
+					</label>
+					<button type="button" class="btn-secondary" id="btn-search">Tải danh sách</button>
+				</div>
+			</div>
+
+			<div class="panel deck-section">
+				<h2>Thêm từ vựng</h2>
+				<form id="form-create" class="form-grid">
+					<div class="field">
+						<label for="c-word">word *</label>
+						<input id="c-word" required maxlength="200" />
+					</div>
+					<div class="field">
+						<label for="c-meaning">meaning_vi *</label>
+						<input id="c-meaning" required />
+					</div>
+					<div class="field">
+						<label for="c-phonetic">phonetic</label>
+						<input id="c-phonetic" maxlength="200" />
+					</div>
+					<div class="field">
+						<label for="c-pos">part_of_speech</label>
+						<input id="c-pos" maxlength="50" />
+					</div>
+					<div class="field" style="grid-column: 1 / -1">
+						<label for="c-example">example_sentence</label>
+						<textarea id="c-example" rows="2"></textarea>
+					</div>
+					<div class="field">
+						<label for="c-audio">audio_url</label>
+						<input id="c-audio" maxlength="500" />
+					</div>
+					<div class="field">
+						<label for="c-image">image_url</label>
+						<input id="c-image" maxlength="500" />
+					</div>
+					<div class="field">
+						<label for="c-cefr">cefr_level</label>
+						<select id="c-cefr">
+							<option value="">—</option>
+							<option>A1</option>
+							<option>A2</option>
+							<option>B1</option>
+							<option>B2</option>
+							<option>C1</option>
+							<option>C2</option>
+						</select>
+					</div>
+					<div class="field" style="align-self: end">
+						<button type="submit" class="btn-secondary" id="btn-create">Tạo mới</button>
+					</div>
+				</form>
+			</div>
+
+			<div class="panel deck-section">
+				<h2>Sửa từ vựng</h2>
+				<p class="admin-sub" style="margin-bottom: 0.75rem">Chọn «Sửa» trên bảng để nạp ID; chỉ gửi các trường cần đổi (để trống = giữ nguyên).</p>
+				<form id="form-edit" class="form-grid">
+					<input type="hidden" id="e-id" />
+					<div class="field">
+						<label for="e-word">word</label>
+						<input id="e-word" maxlength="200" />
+					</div>
+					<div class="field">
+						<label for="e-meaning">meaning_vi</label>
+						<input id="e-meaning" />
+					</div>
+					<div class="field">
+						<label for="e-phonetic">phonetic</label>
+						<input id="e-phonetic" maxlength="200" />
+					</div>
+					<div class="field">
+						<label for="e-pos">part_of_speech</label>
+						<input id="e-pos" maxlength="50" />
+					</div>
+					<div class="field" style="grid-column: 1 / -1">
+						<label for="e-example">example_sentence</label>
+						<textarea id="e-example" rows="2"></textarea>
+					</div>
+					<div class="field">
+						<label for="e-audio">audio_url</label>
+						<input id="e-audio" maxlength="500" />
+					</div>
+					<div class="field">
+						<label for="e-image">image_url</label>
+						<input id="e-image" maxlength="500" />
+					</div>
+					<div class="field">
+						<label for="e-cefr">cefr_level</label>
+						<select id="e-cefr">
+							<option value="">— (không đổi)</option>
+							<option>A1</option>
+							<option>A2</option>
+							<option>B1</option>
+							<option>B2</option>
+							<option>C1</option>
+							<option>C2</option>
+						</select>
+					</div>
+					<div class="field" style="align-self: end">
+						<button type="submit" class="btn-secondary" id="btn-save-edit">Lưu (PATCH)</button>
+					</div>
+				</form>
+			</div>
+
+			<div class="panel deck-section">
+				<h2>Import CSV / Excel</h2>
+				<p class="admin-sub">Dòng đầu là header: <code>word</code>, <code>meaning_vi</code>, … (xem API). File: <code>.csv</code>, <code>.xlsx</code>, <code>.xls</code>.</p>
+				<form id="form-import">
+					<div class="field">
+						<label for="import-file">Chọn file</label>
+						<input id="import-file" type="file" accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" />
+					</div>
+					<button type="submit" class="btn-secondary">Gửi import</button>
+				</form>
+				<div id="import-out" class="import-result" style="margin-top: 0.75rem; display: none"></div>
+			</div>
+
+			<div class="panel deck-section">
+				<h2>Danh sách</h2>
+				<div class="table-wrap">
+					<table class="data-table" id="tbl">
+						<thead>
+							<tr>
+								<th>word</th>
+								<th>meaning (rút gọn)</th>
+								<th>CEFR</th>
+								<th>Trạng thái</th>
+								<th></th>
+							</tr>
+						</thead>
+						<tbody id="tbl-body"></tbody>
+					</table>
+				</div>
+				<div class="pagination">
+					<button type="button" class="btn-secondary btn-sm" id="btn-prev">Trước</button>
+					<span id="page-info"></span>
+					<button type="button" class="btn-secondary btn-sm" id="btn-next">Sau</button>
+				</div>
+			</div>
+		</main>
+	</div>
+	<script th:src="@{/admin/js/common.js}" defer></script>
+	<script th:src="@{/admin/js/vocabularies.js}" defer></script>
+</body>
+</html>

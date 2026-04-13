@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Deck &amp; học viên — EnglishMe Admin</title>
+	<link rel="stylesheet" th:href="@{/admin/css/admin.css}" />
+</head>
+<body class="dashboard-body">
+	<div class="admin-shell">
+		<header class="admin-topbar">
+			<div>
+				<strong>EnglishMe Admin</strong>
+				<div class="admin-nav">
+					<a th:href="@{/admin/dashboard}">Trang chủ</a>
+					<span>·</span>
+					<a th:href="@{/admin/vocabularies}">Kho từ vựng</a>
+					<span>·</span>
+					<a th:href="@{/admin/decks}">Deck / học viên</a>
+				</div>
+				<span id="user-line" class="admin-nav" style="margin-top: 0.35rem">…</span>
+			</div>
+			<button type="button" class="btn-ghost" id="btn-logout">Đăng xuất</button>
+		</header>
+		<main class="admin-main wide">
+			<p class="admin-sub" style="margin: 0 0 1rem">
+				Các API <code>/api/v1/decks</code> dùng token đăng nhập (ADMIN cũng gọi được). Tạo deck cá nhân, khám phá deck hệ thống, đăng ký / clone, thêm hoặc xóa từ trong deck.
+			</p>
+			<div id="flash" class="flash" role="status"></div>
+
+			<div class="panel deck-section">
+				<h2>A — Tạo bộ thẻ mới</h2>
+				<form id="form-create-deck" class="form-grid">
+					<div class="field">
+						<label for="deck-name">Tên (name) *</label>
+						<input id="deck-name" required maxlength="200" />
+					</div>
+					<div class="field" style="grid-column: 1 / -1">
+						<label for="deck-desc">Mô tả</label>
+						<textarea id="deck-desc" rows="2"></textarea>
+					</div>
+					<div class="field">
+						<label for="deck-topic">Chủ đề (topic)</label>
+						<input id="deck-topic" maxlength="100" />
+					</div>
+					<div class="field" style="align-self: end">
+						<button type="submit" class="btn-secondary">POST /api/v1/decks</button>
+					</div>
+				</form>
+				<div id="out-create-deck" class="output-box" style="display: none"></div>
+			</div>
+
+			<div class="panel deck-section">
+				<h2>B — Deck hệ thống</h2>
+				<div class="toolbar">
+					<div class="field">
+						<label for="sys-topic">topic (lọc)</label>
+						<input id="sys-topic" placeholder="Để trống = tất cả" />
+					</div>
+					<div class="field">
+						<label for="sys-level">level (CEFR)</label>
+						<select id="sys-level">
+							<option value="">—</option>
+							<option>A1</option>
+							<option>A2</option>
+							<option>B1</option>
+							<option>B2</option>
+							<option>C1</option>
+							<option>C2</option>
+						</select>
+					</div>
+					<button type="button" class="btn-secondary" id="btn-load-system">GET /decks/system</button>
+				</div>
+				<div class="table-wrap">
+					<table class="data-table">
+						<thead>
+							<tr>
+								<th>Tên</th>
+								<th>Chủ đề</th>
+								<th>CEFR</th>
+								<th>Số từ</th>
+								<th>deckId</th>
+								<th></th>
+							</tr>
+						</thead>
+						<tbody id="tbl-system"></tbody>
+					</table>
+				</div>
+			</div>
+
+			<div class="panel deck-section">
+				<h2>Đăng ký / Clone deck hệ thống</h2>
+				<div class="form-grid">
+					<div class="field">
+						<label for="op-deck-id">deckId (UUID)</label>
+						<input id="op-deck-id" placeholder="Lấy từ bảng trên" class="cell-mono" style="max-width: none" />
+					</div>
+					<div class="field btn-row" style="align-self: end">
+						<button type="button" class="btn-secondary" id="btn-subscribe">Subscribe</button>
+						<button type="button" class="btn-secondary" id="btn-clone">Clone về của tôi</button>
+					</div>
+				</div>
+				<div id="out-subscribe" class="output-box" style="display: none"></div>
+				<div id="out-clone" class="output-box" style="display: none"></div>
+			</div>
+
+			<div class="panel deck-section">
+				<h2>A / D — Thêm hoặc xóa từ trong deck cá nhân</h2>
+				<p class="admin-sub">Deck phải là <strong>deck cá nhân</strong> (bạn là owner, <code>is_system = false</code>). Thêm từ: cần <code>vocabularyId</code> trong kho (đã tạo ở trang Kho từ vựng).</p>
+				<div class="form-grid">
+					<div class="field">
+						<label for="w-deck-id">deckId</label>
+						<input id="w-deck-id" placeholder="UUID deck của bạn" />
+					</div>
+					<div class="field">
+						<label for="w-vocab-id">vocabularyId</label>
+						<input id="w-vocab-id" placeholder="UUID từ kho" />
+					</div>
+					<div class="field btn-row" style="align-self: end">
+						<button type="button" class="btn-secondary" id="btn-add-word">Thêm từ</button>
+						<button type="button" class="btn-danger" id="btn-remove-word">Xóa từ</button>
+					</div>
+				</div>
+				<div id="out-word" class="output-box" style="display: none"></div>
+			</div>
+		</main>
+	</div>
+	<script th:src="@{/admin/js/common.js}" defer></script>
+	<script th:src="@{/admin/js/decks.js}" defer></script>
+</body>
+</html>

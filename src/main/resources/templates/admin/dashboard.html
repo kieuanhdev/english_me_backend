@@ -16,10 +16,14 @@
 			</div>
 			<button type="button" class="btn-ghost" id="btn-logout">Đăng xuất</button>
 		</header>
-		<main class="admin-main">
+		<main class="admin-main wide">
 			<div class="panel">
 				<h2>Chào mừng</h2>
-				<p>Bạn đã đăng nhập với quyền quản trị. Phần quản lý nội dung (từ vựng, bài học, …) có thể bổ sung API và menu tại đây sau.</p>
+				<p>Bạn đã đăng nhập với quyền quản trị. Chọn mục bên dưới để dùng giao diện web gọi API đã triển khai.</p>
+				<div class="btn-row" style="margin-top: 1rem">
+					<a class="btn-secondary" th:href="@{/admin/vocabularies}" style="text-decoration: none; display: inline-block">Kho từ vựng (CRUD + import)</a>
+					<a class="btn-secondary" th:href="@{/admin/decks}" style="text-decoration: none; display: inline-block">Deck / học viên (API v1)</a>
+				</div>
 			</div>
 		</main>
 	</div>

@@ -22,4 +22,14 @@ public class AdminViewController {
 	public String dashboard() {
 		return "admin/dashboard";
 	}
+
+	@GetMapping("/vocabularies")
+	public String vocabularies() {
+		return "admin/vocabularies";
+	}
+
+	@GetMapping("/decks")
+	public String decks() {
+		return "admin/decks";
+	}
 }
