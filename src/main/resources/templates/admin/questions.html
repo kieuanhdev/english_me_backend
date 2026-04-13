@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Ngân hàng câu hỏi CEFR — EnglishMe Admin</title>
+	<link rel="stylesheet" th:href="@{/admin/css/admin.css}" />
+</head>
+<body class="dashboard-body">
+	<div class="admin-shell">
+		<header class="admin-topbar">
+			<div>
+				<strong>EnglishMe Admin</strong>
+				<div class="admin-nav">
+					<a th:href="@{/admin/dashboard}">Trang chủ</a>
+					<span>·</span>
+					<a th:href="@{/admin/vocabularies}">Kho từ vựng</a>
+					<span>·</span>
+					<a th:href="@{/admin/questions}">Ngân hàng câu hỏi</a>
+					<span>·</span>
+					<a th:href="@{/admin/decks}">Deck / học viên</a>
+				</div>
+				<span id="user-line" class="admin-nav" style="margin-top: 0.35rem">…</span>
+			</div>
+			<button type="button" class="btn-ghost" id="btn-logout">Đăng xuất</button>
+		</header>
+		<main class="admin-main wide">
+			<div id="flash" class="flash" role="status"></div>
+
+			<div class="panel deck-section">
+				<h2>Cảnh báo số lượng câu hỏi theo band</h2>
+				<div class="btn-row">
+					<button type="button" class="btn-secondary" id="btn-load-warnings">Tải cảnh báo</button>
+					<a class="btn-secondary" href="/api/admin/questions/export" target="_blank" style="text-decoration: none; display: inline-block">Export CSV</a>
+				</div>
+				<div id="warning-out" class="output-box" style="display: none"></div>
+			</div>
+
+			<div class="panel deck-section">
+				<h2>Bộ lọc & danh sách</h2>
+				<div class="toolbar">
+					<div class="field">
+						<label for="filter-cefr">CEFR</label>
+						<select id="filter-cefr">
+							<option value="">Tất cả</option>
+							<option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option>
+						</select>
+					</div>
+					<div class="field">
+						<label for="filter-skill">Skill</label>
+						<select id="filter-skill">
+							<option value="">Tất cả</option>
+							<option>VOCABULARY</option>
+							<option>GRAMMAR</option>
+							<option>READING</option>
+						</select>
+					</div>
+					<label class="checkbox-field">
+						<input id="filter-deleted" type="checkbox" />
+						Hiện câu đã xóa mềm
+					</label>
+					<button type="button" class="btn-secondary" id="btn-load">Tải danh sách</button>
+				</div>
+
+				<div class="table-wrap">
+					<table class="data-table">
+						<thead>
+							<tr>
+								<th>Nội dung</th>
+								<th>Band</th>
+								<th>Skill</th>
+								<th>Độ khó</th>
+								<th>Trạng thái</th>
+								<th></th>
+							</tr>
+						</thead>
+						<tbody id="tbl-questions"></tbody>
+					</table>
+				</div>
+				<div class="pagination">
+					<button type="button" class="btn-secondary btn-sm" id="btn-prev">Trước</button>
+					<span id="page-info"></span>
+					<button type="button" class="btn-secondary btn-sm" id="btn-next">Sau</button>
+				</div>
+			</div>
+
+			<div class="panel deck-section">
+				<h2>Tạo / cập nhật câu hỏi</h2>
+				<p class="admin-sub">Options phải đủ 4 lựa chọn khác nhau. Correct answer là A/B/C/D.</p>
+				<form id="form-question" class="form-grid">
+					<input type="hidden" id="q-id" />
+					<div class="field" style="grid-column: 1 / -1">
+						<label for="q-content">Nội dung câu hỏi *</label>
+						<textarea id="q-content" rows="3" required></textarea>
+					</div>
+					<div class="field"><label for="q-opt-a">Option A *</label><input id="q-opt-a" required /></div>
+					<div class="field"><label for="q-opt-b">Option B *</label><input id="q-opt-b" required /></div>
+					<div class="field"><label for="q-opt-c">Option C *</label><input id="q-opt-c" required /></div>
+					<div class="field"><label for="q-opt-d">Option D *</label><input id="q-opt-d" required /></div>
+					<div class="field">
+						<label for="q-answer">Correct answer *</label>
+						<select id="q-answer"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+					</div>
+					<div class="field">
+						<label for="q-band">CEFR band *</label>
+						<select id="q-band"><option>A1</option><option>A2</option><option>B1</option><option>B2</option><option>C1</option><option>C2</option></select>
+					</div>
+					<div class="field">
+						<label for="q-skill">Skill type *</label>
+						<select id="q-skill"><option>VOCABULARY</option><option>GRAMMAR</option><option>READING</option></select>
+					</div>
+					<div class="field">
+						<label for="q-diff">Difficulty (0.0-1.0) *</label>
+						<input id="q-diff" type="number" step="0.01" min="0" max="1" value="0.5" />
+					</div>
+					<label class="checkbox-field" style="align-self: end">
+						<input id="q-active" type="checkbox" checked />
+						Is active
+					</label>
+					<div class="field btn-row" style="align-self: end">
+						<button type="submit" class="btn-secondary" id="btn-save">Lưu</button>
+						<button type="button" class="btn-secondary" id="btn-clear">Làm mới form</button>
+					</div>
+				</form>
+			</div>
+		</main>
+	</div>
+	<script th:src="@{/admin/js/common.js}" defer></script>
+	<script th:src="@{/admin/js/questions.js}" defer></script>
+</body>
+</html>

@@ -32,4 +32,9 @@ public class AdminViewController {
 	public String decks() {
 		return "admin/decks";
 	}
+
+	@GetMapping("/questions")
+	public String questions() {
+		return "admin/questions";
+	}
 }
