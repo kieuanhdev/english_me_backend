@@ -16,6 +16,12 @@
         List<User> users = (List<User>) request.getAttribute("users");
         int totalUsers = users == null ? 0 : users.size();
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String selectedCefr = (String) request.getAttribute("selectedCefr");
+        String selectedStatus = (String) request.getAttribute("selectedStatus");
+        String selectedKeyword = (String) request.getAttribute("selectedKeyword");
+        if (selectedCefr == null) selectedCefr = "";
+        if (selectedStatus == null || selectedStatus.isBlank()) selectedStatus = "all";
+        if (selectedKeyword == null) selectedKeyword = "";
     %>
 
     <div class="p-8 space-y-8">
@@ -31,27 +37,41 @@
         </div>
 
         <section class="bg-surface-container-low p-6 rounded-[2rem] space-y-6">
-            <div class="flex flex-wrap items-center gap-4">
+            <form method="get" action="${pageContext.request.contextPath}/admin/users" class="flex flex-wrap items-end gap-4">
                 <div class="flex-1 min-w-[220px]">
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">Trinh do CEFR</label>
-                    <select class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
-                        <option>Tat ca trinh do</option>
-                        <option>A1 - Beginner</option>
-                        <option>A2 - Elementary</option>
-                        <option>B1 - Intermediate</option>
-                        <option>B2 - Upper Intermediate</option>
-                        <option>C1 - Advanced</option>
+                    <select name="cefr" class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+                        <option value="" <%= selectedCefr.isEmpty() ? "selected" : "" %>>Tat ca trinh do</option>
+                        <option value="A1" <%= "A1".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>A1 - Beginner</option>
+                        <option value="A2" <%= "A2".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>A2 - Elementary</option>
+                        <option value="B1" <%= "B1".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>B1 - Intermediate</option>
+                        <option value="B2" <%= "B2".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>B2 - Upper Intermediate</option>
+                        <option value="C1" <%= "C1".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>C1 - Advanced</option>
                     </select>
                 </div>
                 <div class="flex-1 min-w-[220px]">
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">Trang thai</label>
-                    <div class="mt-1.5 flex bg-white p-1 rounded-xl">
-                        <button class="flex-1 py-2 text-xs font-bold bg-indigo-50 text-indigo-900 rounded-lg">Tat ca</button>
-                        <button class="flex-1 py-2 text-xs font-bold text-slate-500 rounded-lg">Hoat dong</button>
-                        <button class="flex-1 py-2 text-xs font-bold text-slate-500 rounded-lg">Da khoa</button>
-                    </div>
+                    <select name="status" class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+                        <option value="all" <%= "all".equalsIgnoreCase(selectedStatus) ? "selected" : "" %>>Tat ca</option>
+                        <option value="active" <%= "active".equalsIgnoreCase(selectedStatus) ? "selected" : "" %>>Hoat dong</option>
+                        <option value="locked" <%= "locked".equalsIgnoreCase(selectedStatus) ? "selected" : "" %>>Da khoa</option>
+                    </select>
                 </div>
-            </div>
+                <div class="flex-1 min-w-[240px]">
+                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Tim kiem</label>
+                    <input type="text" name="q" value="<%= selectedKeyword %>" placeholder="Ten, email, UID..."
+                           class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="submit" class="primary-gradient text-white px-5 py-3 rounded-xl text-sm font-bold">
+                        Loc
+                    </button>
+                    <a href="${pageContext.request.contextPath}/admin/users"
+                       class="bg-white text-slate-600 px-5 py-3 rounded-xl text-sm font-bold">
+                        Reset
+                    </a>
+                </div>
+            </form>
         </section>
 
         <div class="bg-surface-container-low rounded-[2rem] overflow-hidden">

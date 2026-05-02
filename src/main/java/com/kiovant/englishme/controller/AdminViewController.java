@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
@@ -20,8 +21,16 @@ public class AdminViewController {
     }
 
     @GetMapping("/users")
-    public String users(Model model) {
-        model.addAttribute("users", userService.findAllUsers());
+    public String users(
+            @RequestParam(required = false, defaultValue = "") String cefr,
+            @RequestParam(required = false, defaultValue = "all") String status,
+            @RequestParam(required = false, defaultValue = "") String q,
+            Model model
+    ) {
+        model.addAttribute("users", userService.findUsersByFilter(cefr, status, q));
+        model.addAttribute("selectedCefr", cefr);
+        model.addAttribute("selectedStatus", status);
+        model.addAttribute("selectedKeyword", q);
         return "admin/users";
     }
 }
