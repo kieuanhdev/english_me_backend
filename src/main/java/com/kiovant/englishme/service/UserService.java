@@ -6,6 +6,9 @@ import com.kiovant.englishme.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 
 @Service
 public class UserService {
@@ -32,5 +35,16 @@ public class UserService {
                     newUser.setIsOnboarded(false); // Mặc định chưa làm test
                     return userRepository.save(newUser);
                 });
+    }
+
+    public List<User> findAllUsers() {
+        return userRepository.findAll()
+                .stream()
+                .sorted((u1, u2) -> {
+                    LocalDateTime t1 = u1.getCreatedAt() != null ? u1.getCreatedAt() : LocalDateTime.MIN;
+                    LocalDateTime t2 = u2.getCreatedAt() != null ? u2.getCreatedAt() : LocalDateTime.MIN;
+                    return t2.compareTo(t1);
+                })
+                .toList();
     }
 }

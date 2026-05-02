@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/WorkSpace/doantotnghiep/fontend/englishme/lib/**)"
+    ]
+  }
+}
