@@ -1,0 +1,1042 @@
+[
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "He _____ a doctor at the local hospital.",
+    "options": {
+      "A": "am",
+      "B": "is",
+      "C": "are",
+      "D": "be"
+    },
+    "correct_answer": "B",
+    "explanation": "Động từ 'to be' đi với chủ ngữ ngôi thứ ba số ít 'He' ở thì hiện tại đơn là 'is'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "She _____ to work by bus every day.",
+    "options": {
+      "A": "go",
+      "B": "goes",
+      "C": "going",
+      "D": "is go"
+    },
+    "correct_answer": "B",
+    "explanation": "Với chủ ngữ ngôi thứ ba số ít 'She' trong thì hiện tại đơn, động từ 'go' phải thêm đuôi 'es'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "I have _____ apple in my bag.",
+    "options": {
+      "A": "a",
+      "B": "an",
+      "C": "the",
+      "D": "some"
+    },
+    "correct_answer": "B",
+    "explanation": "Dùng mạo từ 'an' trước danh từ đếm được số ít bắt đầu bằng một nguyên âm (a, e, i, o, u) như 'apple'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "The English class starts _____ 8 o'clock.",
+    "options": {
+      "A": "in",
+      "B": "on",
+      "C": "at",
+      "D": "to"
+    },
+    "correct_answer": "C",
+    "explanation": "Giới từ 'at' được dùng để chỉ một mốc thời gian cụ thể trong ngày (giờ)."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "_____ are my new shoes.",
+    "options": {
+      "A": "This",
+      "B": "That",
+      "C": "These",
+      "D": "It"
+    },
+    "correct_answer": "C",
+    "explanation": "Đại từ chỉ định 'These' dùng để chỉ các sự vật ở số nhiều ('shoes' và 'are') và ở khoảng cách gần."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "_____ is your favorite color?",
+    "options": {
+      "A": "Who",
+      "B": "What",
+      "C": "Where",
+      "D": "How"
+    },
+    "correct_answer": "B",
+    "explanation": "Từ để hỏi 'What' (Cái gì) được dùng để hỏi thông tin về sự vật, ở đây là màu sắc yêu thích."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "We live in London. _____ house is very old.",
+    "options": {
+      "A": "Us",
+      "B": "We",
+      "C": "Our",
+      "D": "Their"
+    },
+    "correct_answer": "C",
+    "explanation": "Tính từ sở hữu tương ứng với đại từ nhân xưng 'We' (chúng tôi) là 'Our' (của chúng tôi)."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "Birds _____ fly in the sky.",
+    "options": {
+      "A": "can",
+      "B": "are",
+      "C": "do",
+      "D": "have"
+    },
+    "correct_answer": "A",
+    "explanation": "'Can' là động từ khuyết thiếu dùng để diễn tả khả năng làm gì đó (có thể bay)."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "_____ three apples on the kitchen table.",
+    "options": {
+      "A": "There is",
+      "B": "There are",
+      "C": "They are",
+      "D": "Their are"
+    },
+    "correct_answer": "B",
+    "explanation": "Cấu trúc 'There are' dùng để chỉ sự tồn tại của nhiều người hoặc vật (three apples là danh từ số nhiều)."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "My brother _____ reading a book right now.",
+    "options": {
+      "A": "am",
+      "B": "is",
+      "C": "are",
+      "D": "does"
+    },
+    "correct_answer": "B",
+    "explanation": "Thì hiện tại tiếp diễn cần trợ động từ 'to be'. Chủ ngữ 'My brother' (tương đương 'He') đi với 'is'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "I like Anna. I want to invite _____ to my birthday party.",
+    "options": {
+      "A": "she",
+      "B": "her",
+      "C": "hers",
+      "D": "him"
+    },
+    "correct_answer": "B",
+    "explanation": "Đại từ tân ngữ thay thế cho 'Anna' (phái nữ, số ít) ở vị trí nhận hành động là 'her'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "My birthday is _____ May.",
+    "options": {
+      "A": "in",
+      "B": "on",
+      "C": "at",
+      "D": "from"
+    },
+    "correct_answer": "A",
+    "explanation": "Giới từ 'in' được dùng trước các tháng trong năm (May - tháng Năm)."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "He _____ a new and fast bicycle.",
+    "options": {
+      "A": "have",
+      "B": "has",
+      "C": "having",
+      "D": "is"
+    },
+    "correct_answer": "B",
+    "explanation": "Động từ 'have' (có) khi chia với chủ ngữ ngôi thứ ba số ít (He) ở hiện tại đơn trở thành 'has'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "I need two _____ for the salad.",
+    "options": {
+      "A": "tomato",
+      "B": "tomatos",
+      "C": "tomatoes",
+      "D": "tomaties"
+    },
+    "correct_answer": "C",
+    "explanation": "Danh từ 'tomato' kết thúc bằng 'o', khi chuyển sang dạng số nhiều ta phải thêm 'es' thành 'tomatoes'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "_____ old is your younger sister?",
+    "options": {
+      "A": "What",
+      "B": "Who",
+      "C": "When",
+      "D": "How"
+    },
+    "correct_answer": "D",
+    "explanation": "Cụm từ để hỏi về tuổi tác trong tiếng Anh luôn bắt đầu bằng 'How old'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "They _____ like playing football in the rain.",
+    "options": {
+      "A": "doesn't",
+      "B": "isn't",
+      "C": "aren't",
+      "D": "don't"
+    },
+    "correct_answer": "D",
+    "explanation": "Trong thì hiện tại đơn, câu phủ định với động từ thường (like) và chủ ngữ số nhiều (They) dùng trợ động từ 'don't'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "_____ you speak English well?",
+    "options": {
+      "A": "Are",
+      "B": "Is",
+      "C": "Do",
+      "D": "Does"
+    },
+    "correct_answer": "C",
+    "explanation": "Để tạo câu hỏi nghi vấn trong thì hiện tại đơn với động từ thường (speak) và chủ ngữ 'you', ta dùng trợ động từ 'Do'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "Please, _____ open the window. It is very cold outside.",
+    "options": {
+      "A": "no",
+      "B": "not",
+      "C": "doesn't",
+      "D": "don't"
+    },
+    "correct_answer": "D",
+    "explanation": "Câu mệnh lệnh phủ định (yêu cầu ai đó KHÔNG làm gì) luôn bắt đầu bằng 'Don't' cộng với động từ nguyên thể."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "Mary and John _____ students at this university.",
+    "options": {
+      "A": "am",
+      "B": "is",
+      "C": "are",
+      "D": "be"
+    },
+    "correct_answer": "C",
+    "explanation": "Chủ ngữ 'Mary and John' là hai người (số nhiều, tương đương 'They') nên động từ to be được chia là 'are'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Grammar",
+    "question": "Where _____ she live now?",
+    "options": {
+      "A": "do",
+      "B": "does",
+      "C": "is",
+      "D": "are"
+    },
+    "correct_answer": "B",
+    "explanation": "Trong câu hỏi wh- thì hiện tại đơn, với chủ ngữ ngôi thứ ba số ít (she) đi kèm động từ thường (live), ta dùng trợ động từ 'does'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "My mother's sister is my _____.",
+    "options": {
+      "A": "aunt",
+      "B": "uncle",
+      "C": "cousin",
+      "D": "grandmother"
+    },
+    "correct_answer": "A",
+    "explanation": "Từ vựng chỉ các thành viên trong gia đình: chị/em gái của mẹ được gọi là dì/bác gái ('aunt')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "The day after Tuesday is _____.",
+    "options": {
+      "A": "Monday",
+      "B": "Wednesday",
+      "C": "Thursday",
+      "D": "Friday"
+    },
+    "correct_answer": "B",
+    "explanation": "Thứ tự các ngày trong tuần: ngày ngay sau thứ Ba ('Tuesday') là thứ Tư ('Wednesday')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "I usually drink a cup of _____ every morning.",
+    "options": {
+      "A": "bread",
+      "B": "cheese",
+      "C": "coffee",
+      "D": "meat"
+    },
+    "correct_answer": "C",
+    "explanation": "Động từ 'drink' (uống) phải đi với một danh từ chỉ đồ uống, trong các lựa chọn chỉ có 'coffee' (cà phê) là đồ uống."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "Tomatoes and strawberries are usually _____.",
+    "options": {
+      "A": "blue",
+      "B": "red",
+      "C": "yellow",
+      "D": "green"
+    },
+    "correct_answer": "B",
+    "explanation": "Từ vựng về màu sắc: cà chua ('tomatoes') và dâu tây ('strawberries') khi chín thường có màu đỏ ('red')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "A _____ works in a hospital and helps sick people.",
+    "options": {
+      "A": "teacher",
+      "B": "doctor",
+      "C": "mechanic",
+      "D": "farmer"
+    },
+    "correct_answer": "B",
+    "explanation": "Từ vựng về nghề nghiệp: người làm việc ở bệnh viện ('hospital') và giúp người bệnh là bác sĩ ('doctor')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "It is raining outside. Take your _____.",
+    "options": {
+      "A": "sunglasses",
+      "B": "t-shirt",
+      "C": "umbrella",
+      "D": "shorts"
+    },
+    "correct_answer": "C",
+    "explanation": "Khi trời mưa ('raining'), vật dụng cần thiết để mang theo là chiếc ô/dù ('umbrella')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "We want to buy some books. Let's go to the _____.",
+    "options": {
+      "A": "bookstore",
+      "B": "pharmacy",
+      "C": "restaurant",
+      "D": "park"
+    },
+    "correct_answer": "A",
+    "explanation": "Từ vựng về địa điểm: nơi để mua sách ('buy books') là nhà sách ('bookstore')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "I always _____ a good book before I go to sleep.",
+    "options": {
+      "A": "listen",
+      "B": "watch",
+      "C": "read",
+      "D": "play"
+    },
+    "correct_answer": "C",
+    "explanation": "Động từ phù hợp nhất đi kèm với tân ngữ 'a book' (một cuốn sách) là 'read' (đọc)."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "An elephant is a very _____ animal.",
+    "options": {
+      "A": "small",
+      "B": "big",
+      "C": "fast",
+      "D": "light"
+    },
+    "correct_answer": "B",
+    "explanation": "Tính từ miêu tả kích thước đặc trưng của con voi ('elephant') là to lớn ('big')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "You use your _____ to see things.",
+    "options": {
+      "A": "ears",
+      "B": "nose",
+      "C": "mouth",
+      "D": "eyes"
+    },
+    "correct_answer": "D",
+    "explanation": "Từ vựng về bộ phận cơ thể: bộ phận dùng để nhìn ('see') là đôi mắt ('eyes')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "A _____ is a popular pet that says 'meow'.",
+    "options": {
+      "A": "dog",
+      "B": "bird",
+      "C": "cat",
+      "D": "fish"
+    },
+    "correct_answer": "C",
+    "explanation": "Con vật nuôi quen thuộc kêu 'meow' là con mèo ('cat')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "I am tired. I am going to sleep in my _____.",
+    "options": {
+      "A": "kitchen",
+      "B": "bathroom",
+      "C": "bedroom",
+      "D": "living room"
+    },
+    "correct_answer": "C",
+    "explanation": "Từ vựng về các phòng trong nhà: phòng dùng để ngủ ('sleep') là phòng ngủ ('bedroom')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "You can fly to another country in an _____.",
+    "options": {
+      "A": "train",
+      "B": "airplane",
+      "C": "bus",
+      "D": "boat"
+    },
+    "correct_answer": "B",
+    "explanation": "Từ vựng về phương tiện giao thông: phương tiện dùng để bay ('fly') trên trời là máy bay ('airplane'). Hơn nữa, mạo từ 'an' phải đi trước danh từ bắt đầu bằng nguyên âm."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "Ten plus five is _____.",
+    "options": {
+      "A": "twelve",
+      "B": "fifteen",
+      "C": "twenty",
+      "D": "fifty"
+    },
+    "correct_answer": "B",
+    "explanation": "Phép toán cơ bản: 10 ('ten') cộng với 5 ('five') bằng 15 ('fifteen')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "Look at the beautiful yellow _____ in the garden.",
+    "options": {
+      "A": "stars",
+      "B": "clouds",
+      "C": "flowers",
+      "D": "stones"
+    },
+    "correct_answer": "C",
+    "explanation": "Sự vật thường có màu vàng đẹp mắt và xuất hiện ở trong vườn ('garden') là những bông hoa ('flowers')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "Every morning, I wash my face and _____ my teeth.",
+    "options": {
+      "A": "brush",
+      "B": "comb",
+      "C": "make",
+      "D": "do"
+    },
+    "correct_answer": "A",
+    "explanation": "Cụm từ cố định chỉ thói quen sinh hoạt hàng ngày: đánh răng là 'brush one's teeth'."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "This coffee is too _____! I cannot drink it right now.",
+    "options": {
+      "A": "cold",
+      "B": "sweet",
+      "C": "hot",
+      "D": "nice"
+    },
+    "correct_answer": "C",
+    "explanation": "Tính từ miêu tả trạng thái của cà phê khiến ta không thể uống ngay ('cannot drink it right now') là quá nóng ('hot')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "The first month of the year is _____.",
+    "options": {
+      "A": "February",
+      "B": "December",
+      "C": "March",
+      "D": "January"
+    },
+    "correct_answer": "D",
+    "explanation": "Tháng đầu tiên ('first month') trong một năm là tháng Một ('January')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "I use a _____ to write letters in my notebook.",
+    "options": {
+      "A": "pen",
+      "B": "ruler",
+      "C": "rubber",
+      "D": "desk"
+    },
+    "correct_answer": "A",
+    "explanation": "Từ vựng về dụng cụ học tập: đồ vật dùng để viết ('write') là cây bút ('pen')."
+  },
+  {
+    "cefr_level": "A1",
+    "skill_category": "Vocabulary",
+    "question": "Apples, bananas, and oranges are types of _____.",
+    "options": {
+      "A": "vegetables",
+      "B": "meat",
+      "C": "fruit",
+      "D": "drinks"
+    },
+    "correct_answer": "C",
+    "explanation": "Từ vựng phân loại thực phẩm: táo, chuối và cam đều được phân loại là trái cây ('fruit')."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "We _____ to the cinema yesterday evening.",
+    "options": {
+      "A": "go",
+      "B": "going",
+      "C": "went",
+      "D": "goes"
+    },
+    "correct_answer": "C",
+    "explanation": "Trạng từ 'yesterday' (hôm qua) là dấu hiệu của thì quá khứ đơn. Động từ bất quy tắc 'go' phải được chia thành 'went'."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "A train is usually _____ than a bus.",
+    "options": {
+      "A": "fast",
+      "B": "faster",
+      "C": "fastest",
+      "D": "more fast"
+    },
+    "correct_answer": "B",
+    "explanation": "Cấu trúc so sánh hơn với tính từ ngắn (fast) cần thêm đuôi '-er' thành 'faster' khi có từ 'than'."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "How _____ milk do we need to make the cake?",
+    "options": {
+      "A": "many",
+      "B": "much",
+      "C": "few",
+      "D": "a lot"
+    },
+    "correct_answer": "B",
+    "explanation": "'Milk' (sữa) là danh từ không đếm được. Để hỏi về số lượng của danh từ không đếm được, ta dùng 'How much'."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "I _____ my grandparents this weekend. We have already bought the train tickets.",
+    "options": {
+      "A": "visit",
+      "B": "am visiting",
+      "C": "visited",
+      "D": "visits"
+    },
+    "correct_answer": "B",
+    "explanation": "Thì hiện tại tiếp diễn (am visiting) được dùng để diễn tả một kế hoạch chắc chắn sẽ xảy ra trong tương lai gần (đã mua vé tàu)."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "It is very cold outside. You _____ wear a warm jacket.",
+    "options": {
+      "A": "should",
+      "B": "shouldn't",
+      "C": "have",
+      "D": "would"
+    },
+    "correct_answer": "A",
+    "explanation": "Động từ khuyết thiếu 'should' (nên) được dùng để đưa ra lời khuyên hợp lý trong tình huống trời lạnh."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "_____ you ever been to Paris?",
+    "options": {
+      "A": "Do",
+      "B": "Did",
+      "C": "Has",
+      "D": "Have"
+    },
+    "correct_answer": "D",
+    "explanation": "Câu hỏi về trải nghiệm dùng thì hiện tại hoàn thành. Chủ ngữ 'you' đi với trợ động từ 'Have' (Have you ever + V3/ed)."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "I really want _____ a new computer next month.",
+    "options": {
+      "A": "buy",
+      "B": "buying",
+      "C": "to buy",
+      "D": "bought"
+    },
+    "correct_answer": "C",
+    "explanation": "Động từ 'want' luôn đi kèm với động từ nguyên thể có 'to' (to-infinitive), tạo thành cấu trúc 'want to do something'."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "This book isn't mine. Is it _____?",
+    "options": {
+      "A": "your",
+      "B": "you",
+      "C": "yours",
+      "D": "yourself"
+    },
+    "correct_answer": "C",
+    "explanation": "Cần một đại từ sở hữu (yours = your book) đứng ở cuối câu để tránh lặp lại danh từ 'book'."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "Mount Everest is the _____ mountain in the world.",
+    "options": {
+      "A": "high",
+      "B": "higher",
+      "C": "highest",
+      "D": "most high"
+    },
+    "correct_answer": "C",
+    "explanation": "Cấu trúc so sánh nhất ('the' + tính từ) với tính từ ngắn (high) yêu cầu thêm đuôi '-est' thành 'highest'."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "I _____ TV when the phone rang.",
+    "options": {
+      "A": "watched",
+      "B": "was watching",
+      "C": "am watching",
+      "D": "watch"
+    },
+    "correct_answer": "B",
+    "explanation": "Sử dụng thì quá khứ tiếp diễn (was watching) để diễn tả một hành động đang xảy ra trong quá khứ thì một hành động khác (the phone rang) xen vào."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "My father's birthday is _____ the 15th of August.",
+    "options": {
+      "A": "in",
+      "B": "on",
+      "C": "at",
+      "D": "of"
+    },
+    "correct_answer": "B",
+    "explanation": "Giới từ 'on' luôn được sử dụng trước các ngày cụ thể trong tháng (the 15th of August)."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "There aren't _____ apples left in the basket.",
+    "options": {
+      "A": "some",
+      "B": "any",
+      "C": "no",
+      "D": "much"
+    },
+    "correct_answer": "B",
+    "explanation": "Từ 'any' được dùng trong câu phủ định (aren't) với danh từ đếm được số nhiều (apples) để chỉ số lượng bằng không."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "If it rains tomorrow, we _____ at home.",
+    "options": {
+      "A": "stay",
+      "B": "stayed",
+      "C": "will stay",
+      "D": "are staying"
+    },
+    "correct_answer": "C",
+    "explanation": "Đây là câu điều kiện loại 1 diễn tả sự việc có thể xảy ra ở tương lai. Mệnh đề chính (kết quả) sử dụng thì tương lai đơn (will + V)."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "She is _____ late for work. She always arrives exactly on time.",
+    "options": {
+      "A": "always",
+      "B": "often",
+      "C": "sometimes",
+      "D": "never"
+    },
+    "correct_answer": "D",
+    "explanation": "Câu sau 'She always arrives exactly on time' (Cô ấy luôn đến đúng giờ) cho thấy cô ấy không bao giờ (never) đi làm muộn."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "My brother is _____ architect. He designs houses.",
+    "options": {
+      "A": "a",
+      "B": "an",
+      "C": "the",
+      "D": "(no article)"
+    },
+    "correct_answer": "B",
+    "explanation": "Dùng mạo từ 'an' trước danh từ đếm được số ít chỉ nghề nghiệp bắt đầu bằng một nguyên âm (architect)."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "You _____ turn off your mobile phone in the cinema.",
+    "options": {
+      "A": "must",
+      "B": "mustn't",
+      "C": "can",
+      "D": "don't have to"
+    },
+    "correct_answer": "A",
+    "explanation": "Động từ khuyết thiếu 'must' (phải) được dùng để diễn tả một quy định, sự bắt buộc mạnh mẽ (tắt điện thoại trong rạp phim)."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "Look at those dark clouds! It _____ soon.",
+    "options": {
+      "A": "will rain",
+      "B": "is raining",
+      "C": "is going to rain",
+      "D": "rains"
+    },
+    "correct_answer": "C",
+    "explanation": "Cấu trúc 'be going to + V' được dùng để dự đoán một sự việc sắp xảy ra dựa trên bằng chứng hiện tại (những đám mây đen)."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "He enjoys _____ football with his friends on Sundays.",
+    "options": {
+      "A": "play",
+      "B": "playing",
+      "C": "to play",
+      "D": "played"
+    },
+    "correct_answer": "B",
+    "explanation": "Sau động từ 'enjoy' (yêu thích), ta luôn phải sử dụng danh động từ (V-ing), ở đây là 'playing'."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "What _____ the weather like when you were in London?",
+    "options": {
+      "A": "is",
+      "B": "was",
+      "C": "were",
+      "D": "did"
+    },
+    "correct_answer": "B",
+    "explanation": "Câu hỏi về thời tiết trong quá khứ (khi bạn ở London) nên động từ 'to be' đi với danh từ số ít 'the weather' phải là 'was'."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Grammar",
+    "question": "I was very tired, _____ I went to bed early.",
+    "options": {
+      "A": "because",
+      "B": "but",
+      "C": "so",
+      "D": "although"
+    },
+    "correct_answer": "C",
+    "explanation": "Liên từ 'so' (vì vậy) được dùng để chỉ kết quả của một hành động. Mệt mỏi là nguyên nhân, nên kết quả là đi ngủ sớm."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "You need to buy a _____ before you get on the train.",
+    "options": {
+      "A": "receipt",
+      "B": "ticket",
+      "C": "map",
+      "D": "passport"
+    },
+    "correct_answer": "B",
+    "explanation": "Từ vựng về giao thông: 'ticket' (vé) là vật bắt buộc phải có để lên tàu. Các phương án khác không phù hợp trong ngữ cảnh này."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "If you have a problem with your teeth, you should go to the _____.",
+    "options": {
+      "A": "chemist",
+      "B": "nurse",
+      "C": "dentist",
+      "D": "surgeon"
+    },
+    "correct_answer": "C",
+    "explanation": "Từ vựng nghề nghiệp/y tế: 'dentist' (nha sĩ) là người chuyên khám và chữa các bệnh về răng miệng."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "I need to _____ my homework before I can go out to play.",
+    "options": {
+      "A": "make",
+      "B": "do",
+      "C": "write",
+      "D": "study"
+    },
+    "correct_answer": "B",
+    "explanation": "Sự kết hợp từ (collocation): 'do homework' là cụm từ cố định mang nghĩa 'làm bài tập về nhà'. Không dùng 'make'."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "It is going to rain. Don't forget to take your _____ with you.",
+    "options": {
+      "A": "sweater",
+      "B": "sunglasses",
+      "C": "umbrella",
+      "D": "scarf"
+    },
+    "correct_answer": "C",
+    "explanation": "Từ vựng thời tiết/đồ dùng: 'umbrella' (chiếc ô/dù) là vật dụng cần thiết khi trời chuẩn bị mưa ('rain')."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "How much does this shirt _____? I cannot find the price tag.",
+    "options": {
+      "A": "cost",
+      "B": "pay",
+      "C": "buy",
+      "D": "spend"
+    },
+    "correct_answer": "A",
+    "explanation": "Động từ 'cost' được dùng với chủ ngữ là đồ vật để diễn tả món đồ đó có giá bao nhiêu tiền."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "Could I have a _____ of water, please?",
+    "options": {
+      "A": "slice",
+      "B": "piece",
+      "C": "bowl",
+      "D": "glass"
+    },
+    "correct_answer": "D",
+    "explanation": "Từ vựng về vật chứa (containers): Nước là chất lỏng, thường dùng với 'glass' (cốc, ly thủy tinh). 'Slice' hay 'piece' dùng cho đồ ăn đặc."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "The movie was very _____. We all fell asleep in the cinema.",
+    "options": {
+      "A": "boring",
+      "B": "bored",
+      "C": "exciting",
+      "D": "excited"
+    },
+    "correct_answer": "A",
+    "explanation": "Tính từ đuôi '-ing' (boring) được dùng để miêu tả tính chất của bộ phim (nhàm chán), gây ra cảm giác buồn ngủ cho người xem."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "We booked a double _____ at the hotel for three nights.",
+    "options": {
+      "A": "space",
+      "B": "room",
+      "C": "place",
+      "D": "flat"
+    },
+    "correct_answer": "B",
+    "explanation": "Từ vựng du lịch: 'double room' là cụm từ cố định chỉ loại phòng có một giường đôi lớn trong khách sạn."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "I have a terrible _____. I need to take an aspirin.",
+    "options": {
+      "A": "cough",
+      "B": "cold",
+      "C": "headache",
+      "D": "sick"
+    },
+    "correct_answer": "C",
+    "explanation": "Từ vựng sức khỏe: Aspirin là loại thuốc giảm đau, phù hợp để uống khi bị 'headache' (đau đầu)."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "The post office is on the left, _____ to the bank.",
+    "options": {
+      "A": "near",
+      "B": "between",
+      "C": "opposite",
+      "D": "next"
+    },
+    "correct_answer": "D",
+    "explanation": "Chỉ phương hướng: 'next to' là cụm giới từ cố định mang nghĩa 'kế bên'. Các phương án khác không đi trực tiếp với từ 'to'."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "Can you _____ me a text message when you arrive at the airport?",
+    "options": {
+      "A": "give",
+      "B": "send",
+      "C": "make",
+      "D": "call"
+    },
+    "correct_answer": "B",
+    "explanation": "Sự kết hợp từ (collocation): 'send a text message' có nghĩa là gửi một tin nhắn văn bản."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "We had to wait for half an hour at the bus _____ in the rain.",
+    "options": {
+      "A": "station",
+      "B": "stop",
+      "C": "port",
+      "D": "platform"
+    },
+    "correct_answer": "B",
+    "explanation": "Từ vựng giao thông: 'bus stop' là điểm dừng xe buýt trên đường, khác với nhà ga xe lửa ('platform') hay bến cảng ('port')."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "My sister works as a _____ in a busy restaurant.",
+    "options": {
+      "A": "chef",
+      "B": "cooker",
+      "C": "mechanic",
+      "D": "waitress"
+    },
+    "correct_answer": "D",
+    "explanation": "Từ vựng nghề nghiệp: 'waitress' (nữ bồi bàn) là người phục vụ trong nhà hàng. Lưu ý 'cooker' là cái bếp lò, không phải người."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "Hurry up! The train _____ in ten minutes.",
+    "options": {
+      "A": "goes",
+      "B": "leaves",
+      "C": "moves",
+      "D": "drives"
+    },
+    "correct_answer": "B",
+    "explanation": "Động từ 'leave' (rời đi, khởi hành) là từ phổ biến và tự nhiên nhất dùng cho lịch trình của phương tiện giao thông công cộng."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "Can I _____ this jacket on to see if it fits me?",
+    "options": {
+      "A": "put",
+      "B": "wear",
+      "C": "try",
+      "D": "take"
+    },
+    "correct_answer": "C",
+    "explanation": "Cụm động từ (phrasal verb): 'try on' mang nghĩa là mặc thử đồ xem có vừa vặn không."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "Put your clothes in the _____ before your room gets too messy.",
+    "options": {
+      "A": "fridge",
+      "B": "bookcase",
+      "C": "wardrobe",
+      "D": "sink"
+    },
+    "correct_answer": "C",
+    "explanation": "Từ vựng đồ dùng trong nhà: 'wardrobe' là tủ quần áo, nơi dùng để cất giữ trang phục ('clothes')."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "The box is too _____ for me to lift. Can you help me?",
+    "options": {
+      "A": "heavy",
+      "B": "thick",
+      "C": "empty",
+      "D": "light"
+    },
+    "correct_answer": "A",
+    "explanation": "Tính từ miêu tả: 'heavy' (nặng) giải thích lý do tại sao người nói không thể tự mình nâng chiếc hộp lên ('lift')."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "What time do you usually have _____ in the evening?",
+    "options": {
+      "A": "breakfast",
+      "B": "lunch",
+      "C": "dinner",
+      "D": "snack"
+    },
+    "correct_answer": "C",
+    "explanation": "Từ vựng bữa ăn: 'dinner' là bữa ăn tối, tương ứng với khoảng thời gian 'in the evening' (vào buổi tối)."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "She was very _____ when she passed her driving test.",
+    "options": {
+      "A": "upset",
+      "B": "happy",
+      "C": "angry",
+      "D": "worried"
+    },
+    "correct_answer": "B",
+    "explanation": "Từ vựng chỉ cảm xúc: 'happy' (vui vẻ, hạnh phúc) là phản ứng tích cực hợp lý khi ai đó thi đỗ ('passed')."
+  },
+  {
+    "cefr_level": "A2",
+    "skill_category": "Vocabulary",
+    "question": "We decided to go _____ in the mountains during our winter holiday.",
+    "options": {
+      "A": "sailing",
+      "B": "skiing",
+      "C": "swimming",
+      "D": "surfing"
+    },
+    "correct_answer": "B",
+    "explanation": "Từ vựng thể thao/giải trí: 'skiing' (trượt tuyết) là hoạt động phù hợp diễn ra ở vùng núi ('mountains') vào mùa đông ('winter')."
+  }
+]
