@@ -1,0 +1,36 @@
+package com.kiovant.englishme.service;
+
+import com.google.firebase.auth.FirebaseToken;
+import com.kiovant.englishme.entity.User;
+import com.kiovant.englishme.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+
+@Service
+public class UserService {
+    @Autowired
+    private UserRepository userRepository;
+
+    public User syncUser(FirebaseToken token) {
+        String uid = token.getUid();
+
+        return userRepository.findByFirebaseUid(uid)
+                .map(existingUser -> {
+                    // Cập nhật thông tin cơ bản từ Firebase
+                    existingUser.setFullName((String) token.getClaims().get("name"));
+                    existingUser.setAvatarUrl((String) token.getClaims().get("picture"));
+                    return userRepository.save(existingUser);
+                })
+                .orElseGet(() -> {
+                    // Tạo mới nếu chưa tồn tại
+                    User newUser = new User();
+                    newUser.setFirebaseUid(uid);
+                    newUser.setEmail(token.getEmail());
+                    newUser.setFullName((String) token.getClaims().get("name"));
+                    newUser.setAvatarUrl((String) token.getClaims().get("picture"));
+                    newUser.setIsOnboarded(false); // Mặc định chưa làm test
+                    return userRepository.save(newUser);
+                });
+    }
+}
