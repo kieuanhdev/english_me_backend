@@ -26,7 +26,12 @@ public class User {
 
     // Quản lý trạng thái học tập
     private String cefrLevel = null;
+    /** Da hoan thanh bai placement test (onboarding) — khong dung de khoa tai khoan */
     private Boolean isOnboarded = false;
+
+    /** Khoa boi admin: chan dang nhap sync va API hoc vien */
+    @Column(nullable = false)
+    private Boolean accountLocked = false;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

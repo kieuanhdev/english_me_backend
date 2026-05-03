@@ -36,10 +36,14 @@ public class PlacementTestService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private UserService userService;
+
     @Transactional
     public StartTestResponse startTest(String firebaseUid) {
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        userService.requireAccountNotLocked(user);
 
         List<Question> selected = selectQuestions();
 
@@ -60,6 +64,7 @@ public class PlacementTestService {
     public AnswerQuestionResponse answerQuestion(UUID sessionId, AnswerQuestionRequest request) {
         TestSession session = testSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Test session not found"));
+        userService.requireAccountNotLocked(session.getUser());
 
         if (session.getStatus() == TestSession.TestStatus.COMPLETED) {
             throw new IllegalStateException("Test session already completed");
@@ -107,6 +112,7 @@ public class PlacementTestService {
     public TestResultResponse completeTest(UUID sessionId) {
         TestSession session = testSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Test session not found"));
+        userService.requireAccountNotLocked(session.getUser());
 
         if (session.getStatus() == TestSession.TestStatus.COMPLETED) {
             throw new IllegalStateException("Test session already completed");

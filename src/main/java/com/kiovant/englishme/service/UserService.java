@@ -4,11 +4,14 @@ import com.google.firebase.auth.FirebaseToken;
 import com.kiovant.englishme.entity.User;
 import com.kiovant.englishme.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 
 @Service
@@ -21,6 +24,7 @@ public class UserService {
 
         return userRepository.findByFirebaseUid(uid)
                 .map(existingUser -> {
+                    requireAccountNotLocked(existingUser);
                     // Cập nhật thông tin cơ bản từ Firebase
                     existingUser.setFullName((String) token.getClaims().get("name"));
                     existingUser.setAvatarUrl((String) token.getClaims().get("picture"));
@@ -34,8 +38,16 @@ public class UserService {
                     newUser.setFullName((String) token.getClaims().get("name"));
                     newUser.setAvatarUrl((String) token.getClaims().get("picture"));
                     newUser.setIsOnboarded(false); // Mặc định chưa làm test
+                    newUser.setAccountLocked(false);
                     return userRepository.save(newUser);
                 });
+    }
+
+    /** Chan API hoc vien khi tai khoan bi admin khoa */
+    public void requireAccountNotLocked(User user) {
+        if (user != null && Boolean.TRUE.equals(user.getAccountLocked())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tai khoan da bi khoa");
+        }
     }
 
     public List<User> findAllUsers() {
@@ -66,9 +78,9 @@ public class UserService {
                     if ("all".equals(normalizedStatus)) {
                         return true;
                     }
-                    boolean active = user.getIsOnboarded() != null && user.getIsOnboarded();
-                    return ("active".equals(normalizedStatus) && active)
-                            || ("locked".equals(normalizedStatus) && !active);
+                    boolean unlocked = !Boolean.TRUE.equals(user.getAccountLocked());
+                    return ("active".equals(normalizedStatus) && unlocked)
+                            || ("locked".equals(normalizedStatus) && !unlocked);
                 })
                 .filter(user -> {
                     if (normalizedKeyword.isEmpty()) {
@@ -82,5 +94,19 @@ public class UserService {
                             || uid.contains(normalizedKeyword);
                 })
                 .toList();
+    }
+
+    public void unlockUser(UUID id) {
+        userRepository.findById(id).ifPresent(user -> {
+            user.setAccountLocked(false);
+            userRepository.save(user);
+        });
+    }
+
+    public void lockUser(UUID id) {
+        userRepository.findById(id).ifPresent(user -> {
+            user.setAccountLocked(true);
+            userRepository.save(user);
+        });
     }
 }

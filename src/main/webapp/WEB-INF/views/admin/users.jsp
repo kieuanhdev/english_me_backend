@@ -85,6 +85,7 @@
                         <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Trinh do CEFR</th>
                         <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Ngay tham gia</th>
                         <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Trang thai</th>
+                        <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Hanh dong</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -92,7 +93,7 @@
                         if (users == null || users.isEmpty()) {
                     %>
                     <tr>
-                        <td colspan="5" class="px-8 py-10 text-center text-slate-500 font-semibold">
+                        <td colspan="6" class="px-8 py-10 text-center text-slate-500 font-semibold">
                             Chua co nguoi dung nao trong he thong.
                         </td>
                     </tr>
@@ -102,9 +103,9 @@
                                 String displayName = user.getFullName() != null && !user.getFullName().isBlank()
                                         ? user.getFullName() : "Nguoi dung chua cap nhat";
                                 String level = user.getCefrLevel() != null ? user.getCefrLevel() : "Chua xep lop";
-                                boolean active = user.getIsOnboarded() != null && user.getIsOnboarded();
-                                String statusText = active ? "Hoat dong" : "Da khoa";
-                                String statusClass = active
+                                boolean accountActive = !Boolean.TRUE.equals(user.getAccountLocked());
+                                String statusText = accountActive ? "Hoat dong" : "Da khoa";
+                                String statusClass = accountActive
                                         ? "bg-green-50 text-green-700"
                                         : "bg-red-50 text-red-700";
                                 String createdAt = user.getCreatedAt() != null ? user.getCreatedAt().format(dateFormatter) : "--/--/----";
@@ -130,6 +131,37 @@
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full <%= statusClass %>">
                                 <span class="w-1 h-1 rounded-full bg-current"></span><%= statusText %>
                             </span>
+                        </td>
+                        <td class="px-6 py-5 text-right">
+                            <div class="inline-flex flex-wrap items-center justify-end gap-2">
+                            <% if (accountActive) { %>
+                            <form method="post"
+                                  action="${pageContext.request.contextPath}/admin/users/<%= user.getId() %>/lock"
+                                  class="inline">
+                                <input type="hidden" name="cefr" value="<%= selectedCefr %>"/>
+                                <input type="hidden" name="status" value="<%= selectedStatus %>"/>
+                                <input type="hidden" name="q" value="<%= selectedKeyword %>"/>
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors">
+                                    <span class="material-symbols-outlined text-base">lock</span>
+                                    Khoa
+                                </button>
+                            </form>
+                            <% } else { %>
+                            <form method="post"
+                                  action="${pageContext.request.contextPath}/admin/users/<%= user.getId() %>/unlock"
+                                  class="inline">
+                                <input type="hidden" name="cefr" value="<%= selectedCefr %>"/>
+                                <input type="hidden" name="status" value="<%= selectedStatus %>"/>
+                                <input type="hidden" name="q" value="<%= selectedKeyword %>"/>
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
+                                    <span class="material-symbols-outlined text-base">lock_open</span>
+                                    Mo khoa
+                                </button>
+                            </form>
+                            <% } %>
+                            </div>
                         </td>
                     </tr>
                     <%
