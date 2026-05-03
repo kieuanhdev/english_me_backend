@@ -30,7 +30,8 @@
                 <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline">Quan ly nguoi dung</h1>
                 <p class="text-slate-500 font-medium">Theo doi va quan ly <%= totalUsers %> hoc vien trong he thong.</p>
             </div>
-            <button class="primary-gradient text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
+            <button type="button" id="openUserModal"
+                    class="primary-gradient text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
                 <span class="material-symbols-outlined text-xl">person_add</span>
                 Them nguoi dung
             </button>
@@ -140,7 +141,115 @@
             </div>
         </div>
     </div>
+
+    <div id="userCreateModal" class="fixed inset-0 z-[60] hidden items-center justify-center p-6">
+        <div id="userCreateBackdrop" class="absolute inset-0 bg-slate-900/40 backdrop-blur-md"></div>
+        <div class="relative bg-surface-container-lowest w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-8 pb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-tertiary-container bg-orange-100 px-3 py-1 rounded-full uppercase tracking-tighter">
+                        System Administration
+                    </span>
+                    <button type="button" id="closeUserModalIcon"
+                            class="material-symbols-outlined text-slate-400 hover:text-on-surface transition-colors">close</button>
+                </div>
+                <h2 class="text-3xl font-headline font-black text-primary leading-tight">Them nguoi dung moi</h2>
+                <p class="text-on-surface-variant text-sm mt-1">
+                    Register a new profile to the Scholar ecosystem with specific access credentials.
+                </p>
+            </div>
+
+            <form class="p-8 pt-4 space-y-8" action="#" method="post">
+                <div class="bg-surface-container-low p-6 rounded-xl space-y-5">
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-primary tracking-wide block ml-1">Ho va ten</label>
+                        <input class="w-full bg-surface-container-lowest border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/10"
+                               placeholder="e.g. Nguyen Van A" type="text"/>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-primary tracking-wide block ml-1">Email</label>
+                        <input class="w-full bg-surface-container-lowest border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/10"
+                               placeholder="nguyenvan@scholar.edu.vn" type="email"/>
+                    </div>
+                </div>
+
+                <div class="space-y-5">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-primary tracking-wide block ml-1">Mat khau</label>
+                            <input class="w-full bg-surface-container-high border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/10"
+                                   placeholder="••••••••" type="password"/>
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-primary tracking-wide block ml-1">Quyen han (Role)</label>
+                            <select class="w-full bg-surface-container-high border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/10">
+                                <option>Student</option>
+                                <option>Teacher</option>
+                                <option>Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-primary tracking-wide block ml-1">Trinh do CEFR dau vao</label>
+                        <div class="bg-surface-container-low p-4 rounded-xl flex items-center justify-between gap-3 flex-wrap">
+                            <div class="flex gap-2 flex-wrap">
+                                <button class="px-3 py-1 bg-surface-container-lowest rounded-lg text-xs font-bold text-slate-500" type="button">A1</button>
+                                <button class="px-3 py-1 bg-surface-container-lowest rounded-lg text-xs font-bold text-slate-500" type="button">A2</button>
+                                <button class="px-3 py-1 bg-primary text-white rounded-lg text-xs font-bold shadow-sm" type="button">B1</button>
+                                <button class="px-3 py-1 bg-surface-container-lowest rounded-lg text-xs font-bold text-slate-500" type="button">B2</button>
+                                <button class="px-3 py-1 bg-surface-container-lowest rounded-lg text-xs font-bold text-slate-500" type="button">C1</button>
+                                <button class="px-3 py-1 bg-surface-container-lowest rounded-lg text-xs font-bold text-slate-500" type="button">C2</button>
+                            </div>
+                            <span class="text-[10px] text-slate-400 italic">Intermediate Proficiency</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-4 pt-4">
+                    <button type="button" id="closeUserModalButton"
+                            class="text-slate-500 font-bold text-sm px-6 py-3 hover:bg-slate-100 rounded-xl transition-colors">Huy</button>
+                    <button class="bg-gradient-to-r from-primary to-primary-container text-white px-8 py-3 rounded-2xl font-bold text-sm shadow-lg shadow-primary/20"
+                            type="submit">
+                        Them thanh vien
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <%@ include file="layout/footer.jspf" %>
 </main>
+<script>
+    (function () {
+        const openBtn = document.getElementById("openUserModal");
+        const modal = document.getElementById("userCreateModal");
+        const backdrop = document.getElementById("userCreateBackdrop");
+        const closeIcon = document.getElementById("closeUserModalIcon");
+        const closeButton = document.getElementById("closeUserModalButton");
+
+        if (!openBtn || !modal) return;
+
+        const openModal = function () {
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        };
+
+        const closeModal = function () {
+            modal.classList.remove("flex");
+            modal.classList.add("hidden");
+        };
+
+        openBtn.addEventListener("click", openModal);
+        if (backdrop) backdrop.addEventListener("click", closeModal);
+        if (closeIcon) closeIcon.addEventListener("click", closeModal);
+        if (closeButton) closeButton.addEventListener("click", closeModal);
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && modal.classList.contains("flex")) {
+                closeModal();
+            }
+        });
+    })();
+</script>
 </body>
 </html>
