@@ -8,7 +8,12 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "desk")
+@Table(
+        name = "desk",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uq_desk_owner_cefr", columnNames = {"owner_id", "cefr_level"})
+        }
+)
 @Data
 public class Desk {
 
@@ -16,7 +21,11 @@ public class Desk {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "cefr_level", nullable = false, unique = true, length = 10)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
+    @Column(name = "cefr_level", nullable = false, length = 10)
     private String cefrLevel;
 
     @Column(nullable = false)

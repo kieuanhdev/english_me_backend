@@ -10,10 +10,12 @@ import java.util.UUID;
 
 public interface DeskRepository extends JpaRepository<Desk, UUID> {
 
-    Optional<Desk> findByCefrLevel(String cefrLevel);
+    Optional<Desk> findByIdAndOwner_Id(UUID id, UUID ownerId);
 
-    List<Desk> findAllByOrderBySortOrderAsc();
+    Optional<Desk> findByOwner_IdAndCefrLevel(UUID ownerId, String cefrLevel);
 
-    @Query("SELECT COALESCE(MAX(d.sortOrder), 0) FROM Desk d")
-    int findMaxSortOrder();
+    List<Desk> findAllByOwner_IdOrderBySortOrderAsc(UUID ownerId);
+
+    @Query("SELECT COALESCE(MAX(d.sortOrder), 0) FROM Desk d WHERE d.owner.id = :ownerId")
+    int findMaxSortOrderByOwnerId(UUID ownerId);
 }
