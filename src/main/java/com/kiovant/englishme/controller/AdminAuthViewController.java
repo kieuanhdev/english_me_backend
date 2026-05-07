@@ -2,7 +2,6 @@ package com.kiovant.englishme.controller;
 
 import com.kiovant.englishme.service.AdminAuthService;
 import jakarta.servlet.http.HttpSession;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,8 +13,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("/admin")
 public class AdminAuthViewController {
 
-    @Autowired
-    private AdminAuthService adminAuthService;
+    private final AdminAuthService adminAuthService;
+
+    public AdminAuthViewController(AdminAuthService adminAuthService) {
+        this.adminAuthService = adminAuthService;
+    }
 
     @GetMapping("/login")
     public String loginPage(HttpSession session) {

@@ -16,7 +16,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class DeskFlashcardService {
@@ -35,27 +38,22 @@ public class DeskFlashcardService {
         this.userRepository = userRepository;
     }
 
+    // ── Desk listing ──────────────────────────────────────────────
+
     @Transactional(readOnly = true)
     public List<DeskResponse> listDesks(String firebaseUid) {
         User owner = getUserByFirebaseUidOrThrow(firebaseUid);
-        return deskRepository.findAll().stream()
-                .filter(d -> d.getOwner() == null || d.getOwner().getId().equals(owner.getId()))
-                .sorted((a, b) -> Integer.compare(a.getSortOrder(), b.getSortOrder()))
-                .map(this::toDeskResponse)
-                .toList();
+        List<Desk> desks = deskRepository.findAllAccessibleByOwner(owner.getId());
+        return toDeskResponses(desks);
     }
 
-    /**
-     * Legacy admin scope: desks not bound to a specific owner.
-     */
     @Transactional(readOnly = true)
     public List<DeskResponse> listDesks() {
-        return deskRepository.findAll().stream()
-                .filter(d -> d.getOwner() == null)
-                .sorted((a, b) -> Integer.compare(a.getSortOrder(), b.getSortOrder()))
-                .map(this::toDeskResponse)
-                .toList();
+        List<Desk> desks = deskRepository.findAllByOwnerIsNullOrderBySortOrderAsc();
+        return toDeskResponses(desks);
     }
+
+    // ── Desk lookup ───────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public Desk getDeskOrThrow(UUID id, UUID ownerId) {
@@ -63,9 +61,6 @@ public class DeskFlashcardService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Desk not found"));
     }
 
-    /**
-     * Legacy admin scope: desk without owner.
-     */
     @Transactional(readOnly = true)
     public Desk getDeskOrThrow(UUID id) {
         Desk desk = deskRepository.findById(id)
@@ -76,92 +71,51 @@ public class DeskFlashcardService {
         return desk;
     }
 
+    // ── Flashcard listing ─────────────────────────────────────────
+
     @Transactional(readOnly = true)
     public Page<FlashcardResponse> listFlashcardsPage(String firebaseUid, UUID deskId, int page, int size) {
         getDeskReadableOrThrow(firebaseUid, deskId);
-        return flashcardRepository
-                .findByDesk_Id(deskId, PageRequest.of(page, size, Sort.by("word")))
-                .map(fc -> toFlashcardResponse(fc, deskId));
+        return listFlashcardsForDesk(deskId, page, size);
     }
 
-    /**
-     * Legacy admin scope: desk without owner.
-     */
     @Transactional(readOnly = true)
     public Page<FlashcardResponse> listFlashcardsPage(UUID deskId, int page, int size) {
         getDeskOrThrow(deskId);
+        return listFlashcardsForDesk(deskId, page, size);
+    }
+
+    private Page<FlashcardResponse> listFlashcardsForDesk(UUID deskId, int page, int size) {
         return flashcardRepository
                 .findByDesk_Id(deskId, PageRequest.of(page, size, Sort.by("word")))
                 .map(fc -> toFlashcardResponse(fc, deskId));
     }
 
-    private DeskResponse toDeskResponse(Desk d) {
-        long n = flashcardRepository.countByDesk_Id(d.getId());
-        return new DeskResponse(
-                d.getId(),
-                d.getCefrLevel(),
-                d.getTitle(),
-                d.getSortOrder(),
-                d.getCreatedAt(),
-                n);
-    }
+    // ── Desk CRUD ─────────────────────────────────────────────────
 
     @Transactional
     public DeskResponse createDesk(String firebaseUid, CreateDeskRequest req) {
         User owner = getUserByFirebaseUidOrThrow(firebaseUid);
-
-        if (req.getCefrLevel() == null || req.getCefrLevel().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cefrLevel is required");
-        }
-        String cefr = req.getCefrLevel().trim().toUpperCase();
+        requireCefrLevel(req);
+        requireNonNegativeSortOrder(req);
+        String cefr = req.cefrLevel().trim().toUpperCase();
         if (deskRepository.findByOwner_IdAndCefrLevel(owner.getId(), cefr).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Desk already exists for CEFR " + cefr + " on your account");
         }
-
-        Desk desk = new Desk();
-        desk.setOwner(owner);
-        desk.setCefrLevel(cefr);
-        String title = req.getTitle();
-        if (title == null || title.isBlank()) {
-            title = "Desk " + cefr;
-        }
-        desk.setTitle(title.trim());
-        if (req.getSortOrder() != null && req.getSortOrder() < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sortOrder must be >= 0");
-        }
-        int order = req.getSortOrder() != null ? req.getSortOrder() : deskRepository.findMaxSortOrderByOwnerId(owner.getId()) + 1;
-        desk.setSortOrder(order);
-
-        desk = deskRepository.save(desk);
-        return toDeskResponse(desk);
+        int defaultOrder = deskRepository.findMaxSortOrderByOwnerId(owner.getId()) + 1;
+        return buildAndSaveDesk(req, owner, cefr, defaultOrder);
     }
 
-    /**
-     * Legacy admin scope: create desk without owner.
-     */
     @Transactional
     public DeskResponse createDesk(CreateDeskRequest req) {
-        if (req.getCefrLevel() == null || req.getCefrLevel().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cefrLevel is required");
-        }
-        String cefr = req.getCefrLevel().trim().toUpperCase();
+        requireCefrLevel(req);
+        requireNonNegativeSortOrder(req);
+        String cefr = req.cefrLevel().trim().toUpperCase();
         if (deskRepository.findAll().stream().anyMatch(d -> d.getOwner() == null && cefr.equalsIgnoreCase(d.getCefrLevel()))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Desk already exists for CEFR " + cefr);
         }
-        Desk desk = new Desk();
-        desk.setCefrLevel(cefr);
-        String title = req.getTitle();
-        if (title == null || title.isBlank()) {
-            title = "Desk " + cefr;
-        }
-        desk.setTitle(title.trim());
-        if (req.getSortOrder() != null && req.getSortOrder() < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sortOrder must be >= 0");
-        }
-        int order = req.getSortOrder() != null ? req.getSortOrder() : listDesks().stream().map(DeskResponse::getSortOrder).max(Integer::compareTo).orElse(0) + 1;
-        desk.setSortOrder(order);
-        desk = deskRepository.save(desk);
-        return toDeskResponse(desk);
+        int defaultOrder = deskRepository.findMaxSortOrderWhereOwnerIsNull() + 1;
+        return buildAndSaveDesk(req, null, cefr, defaultOrder);
     }
 
     @Transactional
@@ -169,8 +123,8 @@ public class DeskFlashcardService {
         User owner = getUserByFirebaseUidOrThrow(firebaseUid);
         Desk desk = getDeskOrThrow(deskId, owner.getId());
 
-        if (req.getCefrLevel() != null && !req.getCefrLevel().isBlank()) {
-            String cefr = req.getCefrLevel().trim().toUpperCase();
+        if (req.cefrLevel() != null && !req.cefrLevel().isBlank()) {
+            String cefr = req.cefrLevel().trim().toUpperCase();
             deskRepository.findByOwner_IdAndCefrLevel(owner.getId(), cefr)
                     .filter(existing -> !existing.getId().equals(deskId))
                     .ifPresent(existing -> {
@@ -179,22 +133,22 @@ public class DeskFlashcardService {
             desk.setCefrLevel(cefr);
         }
 
-        if (req.getTitle() != null) {
-            String title = req.getTitle().trim();
+        if (req.title() != null) {
+            String title = req.title().trim();
             if (title.isEmpty()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "title must not be blank");
             }
             desk.setTitle(title);
         }
 
-        if (req.getSortOrder() != null) {
-            if (req.getSortOrder() < 0) {
+        if (req.sortOrder() != null) {
+            if (req.sortOrder() < 0) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sortOrder must be >= 0");
             }
-            desk.setSortOrder(req.getSortOrder());
+            desk.setSortOrder(req.sortOrder());
         }
 
-        return toDeskResponse(deskRepository.save(desk));
+        return toDeskResponses(List.of(deskRepository.save(desk))).get(0);
     }
 
     @Transactional
@@ -204,20 +158,62 @@ public class DeskFlashcardService {
         deskRepository.delete(desk);
     }
 
+    // ── Flashcard CRUD ────────────────────────────────────────────
+
     @Transactional
     public FlashcardResponse createFlashcard(String firebaseUid, UUID deskId, CreateFlashcardRequest req) {
         User owner = getUserByFirebaseUidOrThrow(firebaseUid);
+        Desk desk = getDeskOrThrow(deskId, owner.getId());
+        return buildAndSaveFlashcard(desk, req, deskId);
+    }
 
-        if (req.getWord() == null || req.getWord().isBlank()) {
+    @Transactional
+    public FlashcardResponse createFlashcard(UUID deskId, CreateFlashcardRequest req) {
+        Desk desk = getDeskOrThrow(deskId);
+        return buildAndSaveFlashcard(desk, req, deskId);
+    }
+
+    // ── Private helpers ───────────────────────────────────────────
+
+    private List<DeskResponse> toDeskResponses(List<Desk> desks) {
+        if (desks.isEmpty()) {
+            return List.of();
+        }
+        Set<UUID> deskIds = desks.stream().map(Desk::getId).collect(Collectors.toSet());
+        Map<UUID, Long> counts = flashcardRepository.countByDeskIdsAsMap(deskIds);
+        return desks.stream()
+                .map(d -> new DeskResponse(
+                        d.getId(),
+                        d.getCefrLevel(),
+                        d.getTitle(),
+                        d.getSortOrder(),
+                        d.getCreatedAt(),
+                        counts.getOrDefault(d.getId(), 0L)))
+                .toList();
+    }
+
+    private DeskResponse buildAndSaveDesk(CreateDeskRequest req, User owner, String cefr, int defaultSortOrder) {
+        Desk desk = new Desk();
+        desk.setOwner(owner);
+        desk.setCefrLevel(cefr);
+        String title = req.title();
+        if (title == null || title.isBlank()) {
+            title = "Desk " + cefr;
+        }
+        desk.setTitle(title.trim());
+        int order = req.sortOrder() != null ? req.sortOrder() : defaultSortOrder;
+        desk.setSortOrder(order);
+        return toDeskResponses(List.of(deskRepository.save(desk))).get(0);
+    }
+
+    private FlashcardResponse buildAndSaveFlashcard(Desk desk, CreateFlashcardRequest req, UUID deskId) {
+        if (req.word() == null || req.word().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "word is required");
         }
-        if (req.getCefr() == null || req.getCefr().isBlank()) {
+        if (req.cefr() == null || req.cefr().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cefr is required");
         }
-
-        Desk desk = getDeskOrThrow(deskId, owner.getId());
-
-        String word = req.getWord().trim();
+        String word = req.word().trim();
         if (flashcardRepository.existsByDesk_IdAndWord(deskId, word)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Flashcard already exists for this word on this desk");
         }
@@ -225,54 +221,32 @@ public class DeskFlashcardService {
         Flashcard fc = new Flashcard();
         fc.setDesk(desk);
         fc.setWord(word);
-        fc.setCefr(req.getCefr().trim().toUpperCase());
-        fc.setPosJson(emptyToNull(req.getPos()));
-        fc.setAllLevelsJson(emptyToNull(req.getAllLevels()));
-        fc.setIpa(trimToNull(req.getIpa()));
-        fc.setAudioUrl(trimToNull(req.getAudioUrl()));
-        fc.setDefinition(trimToNull(req.getDefinition()));
-        fc.setExample(trimToNull(req.getExample()));
-        fc.setTopic(trimToNull(req.getTopic()));
-        fc.setVietnamese(trimToNull(req.getVietnamese()));
-        fc.setViDefinition(trimToNull(req.getViDefinition()));
-        fc.setViExample(trimToNull(req.getViExample()));
+        fc.setCefr(req.cefr().trim().toUpperCase());
+        fc.setPosJson(emptyToNull(req.pos()));
+        fc.setAllLevelsJson(emptyToNull(req.allLevels()));
+        fc.setIpa(trimToNull(req.ipa()));
+        fc.setAudioUrl(trimToNull(req.audioUrl()));
+        fc.setDefinition(trimToNull(req.definition()));
+        fc.setExample(trimToNull(req.example()));
+        fc.setTopic(trimToNull(req.topic()));
+        fc.setVietnamese(trimToNull(req.vietnamese()));
+        fc.setViDefinition(trimToNull(req.viDefinition()));
+        fc.setViExample(trimToNull(req.viExample()));
 
         fc = flashcardRepository.save(fc);
         return toFlashcardResponse(fc, deskId);
     }
 
-    /**
-     * Legacy admin scope: desk without owner.
-     */
-    @Transactional
-    public FlashcardResponse createFlashcard(UUID deskId, CreateFlashcardRequest req) {
-        if (req.getWord() == null || req.getWord().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "word is required");
+    private static void requireCefrLevel(CreateDeskRequest req) {
+        if (req.cefrLevel() == null || req.cefrLevel().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cefrLevel is required");
         }
-        if (req.getCefr() == null || req.getCefr().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cefr is required");
+    }
+
+    private static void requireNonNegativeSortOrder(CreateDeskRequest req) {
+        if (req.sortOrder() != null && req.sortOrder() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sortOrder must be >= 0");
         }
-        Desk desk = getDeskOrThrow(deskId);
-        String word = req.getWord().trim();
-        if (flashcardRepository.existsByDesk_IdAndWord(deskId, word)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Flashcard already exists for this word on this desk");
-        }
-        Flashcard fc = new Flashcard();
-        fc.setDesk(desk);
-        fc.setWord(word);
-        fc.setCefr(req.getCefr().trim().toUpperCase());
-        fc.setPosJson(emptyToNull(req.getPos()));
-        fc.setAllLevelsJson(emptyToNull(req.getAllLevels()));
-        fc.setIpa(trimToNull(req.getIpa()));
-        fc.setAudioUrl(trimToNull(req.getAudioUrl()));
-        fc.setDefinition(trimToNull(req.getDefinition()));
-        fc.setExample(trimToNull(req.getExample()));
-        fc.setTopic(trimToNull(req.getTopic()));
-        fc.setVietnamese(trimToNull(req.getVietnamese()));
-        fc.setViDefinition(trimToNull(req.getViDefinition()));
-        fc.setViExample(trimToNull(req.getViExample()));
-        fc = flashcardRepository.save(fc);
-        return toFlashcardResponse(fc, deskId);
     }
 
     private User getUserByFirebaseUidOrThrow(String firebaseUid) {

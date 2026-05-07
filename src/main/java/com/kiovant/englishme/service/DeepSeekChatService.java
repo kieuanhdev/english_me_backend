@@ -21,27 +21,25 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class GroqChatService {
+public class DeepSeekChatService {
 
-    private static final URI GROQ_CHAT_URI = URI.create("https://api.groq.com/openai/v1/chat/completions");
-    private static final int HARD_TPM_LIMIT = 8000;
-    private static final int SAFE_INPUT_BUDGET = 6000;
-    private static final int MIN_COMPLETION_TOKENS = 128;
-    private static final int MAX_COMPLETION_TOKENS = 1024;
+    private static final URI DEEPSEEK_CHAT_URI = URI.create("https://api.deepseek.com/v1/chat/completions");
+    private static final int MAX_HISTORY = 20;
+    private static final int MAX_COMPLETION_TOKENS = 2048;
 
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
 
-    @Value("${englishme.ai.groq.api-key:}")
-    private String groqApiKey;
+    @Value("${englishme.ai.deepseek.api-key:}")
+    private String apiKey;
 
-    @Value("${englishme.ai.groq.model:openai/gpt-oss-120b}")
+    @Value("${englishme.ai.deepseek.model:deepseek-chat}")
     private String model;
 
     @Value("${englishme.ai.teacher-system-prompt:You are an English teacher. Correct grammar, explain clearly, give practical examples, and keep responses concise and friendly for English learners.}")
     private String teacherSystemPrompt;
 
-    public GroqChatService(ObjectMapper objectMapper) {
+    public DeepSeekChatService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(20))
@@ -49,13 +47,13 @@ public class GroqChatService {
     }
 
     public ChatResponse chat(ChatRequest request) {
-        if (groqApiKey == null || groqApiKey.isBlank()) {
+        if (apiKey == null || apiKey.isBlank()) {
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Missing GROQ API key. Set englishme.ai.groq.api-key or GROQ_API_KEY."
+                    "Missing DeepSeek API key. Set englishme.ai.deepseek.api-key or DEEPSEEK_API_KEY."
             );
         }
-        if (request == null || request.getMessage() == null || request.getMessage().isBlank()) {
+        if (request == null || request.message() == null || request.message().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "message is required");
         }
 
@@ -65,20 +63,19 @@ public class GroqChatService {
                 "content", teacherSystemPrompt
         ));
 
-        if (request.getHistory() != null) {
-            // Keep only the most recent history first to avoid Groq TPM overflow.
-            List<ChatMessageDto> history = request.getHistory();
-            int start = Math.max(history.size() - 12, 0);
+        if (request.history() != null) {
+            List<ChatMessageDto> history = request.history();
+            int start = Math.max(history.size() - MAX_HISTORY, 0);
             for (int i = start; i < history.size(); i++) {
                 ChatMessageDto msg = history.get(i);
-                if (msg == null || msg.getRole() == null || msg.getContent() == null) {
+                if (msg == null || msg.role() == null || msg.content() == null) {
                     continue;
                 }
-                String role = msg.getRole().trim().toLowerCase();
+                String role = msg.role().trim().toLowerCase();
                 if (!role.equals("user") && !role.equals("assistant")) {
                     continue;
                 }
-                String content = msg.getContent().trim();
+                String content = msg.content().trim();
                 if (content.isEmpty()) {
                     continue;
                 }
@@ -86,44 +83,27 @@ public class GroqChatService {
             }
         }
 
-        String userMessage = truncateText(request.getMessage().trim(), 1200);
+        String userMessage = truncateText(request.message().trim(), 2000);
         messages.add(Map.of(
                 "role", "user",
                 "content", userMessage
         ));
 
-        int promptTokens = estimateTokens(messages);
-        while (promptTokens > SAFE_INPUT_BUDGET && messages.size() > 2) {
-            // Remove oldest history item, keep system + latest user message.
-            messages.remove(1);
-            promptTokens = estimateTokens(messages);
-        }
-
-        int maxCompletionTokens = Math.min(MAX_COMPLETION_TOKENS, HARD_TPM_LIMIT - promptTokens - 200);
-        if (maxCompletionTokens < MIN_COMPLETION_TOKENS) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Input is too long. Please shorten your message or send less chat history."
-            );
-        }
-
         Map<String, Object> body = Map.of(
                 "model", model,
                 "messages", messages,
-                "temperature", 1,
-                "max_completion_tokens", maxCompletionTokens,
-                "top_p", 1,
-                "reasoning_effort", "medium",
+                "temperature", 0.7,
+                "max_tokens", MAX_COMPLETION_TOKENS,
                 "stream", false
         );
 
         try {
             String jsonBody = objectMapper.writeValueAsString(body);
             HttpRequest httpRequest = HttpRequest.newBuilder()
-                    .uri(GROQ_CHAT_URI)
+                    .uri(DEEPSEEK_CHAT_URI)
                     .timeout(Duration.ofSeconds(60))
                     .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + groqApiKey.trim())
+                    .header("Authorization", "Bearer " + apiKey.trim())
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                     .build();
 
@@ -131,7 +111,7 @@ public class GroqChatService {
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_GATEWAY,
-                        "Groq error: HTTP " + response.statusCode() + " - " + response.body()
+                        "DeepSeek error: HTTP " + response.statusCode() + " - " + response.body()
                 );
             }
 
@@ -139,14 +119,14 @@ public class GroqChatService {
             JsonNode contentNode = root.path("choices").path(0).path("message").path("content");
             String reply = contentNode.isMissingNode() || contentNode.isNull() ? "" : contentNode.asText();
             if (reply.isBlank()) {
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Groq returned empty reply");
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "DeepSeek returned empty reply");
             }
             return new ChatResponse(reply, model);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to call Groq: " + ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to call DeepSeek: " + ex.getMessage(), ex);
         } catch (IOException ex) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to call Groq: " + ex.getMessage(), ex);
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to call DeepSeek: " + ex.getMessage(), ex);
         }
     }
 
@@ -155,21 +135,5 @@ public class GroqChatService {
             return input;
         }
         return input.substring(0, maxChars);
-    }
-
-    private static int estimateTokens(List<Map<String, String>> messages) {
-        int chars = 0;
-        for (Map<String, String> message : messages) {
-            String role = message.get("role");
-            String content = message.get("content");
-            if (role != null) {
-                chars += role.length();
-            }
-            if (content != null) {
-                chars += content.length();
-            }
-        }
-        // Conservative approximation for multilingual text.
-        return (chars / 3) + 80;
     }
 }

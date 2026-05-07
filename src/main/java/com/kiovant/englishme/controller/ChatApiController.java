@@ -1,42 +1,29 @@
 package com.kiovant.englishme.controller;
 
-import com.google.firebase.auth.FirebaseAuth;
 import com.kiovant.englishme.dto.ChatRequest;
 import com.kiovant.englishme.dto.ChatResponse;
-import com.kiovant.englishme.service.GroqChatService;
+import com.kiovant.englishme.service.DeepSeekChatService;
+import com.kiovant.englishme.service.FirebaseAuthHelper;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
-
-import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @RestController
 @RequestMapping("/api/chat")
 public class ChatApiController {
 
-    private final GroqChatService groqChatService;
+    private final DeepSeekChatService chatService;
+    private final FirebaseAuthHelper authHelper;
 
-    public ChatApiController(GroqChatService groqChatService) {
-        this.groqChatService = groqChatService;
+    public ChatApiController(DeepSeekChatService chatService, FirebaseAuthHelper authHelper) {
+        this.chatService = chatService;
+        this.authHelper = authHelper;
     }
 
-    /** Chat với AI (ngữ cảnh giáo viên tiếng Anh) — yêu cầu Bearer Firebase */
     @PostMapping
     public ChatResponse chat(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody ChatRequest body
-    ) throws Exception {
-        verifyBearer(authorization);
-        return groqChatService.chat(body);
-    }
-
-    private static void verifyBearer(String authorization) throws Exception {
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            throw new ResponseStatusException(UNAUTHORIZED, "Authorization Bearer token required");
-        }
-        String idToken = authorization.substring(7).trim();
-        if (idToken.isEmpty()) {
-            throw new ResponseStatusException(UNAUTHORIZED, "Missing token");
-        }
-        FirebaseAuth.getInstance().verifyIdToken(idToken);
+    ) {
+        authHelper.verifyBearer(authorization);
+        return chatService.chat(body);
     }
 }

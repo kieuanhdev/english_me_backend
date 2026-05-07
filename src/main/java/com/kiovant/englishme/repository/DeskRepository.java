@@ -16,6 +16,14 @@ public interface DeskRepository extends JpaRepository<Desk, UUID> {
 
     List<Desk> findAllByOwner_IdOrderBySortOrderAsc(UUID ownerId);
 
+    List<Desk> findAllByOwnerIsNullOrderBySortOrderAsc();
+
+    @Query("SELECT d FROM Desk d WHERE d.owner.id = :ownerId OR d.owner IS NULL ORDER BY d.sortOrder ASC")
+    List<Desk> findAllAccessibleByOwner(UUID ownerId);
+
     @Query("SELECT COALESCE(MAX(d.sortOrder), 0) FROM Desk d WHERE d.owner.id = :ownerId")
     int findMaxSortOrderByOwnerId(UUID ownerId);
+
+    @Query("SELECT COALESCE(MAX(d.sortOrder), 0) FROM Desk d WHERE d.owner IS NULL")
+    int findMaxSortOrderWhereOwnerIsNull();
 }

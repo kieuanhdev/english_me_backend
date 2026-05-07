@@ -5,6 +5,7 @@
     boolean overviewActive = uri.equals(adminRoot) || uri.equals(adminRoot + "/");
     boolean desksActive = uri.startsWith(adminRoot + "/desks");
     boolean usersActive = uri.startsWith(adminRoot + "/users");
+    boolean pronunciationActive = uri.startsWith(adminRoot + "/pronunciation");
 %>
 <aside class="fixed left-0 top-0 h-screen w-64 bg-surface-container-lowest p-6">
     <div class="flex items-center gap-3 mb-8">
@@ -20,6 +21,7 @@
         <a href="${pageContext.request.contextPath}/admin" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= overviewActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">dashboard</span>Overview</a>
         <a href="${pageContext.request.contextPath}/admin/desks" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= desksActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">menu_book</span>Desk / Vocabulary</a>
         <a href="${pageContext.request.contextPath}/admin/users" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= usersActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">group</span>Users</a>
+        <a href="${pageContext.request.contextPath}/admin/pronunciation" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= pronunciationActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">graphic_eq</span>Pronunciation</a>
         <a href="#" class="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100"><span class="material-symbols-outlined">assessment</span>Reports</a>
     </nav>
 </aside>

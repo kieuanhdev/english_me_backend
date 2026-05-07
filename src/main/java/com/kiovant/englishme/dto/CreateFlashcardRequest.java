@@ -1,22 +1,19 @@
 package com.kiovant.englishme.dto;
 
-import lombok.Data;
-
 import java.util.List;
 import java.util.Map;
 
-@Data
-public class CreateFlashcardRequest {
-    private String word;
-    private String cefr;
-    private List<String> pos;
-    private List<Map<String, Object>> allLevels;
-    private String ipa;
-    private String audioUrl;
-    private String definition;
-    private String example;
-    private String topic;
-    private String vietnamese;
-    private String viDefinition;
-    private String viExample;
-}
+public record CreateFlashcardRequest(
+        String word,
+        String cefr,
+        List<String> pos,
+        List<Map<String, Object>> allLevels,
+        String ipa,
+        String audioUrl,
+        String definition,
+        String example,
+        String topic,
+        String vietnamese,
+        String viDefinition,
+        String viExample
+) {}

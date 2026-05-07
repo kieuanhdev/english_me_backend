@@ -1,12 +1,7 @@
 package com.kiovant.englishme.dto;
 
-import lombok.Data;
-
-@Data
-public class CreateDeskRequest {
-    /** Ví dụ A1, B2 — duy nhất trong phạm vi mỗi user */
-    private String cefrLevel;
-    private String title;
-    /** Nếu null, gán max(sort_order) + 1 */
-    private Integer sortOrder;
-}
+public record CreateDeskRequest(
+        String cefrLevel,
+        String title,
+        Integer sortOrder
+) {}

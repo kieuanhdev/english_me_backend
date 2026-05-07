@@ -3,7 +3,6 @@ package com.kiovant.englishme.service;
 import com.kiovant.englishme.dto.*;
 import com.kiovant.englishme.entity.*;
 import com.kiovant.englishme.repository.*;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,20 +23,25 @@ public class PlacementTestService {
         // Mở rộng sau: B1 -> 2, B2 -> 2
     }
 
-    @Autowired
-    private QuestionRepository questionRepository;
+    private final QuestionRepository questionRepository;
+    private final TestSessionRepository testSessionRepository;
+    private final TestAnswerRepository testAnswerRepository;
+    private final UserRepository userRepository;
+    private final UserService userService;
 
-    @Autowired
-    private TestSessionRepository testSessionRepository;
-
-    @Autowired
-    private TestAnswerRepository testAnswerRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private UserService userService;
+    public PlacementTestService(
+            QuestionRepository questionRepository,
+            TestSessionRepository testSessionRepository,
+            TestAnswerRepository testAnswerRepository,
+            UserRepository userRepository,
+            UserService userService
+    ) {
+        this.questionRepository = questionRepository;
+        this.testSessionRepository = testSessionRepository;
+        this.testAnswerRepository = testAnswerRepository;
+        this.userRepository = userRepository;
+        this.userService = userService;
+    }
 
     @Transactional
     public StartTestResponse startTest(String firebaseUid) {
@@ -50,14 +54,11 @@ public class PlacementTestService {
         TestSession session = new TestSession();
         session.setUser(user);
         session.setStatus(TestSession.TestStatus.IN_PROGRESS);
-        session.setQuestionIds(selected.stream().map(Question::getId).collect(Collectors.toList()));
+        session.setQuestionIds(selected.stream().map(Question::getId).toList());
         testSessionRepository.save(session);
 
-        StartTestResponse response = new StartTestResponse();
-        response.setSessionId(session.getId());
-        response.setTotalQuestions(selected.size());
-        response.setQuestions(selected.stream().map(this::toDto).collect(Collectors.toList()));
-        return response;
+        var questions = selected.stream().map(this::toDto).toList();
+        return new StartTestResponse(session.getId(), questions, questions.size());
     }
 
     @Transactional
@@ -70,7 +71,7 @@ public class PlacementTestService {
             throw new IllegalStateException("Test session already completed");
         }
 
-        UUID questionId = request.getQuestionId();
+        UUID questionId = request.questionId();
 
         // Kiểm tra câu hỏi có thuộc session này không
         if (session.getQuestionIds() == null || !session.getQuestionIds().contains(questionId)) {
@@ -85,7 +86,7 @@ public class PlacementTestService {
             throw new IllegalStateException("Question already answered");
         }
 
-        String selected = request.getSelectedAnswer();
+        String selected = request.selectedAnswer();
         boolean correct = question.getCorrectAnswer().equals(selected);
 
         TestAnswer answer = new TestAnswer();
@@ -97,15 +98,15 @@ public class PlacementTestService {
 
         long answeredCount = testAnswerRepository.countByTestSession(session);
 
-        AnswerQuestionResponse response = new AnswerQuestionResponse();
-        response.setQuestionId(questionId);
-        response.setSelectedAnswer(selected);
-        response.setCorrectAnswer(question.getCorrectAnswer());
-        response.setCorrect(correct);
-        response.setExplanation(question.getExplanation());
-        response.setAnsweredCount((int) answeredCount);
-        response.setTotalQuestions(session.getQuestionIds().size());
-        return response;
+        return new AnswerQuestionResponse(
+                questionId,
+                selected,
+                question.getCorrectAnswer(),
+                correct,
+                question.getExplanation(),
+                (int) answeredCount,
+                session.getQuestionIds().size()
+        );
     }
 
     @Transactional
@@ -196,13 +197,13 @@ public class PlacementTestService {
     }
 
     private QuestionDto toDto(Question q) {
-        QuestionDto dto = new QuestionDto();
-        dto.setId(q.getId());
-        dto.setCefrLevel(q.getCefrLevel());
-        dto.setSkillCategory(q.getSkillCategory());
-        dto.setQuestion(q.getQuestion());
-        dto.setOptions(q.getOptions());
-        return dto;
+        return new QuestionDto(
+                q.getId(),
+                q.getCefrLevel(),
+                q.getSkillCategory(),
+                q.getQuestion(),
+                q.getOptions()
+        );
     }
 
     private TestResultResponse buildResult(TestSession session, List<Question> questions, List<TestAnswer> answers) {
@@ -210,25 +211,23 @@ public class PlacementTestService {
                 .collect(Collectors.toMap(a -> a.getQuestion().getId(), a -> a));
 
         List<TestResultResponse.AnswerReview> reviews = questions.stream().map(q -> {
-            TestResultResponse.AnswerReview review = new TestResultResponse.AnswerReview();
-            review.setQuestionId(q.getId());
-            review.setQuestion(q.getQuestion());
-            review.setCorrectAnswer(q.getCorrectAnswer());
-            review.setExplanation(q.getExplanation());
             TestAnswer ans = answerByQuestion.get(q.getId());
-            if (ans != null) {
-                review.setSelectedAnswer(ans.getSelectedAnswer());
-                review.setCorrect(Boolean.TRUE.equals(ans.getIsCorrect()));
-            }
-            return review;
-        }).collect(Collectors.toList());
+            return new TestResultResponse.AnswerReview(
+                    q.getId(),
+                    q.getQuestion(),
+                    ans != null ? ans.getSelectedAnswer() : null,
+                    q.getCorrectAnswer(),
+                    ans != null && Boolean.TRUE.equals(ans.getIsCorrect()),
+                    q.getExplanation()
+            );
+        }).toList();
 
-        TestResultResponse response = new TestResultResponse();
-        response.setSessionId(session.getId());
-        response.setResultLevel(session.getResultLevel());
-        response.setScore(session.getScore());
-        response.setTotalQuestions(questions.size());
-        response.setReview(reviews);
-        return response;
+        return new TestResultResponse(
+                session.getId(),
+                session.getResultLevel(),
+                session.getScore() != null ? session.getScore() : 0,
+                questions.size(),
+                reviews
+        );
     }
 }

@@ -1,7 +1,5 @@
 package com.kiovant.englishme.controller;
 
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
 import com.kiovant.englishme.dto.CreateDeskRequest;
 import com.kiovant.englishme.dto.CreateFlashcardRequest;
@@ -9,11 +7,11 @@ import com.kiovant.englishme.dto.DeskResponse;
 import com.kiovant.englishme.dto.FlashcardResponse;
 import com.kiovant.englishme.dto.UpdateDeskRequest;
 import com.kiovant.englishme.service.DeskFlashcardService;
+import com.kiovant.englishme.service.FirebaseAuthHelper;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,17 +21,19 @@ import java.util.UUID;
 public class DeskApiController {
 
     private final DeskFlashcardService deskFlashcardService;
+    private final FirebaseAuthHelper authHelper;
 
-    public DeskApiController(DeskFlashcardService deskFlashcardService) {
+    public DeskApiController(DeskFlashcardService deskFlashcardService, FirebaseAuthHelper authHelper) {
         this.deskFlashcardService = deskFlashcardService;
+        this.authHelper = authHelper;
     }
 
     /** Danh sách desk của user đã đăng nhập */
     @GetMapping
     public List<DeskResponse> listDesks(
             @RequestHeader(value = "Authorization", required = false) String authorization
-    ) throws Exception {
-        FirebaseToken token = verifyBearer(authorization);
+    ) {
+        FirebaseToken token = authHelper.verifyBearer(authorization);
         return deskFlashcardService.listDesks(token.getUid());
     }
 
@@ -47,8 +47,8 @@ public class DeskApiController {
             @PathVariable UUID deskId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
-    ) throws Exception {
-        FirebaseToken token = verifyBearer(authorization);
+    ) {
+        FirebaseToken token = authHelper.verifyBearer(authorization);
         int safeSize = Math.min(Math.max(size, 1), 100);
         int safePage = Math.max(page, 0);
         return deskFlashcardService.listFlashcardsPage(token.getUid(), deskId, safePage, safeSize);
@@ -59,8 +59,8 @@ public class DeskApiController {
     public ResponseEntity<DeskResponse> createDesk(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestBody CreateDeskRequest body
-    ) throws Exception {
-        FirebaseToken token = verifyBearer(authorization);
+    ) {
+        FirebaseToken token = authHelper.verifyBearer(authorization);
         DeskResponse created = deskFlashcardService.createDesk(token.getUid(), body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
@@ -71,8 +71,8 @@ public class DeskApiController {
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @PathVariable UUID deskId,
             @RequestBody UpdateDeskRequest body
-    ) throws Exception {
-        FirebaseToken token = verifyBearer(authorization);
+    ) {
+        FirebaseToken token = authHelper.verifyBearer(authorization);
         return deskFlashcardService.updateDesk(token.getUid(), deskId, body);
     }
 
@@ -81,8 +81,8 @@ public class DeskApiController {
     public ResponseEntity<Void> deleteDesk(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @PathVariable UUID deskId
-    ) throws Exception {
-        FirebaseToken token = verifyBearer(authorization);
+    ) {
+        FirebaseToken token = authHelper.verifyBearer(authorization);
         deskFlashcardService.deleteDesk(token.getUid(), deskId);
         return ResponseEntity.noContent().build();
     }
@@ -93,24 +93,9 @@ public class DeskApiController {
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @PathVariable UUID deskId,
             @RequestBody CreateFlashcardRequest body
-    ) throws Exception {
-        FirebaseToken token = verifyBearer(authorization);
+    ) {
+        FirebaseToken token = authHelper.verifyBearer(authorization);
         FlashcardResponse created = deskFlashcardService.createFlashcard(token.getUid(), deskId, body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
-    }
-
-    private static FirebaseToken verifyBearer(String authorization) throws Exception {
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authorization Bearer token required");
-        }
-        String idToken = authorization.substring(7).trim();
-        if (idToken.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing token");
-        }
-        try {
-            return FirebaseAuth.getInstance().verifyIdToken(idToken);
-        } catch (FirebaseAuthException ex) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token");
-        }
     }
 }

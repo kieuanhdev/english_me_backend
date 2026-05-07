@@ -2,10 +2,11 @@ package com.kiovant.englishme.controller;
 
 import com.kiovant.englishme.dto.CreateDeskRequest;
 import com.kiovant.englishme.dto.CreateFlashcardRequest;
+import com.kiovant.englishme.dto.AdminPronunciationAttemptRow;
 import com.kiovant.englishme.entity.Desk;
 import com.kiovant.englishme.service.DeskFlashcardService;
+import com.kiovant.englishme.service.PronunciationAssessmentService;
 import com.kiovant.englishme.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.data.domain.Page;
 
 import java.util.UUID;
 
@@ -24,11 +26,19 @@ import java.util.UUID;
 @RequestMapping("/admin")
 public class AdminViewController {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+    private final DeskFlashcardService deskFlashcardService;
+    private final PronunciationAssessmentService pronunciationAssessmentService;
 
-    @Autowired
-    private DeskFlashcardService deskFlashcardService;
+    public AdminViewController(
+            UserService userService,
+            DeskFlashcardService deskFlashcardService,
+            PronunciationAssessmentService pronunciationAssessmentService
+    ) {
+        this.userService = userService;
+        this.deskFlashcardService = deskFlashcardService;
+        this.pronunciationAssessmentService = pronunciationAssessmentService;
+    }
 
     @GetMapping
     public String dashboard() {
@@ -57,10 +67,11 @@ public class AdminViewController {
                 return "redirect:/admin/desks";
             }
         }
-        CreateDeskRequest req = new CreateDeskRequest();
-        req.setCefrLevel(cefrLevel);
-        req.setTitle(title.isBlank() ? null : title);
-        req.setSortOrder(sortOrder);
+        CreateDeskRequest req = new CreateDeskRequest(
+                cefrLevel,
+                title.isBlank() ? null : title,
+                sortOrder
+        );
         try {
             deskFlashcardService.createDesk(req);
             ra.addFlashAttribute("successMessage", "Đã tạo desk thành công.");
@@ -107,17 +118,13 @@ public class AdminViewController {
             @RequestParam(required = false, defaultValue = "") String viExample,
             RedirectAttributes ra
     ) {
-        CreateFlashcardRequest req = new CreateFlashcardRequest();
-        req.setWord(word);
-        req.setCefr(cefr);
-        req.setIpa(blankToNull(ipa));
-        req.setAudioUrl(blankToNull(audioUrl));
-        req.setDefinition(blankToNull(definition));
-        req.setExample(blankToNull(example));
-        req.setTopic(blankToNull(topic));
-        req.setVietnamese(blankToNull(vietnamese));
-        req.setViDefinition(blankToNull(viDefinition));
-        req.setViExample(blankToNull(viExample));
+        CreateFlashcardRequest req = new CreateFlashcardRequest(
+                word, cefr, null, null,
+                blankToNull(ipa), blankToNull(audioUrl),
+                blankToNull(definition), blankToNull(example),
+                blankToNull(topic), blankToNull(vietnamese),
+                blankToNull(viDefinition), blankToNull(viExample)
+        );
         try {
             deskFlashcardService.createFlashcard(id, req);
             ra.addFlashAttribute("successMessage", "Đã thêm flashcard.");
@@ -193,6 +200,25 @@ public class AdminViewController {
                 .encode()
                 .toUriString();
         return "redirect:" + target;
+    }
+
+    @GetMapping("/pronunciation")
+    public String pronunciationAttempts(
+            @RequestParam(required = false, defaultValue = "") String provider,
+            @RequestParam(required = false, defaultValue = "0") int minScore,
+            @RequestParam(required = false, defaultValue = "") String q,
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "20") int size,
+            Model model
+    ) {
+        Page<AdminPronunciationAttemptRow> attempts = pronunciationAssessmentService.adminList(provider, minScore, q, page, size);
+        model.addAttribute("attemptsPage", attempts);
+        model.addAttribute("selectedProvider", provider == null ? "" : provider);
+        model.addAttribute("selectedMinScore", Math.min(Math.max(minScore, 0), 100));
+        model.addAttribute("selectedKeyword", q == null ? "" : q);
+        model.addAttribute("currentPage", Math.max(page, 0));
+        model.addAttribute("pageSize", Math.min(Math.max(size, 1), 100));
+        return "admin/pronunciation";
     }
 
 }

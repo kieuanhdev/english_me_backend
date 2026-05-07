@@ -3,21 +3,24 @@ package com.kiovant.englishme.service;
 import com.google.firebase.auth.FirebaseToken;
 import com.kiovant.englishme.entity.User;
 import com.kiovant.englishme.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
-
 @Service
 public class UserService {
-    @Autowired
-    private UserRepository userRepository;
+
+    private final UserRepository userRepository;
+
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     public User syncUser(FirebaseToken token) {
         String uid = token.getUid();
@@ -51,49 +54,40 @@ public class UserService {
     }
 
     public List<User> findAllUsers() {
-        return userRepository.findAll()
-                .stream()
-                .sorted((u1, u2) -> {
-                    LocalDateTime t1 = u1.getCreatedAt() != null ? u1.getCreatedAt() : LocalDateTime.MIN;
-                    LocalDateTime t2 = u2.getCreatedAt() != null ? u2.getCreatedAt() : LocalDateTime.MIN;
-                    return t2.compareTo(t1);
-                })
-                .toList();
+        return userRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
     }
 
     public List<User> findUsersByFilter(String cefrLevel, String status, String keyword) {
-        String normalizedCefr = cefrLevel == null ? "" : cefrLevel.trim();
-        String normalizedStatus = status == null ? "all" : status.trim().toLowerCase(Locale.ROOT);
-        String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
+        Specification<User> spec = buildFilterSpec(cefrLevel, status, keyword);
+        return userRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"));
+    }
 
-        return findAllUsers().stream()
-                .filter(user -> {
-                    if (normalizedCefr.isEmpty()) {
-                        return true;
-                    }
-                    String level = user.getCefrLevel() == null ? "" : user.getCefrLevel().trim();
-                    return normalizedCefr.equalsIgnoreCase(level);
-                })
-                .filter(user -> {
-                    if ("all".equals(normalizedStatus)) {
-                        return true;
-                    }
-                    boolean unlocked = !Boolean.TRUE.equals(user.getAccountLocked());
-                    return ("active".equals(normalizedStatus) && unlocked)
-                            || ("locked".equals(normalizedStatus) && !unlocked);
-                })
-                .filter(user -> {
-                    if (normalizedKeyword.isEmpty()) {
-                        return true;
-                    }
-                    String fullName = user.getFullName() == null ? "" : user.getFullName().toLowerCase(Locale.ROOT);
-                    String email = user.getEmail() == null ? "" : user.getEmail().toLowerCase(Locale.ROOT);
-                    String uid = user.getFirebaseUid() == null ? "" : user.getFirebaseUid().toLowerCase(Locale.ROOT);
-                    return fullName.contains(normalizedKeyword)
-                            || email.contains(normalizedKeyword)
-                            || uid.contains(normalizedKeyword);
-                })
-                .toList();
+    private Specification<User> buildFilterSpec(String cefrLevel, String status, String keyword) {
+        Specification<User> spec = (root, query, cb) -> cb.conjunction();
+
+        if (cefrLevel != null && !cefrLevel.isBlank()) {
+            String level = cefrLevel.trim();
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("cefrLevel"), level));
+        }
+
+        if (status != null && !status.isBlank()) {
+            String s = status.trim().toLowerCase(Locale.ROOT);
+            if (!"all".equals(s)) {
+                boolean locked = "locked".equals(s);
+                spec = spec.and((root, query, cb) -> cb.equal(root.get("accountLocked"), locked));
+            }
+        }
+
+        if (keyword != null && !keyword.isBlank()) {
+            String kw = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
+            spec = spec.and((root, query, cb) -> cb.or(
+                    cb.like(cb.lower(root.get("fullName")), kw),
+                    cb.like(cb.lower(root.get("email")), kw),
+                    cb.like(cb.lower(root.get("firebaseUid")), kw)
+            ));
+        }
+
+        return spec;
     }
 
     public void unlockUser(UUID id) {
