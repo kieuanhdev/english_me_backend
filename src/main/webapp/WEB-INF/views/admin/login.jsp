@@ -20,10 +20,10 @@
             <div class="absolute inset-0 bg-gradient-to-br from-primary/60 to-primary-container/40 flex flex-col justify-end p-16">
                 <div class="max-w-md">
                     <h2 class="font-headline text-4xl font-extrabold text-white leading-tight mb-4">
-                        Kien thuc la nen tang cua thanh cong.
+                        Kiến thức là nền tảng của thành công.
                     </h2>
                     <p class="text-white/90 text-lg font-medium">
-                        Quan ly hanh trinh hoc tap hien dai voi he thong quan tri EnglishMe chuyen nghiep va tinh te.
+                        Quản lý hành trình học tập hiện đại với hệ thống quản trị EnglishMe chuyên nghiệp và tinh tế.
                     </p>
                 </div>
             </div>
@@ -33,10 +33,10 @@
             <div class="w-full max-w-sm mx-auto">
                 <div class="mb-10">
                     <h1 class="font-headline text-2xl md:text-3xl font-extrabold text-primary mb-2 tracking-tight">
-                        He thong quan tri EnglishMe
+                        Hệ thống quản trị EnglishMe
                     </h1>
                     <p class="text-on-surface-variant font-medium text-base">
-                        Vui long dang nhap voi quyen ADMIN de tiep tuc
+                        Vui lòng đăng nhập với quyền ADMIN để tiếp tục
                     </p>
                 </div>
 
@@ -58,7 +58,7 @@
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-on-surface mb-2 ml-1" for="password">Mat khau</label>
+                            <label class="block text-sm font-semibold text-on-surface mb-2 ml-1" for="password">Mật khẩu</label>
                             <div class="relative">
                                 <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant">lock</span>
                                 <input class="w-full pl-12 pr-4 py-4 bg-surface-container-high border-none rounded-xl text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all duration-300 outline-none"
@@ -69,7 +69,7 @@
 
                     <button class="w-full py-4 bg-gradient-to-r from-[#24389c] to-[#3f51b5] text-white font-bold rounded-xl text-lg hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 flex items-center justify-center gap-2"
                             type="submit">
-                        Dang nhap
+                        Đăng nhập
                         <span class="material-symbols-outlined">arrow_forward</span>
                     </button>
                 </form>

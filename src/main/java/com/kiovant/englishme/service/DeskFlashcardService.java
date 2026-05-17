@@ -173,6 +173,17 @@ public class DeskFlashcardService {
         return buildAndSaveFlashcard(desk, req, deskId);
     }
 
+    @Transactional
+    public void deleteFlashcard(UUID deskId, UUID flashcardId) {
+        getDeskOrThrow(deskId);
+        Flashcard fc = flashcardRepository.findById(flashcardId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Flashcard not found"));
+        if (!fc.getDesk().getId().equals(deskId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Flashcard not found in this desk");
+        }
+        flashcardRepository.delete(fc);
+    }
+
     // ── Private helpers ───────────────────────────────────────────
 
     private List<DeskResponse> toDeskResponses(List<Desk> desks) {

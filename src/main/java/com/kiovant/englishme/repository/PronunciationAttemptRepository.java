@@ -7,15 +7,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 public interface PronunciationAttemptRepository extends JpaRepository<PronunciationAttempt, UUID> {
     List<PronunciationAttempt> findByUser_FirebaseUidOrderByCreatedAtDesc(String firebaseUid, Pageable pageable);
 
-    List<PronunciationAttempt> findByUser_FirebaseUidAndLessonItemIdOrderByCreatedAtDesc(
+    List<PronunciationAttempt> findByUser_FirebaseUidAndExerciseIdOrderByCreatedAtDesc(
             String firebaseUid,
-            UUID lessonItemId,
+            UUID exerciseId,
             Pageable pageable
     );
 
@@ -36,4 +37,7 @@ public interface PronunciationAttemptRepository extends JpaRepository<Pronunciat
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    @Query("SELECT COUNT(p) FROM PronunciationAttempt p WHERE p.createdAt >= :since")
+    long countSince(LocalDateTime since);
 }

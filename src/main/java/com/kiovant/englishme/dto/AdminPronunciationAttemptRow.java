@@ -8,7 +8,7 @@ public record AdminPronunciationAttemptRow(
         String userEmail,
         String userFullName,
         String firebaseUid,
-        UUID lessonItemId,
+        UUID exerciseId,
         String referenceText,
         int overallScore,
         int accuracyScore,

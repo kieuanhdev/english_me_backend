@@ -26,8 +26,8 @@ public class PronunciationAttempt {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(name = "lesson_item_id")
-    private UUID lessonItemId;
+    @Column(name = "exercise_id")
+    private UUID exerciseId;
 
     @Column(name = "reference_text", nullable = false, columnDefinition = "TEXT")
     private String referenceText;
@@ -40,6 +40,12 @@ public class PronunciationAttempt {
 
     @Column(name = "fluency_score", nullable = false)
     private Integer fluencyScore;
+
+    @Column(name = "completeness_score")
+    private Integer completenessScore;
+
+    @Column(name = "transcription", columnDefinition = "TEXT")
+    private String transcription;
 
     @Column(name = "provider", nullable = false, length = 50)
     private String provider;

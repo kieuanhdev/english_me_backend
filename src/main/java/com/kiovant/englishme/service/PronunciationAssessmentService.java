@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.kiovant.englishme.dto.PronunciationAssessResponse;
 import com.kiovant.englishme.dto.AdminPronunciationAttemptRow;
 import com.kiovant.englishme.dto.PronunciationAttemptHistoryItemResponse;
-import com.kiovant.englishme.dto.PronunciationWordFeedbackDto;
 import com.kiovant.englishme.entity.PronunciationAttempt;
 import com.kiovant.englishme.entity.PronunciationWordFeedback;
 import com.kiovant.englishme.entity.User;
@@ -22,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -61,7 +61,7 @@ public class PronunciationAssessmentService {
             MultipartFile audio,
             String referenceText,
             String language,
-            UUID lessonItemId
+            UUID exerciseId
     ) {
         if (audio == null || audio.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "audio is required");
@@ -93,50 +93,57 @@ public class PronunciationAssessmentService {
         }
 
         JsonNode providerResult = cloudPronunciationClient.assess(bytes, safeReference, language);
-
-        UUID attemptId = UUID.randomUUID();
-        PronunciationAssessResponse response = pronunciationScoringMapper
-                .mapSpeechace(attemptId, providerResult, cloudPronunciationClient.providerName());
+        PronunciationAssessResponse response = pronunciationScoringMapper.mapSpeechace(providerResult, safeReference);
 
         PronunciationAttempt attempt = new PronunciationAttempt();
-        attempt.setId(attemptId);
         attempt.setUser(user);
-        attempt.setLessonItemId(lessonItemId);
+        attempt.setExerciseId(exerciseId);
         attempt.setReferenceText(safeReference);
         attempt.setProvider(cloudPronunciationClient.providerName());
-        attempt.setOverallScore(response.overallScore());
-        attempt.setAccuracyScore(response.accuracyScore());
-        attempt.setFluencyScore(response.fluencyScore());
+        attempt.setOverallScore((int) Math.round(response.score()));
+        attempt.setAccuracyScore((int) Math.round(response.accuracy()));
+        attempt.setFluencyScore((int) Math.round(response.fluency()));
+        attempt.setCompletenessScore((int) Math.round(response.completeness()));
+        attempt.setTranscription(response.transcription());
         attempt = attemptRepository.save(attempt);
-        log.info("pronunciation_attempt_saved attemptId={} overall={} accuracy={} fluency={}",
-                attempt.getId(), response.overallScore(), response.accuracyScore(), response.fluencyScore());
+        log.info("pronunciation_attempt_saved attemptId={} score={} accuracy={} fluency={} completeness={}",
+                attempt.getId(), response.score(), response.accuracy(), response.fluency(), response.completeness());
 
-        final PronunciationAttempt savedAttempt = attempt;
-        List<PronunciationWordFeedback> feedbackEntities = response.wordFeedback().stream().map(word -> {
+        JsonNode textScore = providerResult.path("text_score");
+        List<PronunciationWordFeedback> feedbackEntities = new ArrayList<>();
+        for (JsonNode word : textScore.path("word_score_list")) {
+            String token = word.path("word").asText("").trim();
+            if (token.isEmpty()) {
+                continue;
+            }
+            int wordScore = clampScore(word.path("quality_score").asInt(0));
+            int startMs = (int) Math.round(word.path("start").asDouble(0) * 1000);
+            int endMs = (int) Math.round(word.path("end").asDouble(0) * 1000);
+            String issueType = wordScore >= 80 ? "good" : (wordScore >= 60 ? "minor" : "critical");
             PronunciationWordFeedback item = new PronunciationWordFeedback();
-            item.setAttempt(savedAttempt);
-            item.setWord(word.word());
-            item.setScore(word.score());
-            item.setStartMs(word.startMs());
-            item.setEndMs(word.endMs());
-            item.setIssueType(word.issueType());
-            item.setSuggestion(word.suggestion());
-            return item;
-        }).toList();
+            item.setAttempt(attempt);
+            item.setWord(token);
+            item.setScore(wordScore);
+            item.setStartMs(startMs);
+            item.setEndMs(endMs);
+            item.setIssueType(issueType);
+            item.setSuggestion(null);
+            feedbackEntities.add(item);
+        }
         wordFeedbackRepository.saveAll(feedbackEntities);
         return response;
     }
 
     @Transactional(readOnly = true)
-    public List<PronunciationAttemptHistoryItemResponse> history(String firebaseUid, UUID lessonItemId, int limit) {
+    public List<PronunciationAttemptHistoryItemResponse> history(String firebaseUid, UUID exerciseId, int limit) {
         int safeLimit = Math.min(Math.max(limit, 1), 50);
-        List<PronunciationAttempt> attempts = lessonItemId == null
+        List<PronunciationAttempt> attempts = exerciseId == null
                 ? attemptRepository.findByUser_FirebaseUidOrderByCreatedAtDesc(firebaseUid, PageRequest.of(0, safeLimit))
-                : attemptRepository.findByUser_FirebaseUidAndLessonItemIdOrderByCreatedAtDesc(firebaseUid, lessonItemId, PageRequest.of(0, safeLimit));
+                : attemptRepository.findByUser_FirebaseUidAndExerciseIdOrderByCreatedAtDesc(firebaseUid, exerciseId, PageRequest.of(0, safeLimit));
 
         return attempts.stream().map(item -> new PronunciationAttemptHistoryItemResponse(
                 item.getId(),
-                item.getLessonItemId(),
+                item.getExerciseId(),
                 item.getReferenceText(),
                 item.getOverallScore(),
                 item.getAccuracyScore(),
@@ -160,7 +167,7 @@ public class PronunciationAssessmentService {
                         item.getUser().getEmail(),
                         item.getUser().getFullName(),
                         item.getUser().getFirebaseUid(),
-                        item.getLessonItemId(),
+                        item.getExerciseId(),
                         item.getReferenceText(),
                         item.getOverallScore(),
                         item.getAccuracyScore(),
@@ -168,5 +175,9 @@ public class PronunciationAssessmentService {
                         item.getProvider(),
                         item.getCreatedAt()
                 ));
+    }
+
+    private static int clampScore(int score) {
+        return Math.min(Math.max(score, 0), 100);
     }
 }

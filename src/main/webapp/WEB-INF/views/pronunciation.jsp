@@ -26,8 +26,8 @@
 </div>
 
 <div class="row">
-    <label for="lessonItemId">Lesson item id (optional UUID):</label><br/>
-    <input id="lessonItemId" style="width: 100%;" placeholder="Optional"/>
+    <label for="exerciseId">Exercise ID (optional UUID):</label><br/>
+    <input id="exerciseId" style="width: 100%;" placeholder="Optional"/>
 </div>
 
 <div class="row button-group">
@@ -88,7 +88,7 @@
         if (!audioBlob) return;
         const token = document.getElementById('token').value.trim();
         const referenceText = document.getElementById('referenceText').value.trim();
-        const lessonItemId = document.getElementById('lessonItemId').value.trim();
+        const exerciseId = document.getElementById('exerciseId').value.trim();
         if (!token || !referenceText) {
             statusEl.textContent = 'Status: token and reference text are required';
             return;
@@ -96,9 +96,9 @@
 
         const formData = new FormData();
         formData.append('audio', audioBlob, 'attempt.webm');
-        formData.append('referenceText', referenceText);
+        formData.append('expectedText', referenceText);
         formData.append('language', 'en-us');
-        if (lessonItemId) formData.append('lessonItemId', lessonItemId);
+        if (exerciseId) formData.append('exerciseId', exerciseId);
 
         statusEl.textContent = 'Status: uploading and scoring...';
         submitBtn.disabled = true;
@@ -115,18 +115,19 @@
             }
 
             scoreCard.textContent = [
-                'Attempt: ' + data.attemptId,
-                'Overall: ' + data.overallScore,
-                'Accuracy: ' + data.accuracyScore,
-                'Fluency: ' + data.fluencyScore,
-                'Advice: ' + data.retryAdvice
+                'Score: ' + data.score,
+                'Accuracy: ' + data.accuracy,
+                'Fluency: ' + data.fluency,
+                'Completeness: ' + data.completeness,
+                'Transcription: ' + data.transcription,
+                'Comment: ' + data.overallComment
             ].join('\\n');
 
             resultsEl.innerHTML = '';
-            (data.wordFeedback || []).forEach(item => {
+            (data.errors || []).forEach(item => {
                 const li = document.createElement('li');
-                li.className = item.score < 80 ? 'bad' : 'ok';
-                li.textContent = item.word + ' - score ' + item.score + ' (' + item.suggestion + ')';
+                li.className = 'bad';
+                li.textContent = item.word + ' (position ' + item.position + ') - ' + item.suggestion;
                 resultsEl.appendChild(li);
             });
             statusEl.textContent = 'Status: scored successfully';

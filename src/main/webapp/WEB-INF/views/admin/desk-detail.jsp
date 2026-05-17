@@ -131,6 +131,7 @@
                         <th class="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Từ</th>
                         <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Audio</th>
                         <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Định nghĩa (rút)</th>
+                        <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Xóa</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -138,7 +139,7 @@
                         if (fp == null || fp.isEmpty()) {
                     %>
                     <tr>
-                        <td colspan="3" class="px-8 py-10 text-center text-slate-500 font-semibold">Chưa có flashcard.</td>
+                        <td colspan="4" class="px-8 py-10 text-center text-slate-500 font-semibold">Chưa có flashcard.</td>
                     </tr>
                     <%
                         } else {
@@ -157,6 +158,14 @@
                         </td>
                         <td class="px-6 py-4 text-xs font-mono text-slate-600 max-w-[200px] truncate" title="<%= fc.getAudioUrl() != null ? fc.getAudioUrl() : "" %>"><%= au %></td>
                         <td class="px-6 py-4 text-xs text-slate-600 max-w-xl"><%= def != null ? def : "—" %></td>
+                        <td class="px-6 py-4 text-right">
+                            <form method="post" action="<%= ctx %>/admin/desks/<%= desk.getId() %>/flashcards/<%= fc.getId() %>/delete"
+                                  onsubmit="return confirm('Xóa flashcard này?')">
+                                <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors">
+                                    <span class="material-symbols-outlined text-sm">delete</span>
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                     <%
                             }

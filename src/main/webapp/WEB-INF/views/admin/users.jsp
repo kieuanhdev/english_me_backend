@@ -27,22 +27,22 @@
     <div class="p-8 space-y-8">
         <div class="flex justify-between items-end">
             <div class="space-y-1">
-                <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline">Quan ly nguoi dung</h1>
-                <p class="text-slate-500 font-medium">Theo doi va quan ly <%= totalUsers %> hoc vien trong he thong.</p>
+                <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline">Quản lý người dùng</h1>
+                <p class="text-slate-500 font-medium">Theo dõi và quản lý <%= totalUsers %> học viên trong hệ thống.</p>
             </div>
             <button type="button" id="openUserModal"
                     class="primary-gradient text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
                 <span class="material-symbols-outlined text-xl">person_add</span>
-                Them nguoi dung
+                Thêm người dùng
             </button>
         </div>
 
         <section class="bg-surface-container-low p-6 rounded-[2rem] space-y-6">
             <form method="get" action="${pageContext.request.contextPath}/admin/users" class="flex flex-wrap items-end gap-4">
                 <div class="flex-1 min-w-[220px]">
-                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Trinh do CEFR</label>
+                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Trình độ CEFR</label>
                     <select name="cefr" class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
-                        <option value="" <%= selectedCefr.isEmpty() ? "selected" : "" %>>Tat ca trinh do</option>
+                        <option value="" <%= selectedCefr.isEmpty() ? "selected" : "" %>>Tất cả trình độ</option>
                         <option value="A1" <%= "A1".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>A1 - Beginner</option>
                         <option value="A2" <%= "A2".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>A2 - Elementary</option>
                         <option value="B1" <%= "B1".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>B1 - Intermediate</option>
@@ -51,21 +51,21 @@
                     </select>
                 </div>
                 <div class="flex-1 min-w-[220px]">
-                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Trang thai</label>
+                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Trạng thái</label>
                     <select name="status" class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
-                        <option value="all" <%= "all".equalsIgnoreCase(selectedStatus) ? "selected" : "" %>>Tat ca</option>
-                        <option value="active" <%= "active".equalsIgnoreCase(selectedStatus) ? "selected" : "" %>>Hoat dong</option>
-                        <option value="locked" <%= "locked".equalsIgnoreCase(selectedStatus) ? "selected" : "" %>>Da khoa</option>
+                        <option value="all" <%= "all".equalsIgnoreCase(selectedStatus) ? "selected" : "" %>>Tất cả</option>
+                        <option value="active" <%= "active".equalsIgnoreCase(selectedStatus) ? "selected" : "" %>>Hoạt động</option>
+                        <option value="locked" <%= "locked".equalsIgnoreCase(selectedStatus) ? "selected" : "" %>>Đã khóa</option>
                     </select>
                 </div>
                 <div class="flex-1 min-w-[240px]">
-                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Tim kiem</label>
+                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Tìm kiếm</label>
                     <input type="text" name="q" value="<%= selectedKeyword %>" placeholder="Ten, email, UID..."
                            class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
                 </div>
                 <div class="flex items-center gap-2">
                     <button type="submit" class="primary-gradient text-white px-5 py-3 rounded-xl text-sm font-bold">
-                        Loc
+                        Lọc
                     </button>
                     <a href="${pageContext.request.contextPath}/admin/users"
                        class="bg-white text-slate-600 px-5 py-3 rounded-xl text-sm font-bold">
@@ -80,12 +80,12 @@
                 <table class="w-full text-left border-separate border-spacing-0">
                     <thead>
                     <tr class="bg-slate-100/50">
-                        <th class="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Ho va ten</th>
+                        <th class="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Họ và tên</th>
                         <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Email</th>
-                        <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Trinh do CEFR</th>
-                        <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Ngay tham gia</th>
-                        <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Trang thai</th>
-                        <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Hanh dong</th>
+                        <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Trình độ CEFR</th>
+                        <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Ngày tham gia</th>
+                        <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Trạng thái</th>
+                        <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Hành động</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -94,17 +94,17 @@
                     %>
                     <tr>
                         <td colspan="6" class="px-8 py-10 text-center text-slate-500 font-semibold">
-                            Chua co nguoi dung nao trong he thong.
+                            Chưa có người dùng nào trong hệ thống.
                         </td>
                     </tr>
                     <%
                         } else {
                             for (User user : users) {
                                 String displayName = user.getFullName() != null && !user.getFullName().isBlank()
-                                        ? user.getFullName() : "Nguoi dung chua cap nhat";
-                                String level = user.getCefrLevel() != null ? user.getCefrLevel() : "Chua xep lop";
+                                        ? user.getFullName() : "Người dùng chưa cập nhật";
+                                String level = user.getCefrLevel() != null ? user.getCefrLevel() : "Chưa xếp lớp";
                                 boolean accountActive = !Boolean.TRUE.equals(user.getAccountLocked());
-                                String statusText = accountActive ? "Hoat dong" : "Da khoa";
+                                String statusText = accountActive ? "Hoạt động" : "Đã khóa";
                                 String statusClass = accountActive
                                         ? "bg-green-50 text-green-700"
                                         : "bg-red-50 text-red-700";
@@ -144,7 +144,7 @@
                                 <button type="submit"
                                         class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors">
                                     <span class="material-symbols-outlined text-base">lock</span>
-                                    Khoa
+                                    Khóa
                                 </button>
                             </form>
                             <% } else { %>
@@ -157,7 +157,7 @@
                                 <button type="submit"
                                         class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
                                     <span class="material-symbols-outlined text-base">lock_open</span>
-                                    Mo khoa
+                                    Mở khóa
                                 </button>
                             </form>
                             <% } %>
@@ -185,7 +185,7 @@
                     <button type="button" id="closeUserModalIcon"
                             class="material-symbols-outlined text-slate-400 hover:text-on-surface transition-colors">close</button>
                 </div>
-                <h2 class="text-3xl font-headline font-black text-primary leading-tight">Them nguoi dung moi</h2>
+                <h2 class="text-3xl font-headline font-black text-primary leading-tight">Thêm người dùng mới</h2>
                 <p class="text-on-surface-variant text-sm mt-1">
                     Register a new profile to the Scholar ecosystem with specific access credentials.
                 </p>
@@ -194,7 +194,7 @@
             <form class="p-8 pt-4 space-y-8" action="#" method="post">
                 <div class="bg-surface-container-low p-6 rounded-xl space-y-5">
                     <div class="space-y-2">
-                        <label class="text-xs font-bold text-primary tracking-wide block ml-1">Ho va ten</label>
+                        <label class="text-xs font-bold text-primary tracking-wide block ml-1">Họ và tên</label>
                         <input class="w-full bg-surface-container-lowest border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/10"
                                placeholder="e.g. Nguyen Van A" type="text"/>
                     </div>
@@ -208,12 +208,12 @@
                 <div class="space-y-5">
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-2">
-                            <label class="text-xs font-bold text-primary tracking-wide block ml-1">Mat khau</label>
+                            <label class="text-xs font-bold text-primary tracking-wide block ml-1">Mật khẩu</label>
                             <input class="w-full bg-surface-container-high border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/10"
                                    placeholder="••••••••" type="password"/>
                         </div>
                         <div class="space-y-2">
-                            <label class="text-xs font-bold text-primary tracking-wide block ml-1">Quyen han (Role)</label>
+                            <label class="text-xs font-bold text-primary tracking-wide block ml-1">Quyền hạn (Role)</label>
                             <select class="w-full bg-surface-container-high border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary/10">
                                 <option>Student</option>
                                 <option>Teacher</option>
@@ -222,7 +222,7 @@
                         </div>
                     </div>
                     <div class="space-y-2">
-                        <label class="text-xs font-bold text-primary tracking-wide block ml-1">Trinh do CEFR dau vao</label>
+                        <label class="text-xs font-bold text-primary tracking-wide block ml-1">Trình độ CEFR đầu vào</label>
                         <div class="bg-surface-container-low p-4 rounded-xl flex items-center justify-between gap-3 flex-wrap">
                             <div class="flex gap-2 flex-wrap">
                                 <button class="px-3 py-1 bg-surface-container-lowest rounded-lg text-xs font-bold text-slate-500" type="button">A1</button>
@@ -239,10 +239,10 @@
 
                 <div class="flex items-center justify-end gap-4 pt-4">
                     <button type="button" id="closeUserModalButton"
-                            class="text-slate-500 font-bold text-sm px-6 py-3 hover:bg-slate-100 rounded-xl transition-colors">Huy</button>
+                            class="text-slate-500 font-bold text-sm px-6 py-3 hover:bg-slate-100 rounded-xl transition-colors">Hủy</button>
                     <button class="bg-gradient-to-r from-primary to-primary-container text-white px-8 py-3 rounded-2xl font-bold text-sm shadow-lg shadow-primary/20"
                             type="submit">
-                        Them thanh vien
+                        Thêm thành viên
                     </button>
                 </div>
             </form>

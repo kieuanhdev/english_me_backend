@@ -3,6 +3,8 @@ package com.kiovant.englishme.controller;
 import com.google.firebase.auth.FirebaseToken;
 import com.kiovant.englishme.dto.PronunciationAssessResponse;
 import com.kiovant.englishme.dto.PronunciationAttemptHistoryItemResponse;
+import com.kiovant.englishme.entity.PronunciationExercise;
+import com.kiovant.englishme.repository.PronunciationExerciseRepository;
 import com.kiovant.englishme.service.FirebaseAuthHelper;
 import com.kiovant.englishme.service.PronunciationAssessmentService;
 import org.springframework.web.bind.annotation.*;
@@ -16,38 +18,49 @@ import java.util.UUID;
 public class PronunciationApiController {
 
     private final PronunciationAssessmentService pronunciationAssessmentService;
+    private final PronunciationExerciseRepository exerciseRepository;
     private final FirebaseAuthHelper authHelper;
 
-    public PronunciationApiController(PronunciationAssessmentService pronunciationAssessmentService, FirebaseAuthHelper authHelper) {
+    public PronunciationApiController(
+            PronunciationAssessmentService pronunciationAssessmentService,
+            PronunciationExerciseRepository exerciseRepository,
+            FirebaseAuthHelper authHelper
+    ) {
         this.pronunciationAssessmentService = pronunciationAssessmentService;
+        this.exerciseRepository = exerciseRepository;
         this.authHelper = authHelper;
+    }
+
+    @GetMapping("/exercises")
+    public List<PronunciationExercise> exercises() {
+        return exerciseRepository.findAllByOrderByDifficultyAsc();
     }
 
     @PostMapping("/assess")
     public PronunciationAssessResponse assess(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestParam("audio") MultipartFile audio,
-            @RequestParam("referenceText") String referenceText,
-            @RequestParam(value = "language", required = false, defaultValue = "en-us") String language,
-            @RequestParam(value = "lessonItemId", required = false) UUID lessonItemId
+            @RequestParam(value = "expectedText", required = false) String expectedText,
+            @RequestParam(value = "referenceText", required = false) String referenceText,
+            @RequestParam(value = "exerciseId", required = false) UUID exerciseId,
+            @RequestParam(value = "lessonItemId", required = false) UUID lessonItemId,
+            @RequestParam(value = "language", required = false, defaultValue = "en-us") String language
     ) {
+        String text = expectedText != null ? expectedText : referenceText;
+        UUID exId = exerciseId != null ? exerciseId : lessonItemId;
         FirebaseToken token = authHelper.verifyBearer(authorization);
-        return pronunciationAssessmentService.assess(
-                token.getUid(),
-                audio,
-                referenceText,
-                language,
-                lessonItemId
-        );
+        return pronunciationAssessmentService.assess(token.getUid(), audio, text, language, exId);
     }
 
     @GetMapping("/history")
     public List<PronunciationAttemptHistoryItemResponse> history(
             @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestParam(value = "exerciseId", required = false) UUID exerciseId,
             @RequestParam(value = "lessonItemId", required = false) UUID lessonItemId,
             @RequestParam(value = "limit", required = false, defaultValue = "20") int limit
     ) {
+        UUID exId = exerciseId != null ? exerciseId : lessonItemId;
         FirebaseToken token = authHelper.verifyBearer(authorization);
-        return pronunciationAssessmentService.history(token.getUid(), lessonItemId, limit);
+        return pronunciationAssessmentService.history(token.getUid(), exId, limit);
     }
 }

@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public record PronunciationAttemptHistoryItemResponse(
         UUID attemptId,
-        UUID lessonItemId,
+        UUID exerciseId,
         String referenceText,
         int overallScore,
         int accuracyScore,

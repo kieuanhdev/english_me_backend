@@ -29,8 +29,8 @@
 
     <div class="p-8 space-y-8">
         <div class="space-y-1">
-            <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline">Quan ly luyen phat am</h1>
-            <p class="text-slate-500 font-medium">Theo doi lich su cham diem phat am AI cua hoc vien.</p>
+            <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline">Quản lý luyện phát âm</h1>
+            <p class="text-slate-500 font-medium">Theo dõi lịch sử chấm điểm phát âm AI của học viên.</p>
         </div>
 
         <section class="bg-surface-container-low p-6 rounded-[2rem] space-y-6">
@@ -38,23 +38,23 @@
                 <div class="flex-1 min-w-[200px]">
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">Provider</label>
                     <select name="provider" class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
-                        <option value="" <%= selectedProvider.isEmpty() ? "selected" : "" %>>Tat ca</option>
+                        <option value="" <%= selectedProvider.isEmpty() ? "selected" : "" %>>Tất cả</option>
                         <option value="speechace" <%= "speechace".equalsIgnoreCase(selectedProvider) ? "selected" : "" %>>Speechace</option>
                     </select>
                 </div>
                 <div class="flex-1 min-w-[180px]">
-                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Diem toi thieu</label>
+                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Điểm tối thiểu</label>
                     <input type="number" name="minScore" min="0" max="100" value="<%= selectedMinScore %>"
                            class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"/>
                 </div>
                 <div class="flex-[2] min-w-[240px]">
-                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Tim user</label>
+                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Tìm user</label>
                     <input type="text" name="q" value="<%= selectedKeyword %>" placeholder="Ho ten, email, firebase UID..."
                            class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"/>
                 </div>
                 <input type="hidden" name="size" value="<%= pageSize %>"/>
                 <div class="flex items-center gap-2">
-                    <button type="submit" class="primary-gradient text-white px-5 py-3 rounded-xl text-sm font-bold">Loc</button>
+                    <button type="submit" class="primary-gradient text-white px-5 py-3 rounded-xl text-sm font-bold">Lọc</button>
                     <a href="${pageContext.request.contextPath}/admin/pronunciation" class="bg-white text-slate-600 px-5 py-3 rounded-xl text-sm font-bold">Reset</a>
                 </div>
             </form>
@@ -80,14 +80,14 @@
                     %>
                     <tr>
                         <td colspan="7" class="px-8 py-10 text-center text-slate-500 font-semibold">
-                            Chua co du lieu luyen phat am theo bo loc hien tai.
+                            Chưa có dữ liệu luyện phát âm theo bộ lọc hiện tại.
                         </td>
                     </tr>
                     <%
                         } else {
                             for (AdminPronunciationAttemptRow row : attempts) {
                                 String displayName = (row.userFullName() == null || row.userFullName().isBlank())
-                                        ? "Nguoi dung chua cap nhat"
+                                        ? "Người dùng chưa cập nhật"
                                         : row.userFullName();
                                 String referenceText = row.referenceText() == null ? "" : row.referenceText();
                                 if (referenceText.length() > 120) {

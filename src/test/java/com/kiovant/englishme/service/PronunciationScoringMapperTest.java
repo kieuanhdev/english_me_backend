@@ -5,10 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kiovant.englishme.dto.PronunciationAssessResponse;
 import org.junit.jupiter.api.Test;
 
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 
 class PronunciationScoringMapperTest {
 
@@ -16,7 +13,7 @@ class PronunciationScoringMapperTest {
     private final PronunciationScoringMapper mapper = new PronunciationScoringMapper();
 
     @Test
-    void mapSpeechace_shouldMapScoresAndWordFeedback() throws Exception {
+    void mapSpeechace_shouldMapScoresAndErrors() throws Exception {
         String json = """
                 {
                   "text_score": {
@@ -32,14 +29,40 @@ class PronunciationScoringMapperTest {
                 """;
         JsonNode root = objectMapper.readTree(json);
 
-        PronunciationAssessResponse response = mapper.mapSpeechace(UUID.randomUUID(), root, "speechace");
+        PronunciationAssessResponse response = mapper.mapSpeechace(root, "hello world");
 
-        assertEquals(83, response.overallScore());
-        assertEquals(80, response.accuracyScore());
-        assertEquals(78, response.fluencyScore());
-        assertEquals(2, response.wordFeedback().size());
-        assertEquals("hello", response.wordFeedback().get(0).word());
-        assertEquals("critical", response.wordFeedback().get(1).issueType());
-        assertFalse(response.tips().isEmpty());
+        assertEquals(83.0, response.score());
+        assertEquals(80.0, response.accuracy());
+        assertEquals(78.0, response.fluency());
+        assertTrue(response.completeness() > 0);
+        assertEquals("hello world", response.transcription());
+        assertFalse(response.errors().isEmpty());
+        assertEquals("world", response.errors().get(0).word());
+        assertEquals(1, response.errors().get(0).position());
+        assertNotNull(response.overallComment());
+        assertFalse(response.overallComment().isEmpty());
+    }
+
+    @Test
+    void mapSpeechace_shouldReturnEmptyErrorsWhenAllGood() throws Exception {
+        String json = """
+                {
+                  "text_score": {
+                    "quality_score": 90,
+                    "pronunciation": { "score": 92 },
+                    "fluency": { "score": 88 },
+                    "word_score_list": [
+                      { "word": "good", "quality_score": 92, "start": 0.10, "end": 0.50 },
+                      { "word": "job", "quality_score": 88, "start": 0.52, "end": 0.90 }
+                    ]
+                  }
+                }
+                """;
+        JsonNode root = objectMapper.readTree(json);
+
+        PronunciationAssessResponse response = mapper.mapSpeechace(root, "good job");
+
+        assertTrue(response.errors().isEmpty());
+        assertEquals(100.0, response.completeness());
     }
 }

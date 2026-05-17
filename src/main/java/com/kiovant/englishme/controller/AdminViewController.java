@@ -3,8 +3,16 @@ package com.kiovant.englishme.controller;
 import com.kiovant.englishme.dto.CreateDeskRequest;
 import com.kiovant.englishme.dto.CreateFlashcardRequest;
 import com.kiovant.englishme.dto.AdminPronunciationAttemptRow;
+import com.kiovant.englishme.dto.DashboardStats;
 import com.kiovant.englishme.entity.Desk;
+import com.kiovant.englishme.repository.DeskRepository;
+import com.kiovant.englishme.repository.FlashcardRepository;
+import com.kiovant.englishme.repository.PronunciationAttemptRepository;
+import com.kiovant.englishme.repository.TestAnswerRepository;
+import com.kiovant.englishme.repository.TestSessionRepository;
+import com.kiovant.englishme.repository.UserRepository;
 import com.kiovant.englishme.service.DeskFlashcardService;
+import com.kiovant.englishme.service.GrammarService;
 import com.kiovant.englishme.service.PronunciationAssessmentService;
 import com.kiovant.englishme.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -20,6 +28,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.data.domain.Page;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Controller
@@ -29,19 +38,50 @@ public class AdminViewController {
     private final UserService userService;
     private final DeskFlashcardService deskFlashcardService;
     private final PronunciationAssessmentService pronunciationAssessmentService;
+    private final GrammarService grammarService;
+    private final UserRepository userRepository;
+    private final DeskRepository deskRepository;
+    private final FlashcardRepository flashcardRepository;
+    private final PronunciationAttemptRepository pronunciationAttemptRepository;
+    private final TestSessionRepository testSessionRepository;
+    private final TestAnswerRepository testAnswerRepository;
 
     public AdminViewController(
             UserService userService,
             DeskFlashcardService deskFlashcardService,
-            PronunciationAssessmentService pronunciationAssessmentService
+            PronunciationAssessmentService pronunciationAssessmentService,
+            GrammarService grammarService,
+            UserRepository userRepository,
+            DeskRepository deskRepository,
+            FlashcardRepository flashcardRepository,
+            PronunciationAttemptRepository pronunciationAttemptRepository,
+            TestSessionRepository testSessionRepository,
+            TestAnswerRepository testAnswerRepository
     ) {
         this.userService = userService;
         this.deskFlashcardService = deskFlashcardService;
         this.pronunciationAssessmentService = pronunciationAssessmentService;
+        this.grammarService = grammarService;
+        this.userRepository = userRepository;
+        this.deskRepository = deskRepository;
+        this.flashcardRepository = flashcardRepository;
+        this.pronunciationAttemptRepository = pronunciationAttemptRepository;
+        this.testSessionRepository = testSessionRepository;
+        this.testAnswerRepository = testAnswerRepository;
     }
 
     @GetMapping
-    public String dashboard() {
+    public String dashboard(Model model) {
+        var todayStart = LocalDate.now().atStartOfDay();
+        long totalUsers = userRepository.count();
+        long newUsersToday = userRepository.countCreatedSince(todayStart);
+        long activeToday = pronunciationAttemptRepository.countSince(todayStart);
+        long totalDesks = deskRepository.count();
+        long totalFlashcards = flashcardRepository.count();
+        long totalPronunciationAttempts = pronunciationAttemptRepository.count();
+        model.addAttribute("stats", new DashboardStats(
+                totalUsers, activeToday, newUsersToday, totalDesks, totalFlashcards, totalPronunciationAttempts
+        ));
         return "admin/dashboard";
     }
 
@@ -134,6 +174,21 @@ public class AdminViewController {
         return "redirect:/admin/desks/" + id;
     }
 
+    @PostMapping("/desks/{deskId}/flashcards/{flashcardId}/delete")
+    public String deleteFlashcardAdmin(
+            @PathVariable UUID deskId,
+            @PathVariable UUID flashcardId,
+            RedirectAttributes ra
+    ) {
+        try {
+            deskFlashcardService.deleteFlashcard(deskId, flashcardId);
+            ra.addFlashAttribute("successMessage", "Đã xóa flashcard.");
+        } catch (ResponseStatusException ex) {
+            ra.addFlashAttribute("errorMessage", adminMessageFor(ex, "Không thể xóa flashcard."));
+        }
+        return "redirect:/admin/desks/" + deskId;
+    }
+
     private static String blankToNull(String s) {
         return s == null || s.isBlank() ? null : s.trim();
     }
@@ -219,6 +274,62 @@ public class AdminViewController {
         model.addAttribute("currentPage", Math.max(page, 0));
         model.addAttribute("pageSize", Math.min(Math.max(size, 1), 100));
         return "admin/pronunciation";
+    }
+
+    @GetMapping("/grammar")
+    public String grammarTopics(Model model) {
+        model.addAttribute("topics", grammarService.getTopics());
+        return "admin/grammar";
+    }
+
+    @GetMapping("/grammar/topics/{id}")
+    public String grammarLessons(@PathVariable String id, Model model, RedirectAttributes ra) {
+        try {
+            model.addAttribute("lessons", grammarService.getLessonsByTopicId(id));
+            model.addAttribute("topicId", id);
+            return "admin/grammar-lessons";
+        } catch (ResponseStatusException ex) {
+            ra.addFlashAttribute("errorMessage", "Không tìm thấy chủ đề ngữ pháp.");
+            return "redirect:/admin/grammar";
+        }
+    }
+
+    @GetMapping("/grammar/lessons/{id}")
+    public String grammarLessonDetail(@PathVariable String id, Model model, RedirectAttributes ra) {
+        try {
+            model.addAttribute("lesson", grammarService.getLessonDetail(id));
+            return "admin/grammar-lesson-detail";
+        } catch (ResponseStatusException ex) {
+            ra.addFlashAttribute("errorMessage", "Không tìm thấy bài học.");
+            return "redirect:/admin/grammar";
+        }
+    }
+
+    @GetMapping("/placement-test")
+    public String placementTestSessions(
+            @RequestParam(required = false, defaultValue = "0") int page,
+            @RequestParam(required = false, defaultValue = "20") int size,
+            Model model
+    ) {
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        model.addAttribute("sessionsPage", testSessionRepository.findAllWithUser(
+                org.springframework.data.domain.PageRequest.of(safePage, safeSize)));
+        model.addAttribute("currentPage", safePage);
+        model.addAttribute("pageSize", safeSize);
+        return "admin/placement-test";
+    }
+
+    @GetMapping("/placement-test/{id}")
+    public String placementTestDetail(@PathVariable UUID id, Model model, RedirectAttributes ra) {
+        var session = testSessionRepository.findByIdWithUser(id);
+        if (session.isEmpty()) {
+            ra.addFlashAttribute("errorMessage", "Không tìm thấy phiên kiểm tra.");
+            return "redirect:/admin/placement-test";
+        }
+        model.addAttribute("session", session.get());
+        model.addAttribute("answers", testAnswerRepository.findByTestSession(session.get()));
+        return "admin/placement-test-detail";
     }
 
 }
