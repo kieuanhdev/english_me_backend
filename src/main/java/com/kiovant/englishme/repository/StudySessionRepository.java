@@ -20,13 +20,6 @@ public interface StudySessionRepository extends JpaRepository<StudySession, UUID
     @Query("SELECT COUNT(DISTINCT s.user.id) FROM StudySession s WHERE s.startedAt >= :since")
     long countDistinctUsersSince(@Param("since") LocalDateTime since);
 
-    @Query(value = "SELECT CAST(EXTRACT(DOW FROM started_at) AS INTEGER) AS dow, " +
-            "CAST(EXTRACT(HOUR FROM started_at) AS INTEGER) AS hour, COUNT(*) AS cnt " +
-            "FROM study_session WHERE started_at >= :since " +
-            "GROUP BY EXTRACT(DOW FROM started_at), EXTRACT(HOUR FROM started_at)",
-            nativeQuery = true)
-    List<Object[]> heatmapSince(@Param("since") LocalDateTime since);
-
     long countByUser_Id(UUID userId);
 
     /** [date, xpEarned] gộp theo ngày, dùng cho biểu đồ XP 30 ngày. */

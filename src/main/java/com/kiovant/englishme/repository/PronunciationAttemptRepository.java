@@ -44,15 +44,6 @@ public interface PronunciationAttemptRepository extends JpaRepository<Pronunciat
     @Query("SELECT COUNT(DISTINCT p.user.id) FROM PronunciationAttempt p WHERE p.createdAt >= :since")
     long countDistinctUsersSince(@Param("since") LocalDateTime since);
 
-    @Query("""
-            SELECT p.referenceText, AVG(p.overallScore), COUNT(p)
-            FROM PronunciationAttempt p
-            GROUP BY p.referenceText
-            HAVING COUNT(p) >= 3
-            ORDER BY AVG(p.overallScore) ASC
-            """)
-    List<Object[]> findTopMissedWords(org.springframework.data.domain.Pageable pageable);
-
     long countByUser_Id(UUID userId);
 
     List<PronunciationAttempt> findTop50ByUser_IdOrderByCreatedAtDesc(UUID userId);
