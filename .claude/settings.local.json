@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw.cmd compile *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\bidan\\\\Downloads\\\\EnglishMe\\\\src\\\\main\\\\java\\\\com\\\\kiovant\\\\englishme\" -Recurse -Name -File | Where-Object { $_ -match \"\\\\.\\(java|jsp\\)$\" })",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\bidan\\\\Downloads\\\\EnglishMe\\\\src\\\\main\\\\java\\\\com\\\\kiovant\\\\englishme\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(mvn -q -DskipTests compile)"
+    ]
+  }
+}

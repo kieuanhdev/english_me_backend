@@ -1,0 +1,199 @@
+package com.kiovant.englishme.service;
+
+import com.kiovant.englishme.dto.AnswerSubmit;
+import com.kiovant.englishme.dto.ExerciseAnswerResult;
+import com.kiovant.englishme.dto.ExerciseCompleteResponse;
+import com.kiovant.englishme.dto.ExerciseQuestionResponse;
+import com.kiovant.englishme.dto.ExerciseSessionResponse;
+import com.kiovant.englishme.entity.ExerciseAnswer;
+import com.kiovant.englishme.entity.ExerciseQuestion;
+import com.kiovant.englishme.entity.ExerciseSession;
+import com.kiovant.englishme.entity.User;
+import com.kiovant.englishme.repository.ExerciseAnswerRepository;
+import com.kiovant.englishme.repository.ExerciseQuestionRepository;
+import com.kiovant.englishme.repository.ExerciseSessionRepository;
+import com.kiovant.englishme.repository.UserRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+@Service
+public class ExerciseService {
+
+    private static final int DEFAULT_SIZE = 10;
+    private static final int MAX_SIZE = 50;
+    private static final Set<String> ALLOWED_CATEGORIES = Set.of("vocabulary", "grammar");
+
+    private final UserRepository userRepository;
+    private final ExerciseQuestionRepository questionRepository;
+    private final ExerciseSessionRepository sessionRepository;
+    private final ExerciseAnswerRepository answerRepository;
+    private final ProgressService progressService;
+
+    public ExerciseService(UserRepository userRepository,
+                           ExerciseQuestionRepository questionRepository,
+                           ExerciseSessionRepository sessionRepository,
+                           ExerciseAnswerRepository answerRepository,
+                           ProgressService progressService) {
+        this.userRepository = userRepository;
+        this.questionRepository = questionRepository;
+        this.sessionRepository = sessionRepository;
+        this.answerRepository = answerRepository;
+        this.progressService = progressService;
+    }
+
+    @Transactional
+    public ExerciseSessionResponse createSession(String firebaseUid, String category, int size) {
+        String cat = normalizeCategory(category);
+        int cap = clampSize(size);
+
+        User user = loadUser(firebaseUid);
+
+        List<ExerciseQuestion> picked = questionRepository.findRandomByCategory(cat, cap);
+        if (picked.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No questions available for category: " + cat);
+        }
+
+        ExerciseSession session = new ExerciseSession();
+        session.setUser(user);
+        session.setCategory(cat);
+        session.setStatus("active");
+        session.setQuestionIds(picked.stream().map(ExerciseQuestion::getId).toList());
+        session = sessionRepository.save(session);
+
+        List<ExerciseQuestionResponse> questions = picked.stream()
+                .map(q -> new ExerciseQuestionResponse(
+                        q.getId(),
+                        q.getCategory(),
+                        q.getDifficulty(),
+                        q.getQuestion(),
+                        q.getOptions(),
+                        q.getHint(),
+                        q.getLevel()))
+                .toList();
+
+        return new ExerciseSessionResponse(session.getId(), cat, picked.size(), questions);
+    }
+
+    @Transactional
+    public ExerciseCompleteResponse completeSession(String firebaseUid, UUID sessionId, List<AnswerSubmit> answers) {
+        ExerciseSession session = sessionRepository.findByIdAndUser_FirebaseUid(sessionId, firebaseUid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise session not found"));
+
+        if ("completed".equalsIgnoreCase(session.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exercise session is already completed");
+        }
+        if (answers == null) {
+            answers = List.of();
+        }
+
+        Set<UUID> sessionQuestionIds = new HashSet<>(session.getQuestionIds());
+        Map<UUID, ExerciseQuestion> questionsById = new HashMap<>();
+        for (ExerciseQuestion q : questionRepository.findAllById(session.getQuestionIds())) {
+            questionsById.put(q.getId(), q);
+        }
+
+        List<ExerciseAnswerResult> results = new ArrayList<>();
+        Set<UUID> answeredIds = new HashSet<>();
+        int correct = 0;
+
+        for (AnswerSubmit submit : answers) {
+            if (submit == null || submit.questionId() == null) {
+                continue;
+            }
+            UUID qid = submit.questionId();
+            if (!sessionQuestionIds.contains(qid) || answeredIds.contains(qid)) {
+                continue;
+            }
+            ExerciseQuestion q = questionsById.get(qid);
+            if (q == null) {
+                continue;
+            }
+            boolean isCorrect = q.getCorrectAnswer() != null
+                    && submit.selectedAnswer() != null
+                    && q.getCorrectAnswer().equals(submit.selectedAnswer());
+            if (isCorrect) correct++;
+
+            ExerciseAnswer ans = new ExerciseAnswer();
+            ans.setSession(session);
+            ans.setQuestion(q);
+            ans.setSelectedAnswer(submit.selectedAnswer());
+            ans.setIsCorrect(isCorrect);
+            answerRepository.save(ans);
+            answeredIds.add(qid);
+
+            results.add(new ExerciseAnswerResult(
+                    qid,
+                    submit.selectedAnswer(),
+                    q.getCorrectAnswer(),
+                    isCorrect,
+                    q.getExplanation()
+            ));
+        }
+
+        int total = session.getQuestionIds().size();
+        int accuracy = total == 0 ? 0 : (int) Math.round((correct * 100.0) / total);
+        int xpEarned = xpForResult(correct, total);
+
+        session.setStatus("completed");
+        session.setCompletedAt(LocalDateTime.now());
+        sessionRepository.save(session);
+
+        if (xpEarned > 0) {
+            User user = session.getUser();
+            progressService.recordActivity(user.getId(), xpEarned);
+        }
+
+        return new ExerciseCompleteResponse(
+                session.getId(),
+                session.getCategory(),
+                total,
+                correct,
+                total - correct,
+                accuracy,
+                xpEarned,
+                results
+        );
+    }
+
+    private static int xpForResult(int correct, int total) {
+        if (total <= 0) return 0;
+        // 2 XP per correct, +5 bonus for 100% accuracy
+        int xp = correct * 2;
+        if (correct == total) {
+            xp += 5;
+        }
+        return xp;
+    }
+
+    private static String normalizeCategory(String raw) {
+        if (raw == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "category is required");
+        }
+        String cat = raw.trim().toLowerCase();
+        if (!ALLOWED_CATEGORIES.contains(cat)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "category must be 'vocabulary' or 'grammar'");
+        }
+        return cat;
+    }
+
+    private static int clampSize(int size) {
+        if (size <= 0) return DEFAULT_SIZE;
+        return Math.min(size, MAX_SIZE);
+    }
+
+    private User loadUser(String firebaseUid) {
+        return userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User profile not found. Please sync account first."));
+    }
+}

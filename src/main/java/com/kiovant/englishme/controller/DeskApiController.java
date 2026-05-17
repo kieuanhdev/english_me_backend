@@ -98,4 +98,28 @@ public class DeskApiController {
         FlashcardResponse created = deskFlashcardService.createFlashcard(token.getUid(), deskId, body);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
+
+    /** Sửa flashcard trong desk của user */
+    @PutMapping("/{deskId}/flashcards/{flashcardId}")
+    public FlashcardResponse updateFlashcard(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable UUID deskId,
+            @PathVariable UUID flashcardId,
+            @RequestBody CreateFlashcardRequest body
+    ) {
+        FirebaseToken token = authHelper.verifyBearer(authorization);
+        return deskFlashcardService.updateFlashcard(token.getUid(), deskId, flashcardId, body);
+    }
+
+    /** Xóa flashcard khỏi desk của user */
+    @DeleteMapping("/{deskId}/flashcards/{flashcardId}")
+    public ResponseEntity<Void> deleteFlashcard(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @PathVariable UUID deskId,
+            @PathVariable UUID flashcardId
+    ) {
+        FirebaseToken token = authHelper.verifyBearer(authorization);
+        deskFlashcardService.deleteFlashcard(token.getUid(), deskId, flashcardId);
+        return ResponseEntity.noContent().build();
+    }
 }

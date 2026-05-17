@@ -1,0 +1,51 @@
+<div class="grid grid-cols-2 gap-3">
+    <div class="space-y-2 col-span-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Từ</label>
+        <input type="text" name="word" required placeholder="VD: hello"
+               class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">IPA</label>
+        <input type="text" name="pronunciation" placeholder="/həˈloʊ/"
+               class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Part of speech</label>
+        <input type="text" name="partOfSpeech" placeholder="noun / verb / phrase"
+               class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Nghĩa VI</label>
+        <textarea name="definitionVi" rows="2"
+                  class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"></textarea>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Nghĩa EN</label>
+        <textarea name="definitionEn" rows="2"
+                  class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"></textarea>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Câu ví dụ</label>
+        <textarea name="exampleSentence" rows="2"
+                  class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"></textarea>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Dịch ví dụ</label>
+        <textarea name="exampleTranslation" rows="2"
+                  class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"></textarea>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">CEFR</label>
+        <select name="level" required class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+            <option value="" disabled selected>Chọn mức</option>
+            <option value="A1">A1</option><option value="A2">A2</option>
+            <option value="B1">B1</option><option value="B2">B2</option>
+            <option value="C1">C1</option><option value="C2">C2</option>
+        </select>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Audio URL</label>
+        <input type="text" name="audioUrl" placeholder="https://..."
+               class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+    </div>
+</div>

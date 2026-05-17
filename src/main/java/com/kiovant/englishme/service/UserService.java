@@ -27,6 +27,9 @@ public class UserService {
 
         return userRepository.findByFirebaseUid(uid)
                 .map(existingUser -> {
+                    if (existingUser.getDeletedAt() != null) {
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tai khoan da bi xoa");
+                    }
                     requireAccountNotLocked(existingUser);
                     // Cập nhật thông tin cơ bản từ Firebase
                     existingUser.setFullName((String) token.getClaims().get("name"));
@@ -63,7 +66,7 @@ public class UserService {
     }
 
     private Specification<User> buildFilterSpec(String cefrLevel, String status, String keyword) {
-        Specification<User> spec = (root, query, cb) -> cb.conjunction();
+        Specification<User> spec = (root, query, cb) -> cb.isNull(root.get("deletedAt"));
 
         if (cefrLevel != null && !cefrLevel.isBlank()) {
             String level = cefrLevel.trim();

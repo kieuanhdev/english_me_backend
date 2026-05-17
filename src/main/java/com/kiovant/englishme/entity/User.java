@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -33,6 +34,21 @@ public class User {
     @Column(nullable = false)
     private Boolean accountLocked = false;
 
+    @Column(nullable = false)
+    private Integer totalXp = 0;
+
+    @Column(nullable = false)
+    private Integer currentStreak = 0;
+
+    @Column(nullable = false)
+    private Integer longestStreak = 0;
+
+    private LocalDate lastActiveDate;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    /** Soft delete: khi != null, user bị ẩn khỏi list và sync Firebase bị chặn. */
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 }

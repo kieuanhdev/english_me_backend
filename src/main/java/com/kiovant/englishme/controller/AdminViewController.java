@@ -11,8 +11,8 @@ import com.kiovant.englishme.repository.PronunciationAttemptRepository;
 import com.kiovant.englishme.repository.TestAnswerRepository;
 import com.kiovant.englishme.repository.TestSessionRepository;
 import com.kiovant.englishme.repository.UserRepository;
+import com.kiovant.englishme.service.DashboardAnalyticsService;
 import com.kiovant.englishme.service.DeskFlashcardService;
-import com.kiovant.englishme.service.GrammarService;
 import com.kiovant.englishme.service.PronunciationAssessmentService;
 import com.kiovant.englishme.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -38,36 +38,36 @@ public class AdminViewController {
     private final UserService userService;
     private final DeskFlashcardService deskFlashcardService;
     private final PronunciationAssessmentService pronunciationAssessmentService;
-    private final GrammarService grammarService;
     private final UserRepository userRepository;
     private final DeskRepository deskRepository;
     private final FlashcardRepository flashcardRepository;
     private final PronunciationAttemptRepository pronunciationAttemptRepository;
     private final TestSessionRepository testSessionRepository;
     private final TestAnswerRepository testAnswerRepository;
+    private final DashboardAnalyticsService dashboardAnalyticsService;
 
     public AdminViewController(
             UserService userService,
             DeskFlashcardService deskFlashcardService,
             PronunciationAssessmentService pronunciationAssessmentService,
-            GrammarService grammarService,
             UserRepository userRepository,
             DeskRepository deskRepository,
             FlashcardRepository flashcardRepository,
             PronunciationAttemptRepository pronunciationAttemptRepository,
             TestSessionRepository testSessionRepository,
-            TestAnswerRepository testAnswerRepository
+            TestAnswerRepository testAnswerRepository,
+            DashboardAnalyticsService dashboardAnalyticsService
     ) {
         this.userService = userService;
         this.deskFlashcardService = deskFlashcardService;
         this.pronunciationAssessmentService = pronunciationAssessmentService;
-        this.grammarService = grammarService;
         this.userRepository = userRepository;
         this.deskRepository = deskRepository;
         this.flashcardRepository = flashcardRepository;
         this.pronunciationAttemptRepository = pronunciationAttemptRepository;
         this.testSessionRepository = testSessionRepository;
         this.testAnswerRepository = testAnswerRepository;
+        this.dashboardAnalyticsService = dashboardAnalyticsService;
     }
 
     @GetMapping
@@ -82,6 +82,7 @@ public class AdminViewController {
         model.addAttribute("stats", new DashboardStats(
                 totalUsers, activeToday, newUsersToday, totalDesks, totalFlashcards, totalPronunciationAttempts
         ));
+        model.addAttribute("analytics", dashboardAnalyticsService.build());
         return "admin/dashboard";
     }
 
@@ -274,35 +275,6 @@ public class AdminViewController {
         model.addAttribute("currentPage", Math.max(page, 0));
         model.addAttribute("pageSize", Math.min(Math.max(size, 1), 100));
         return "admin/pronunciation";
-    }
-
-    @GetMapping("/grammar")
-    public String grammarTopics(Model model) {
-        model.addAttribute("topics", grammarService.getTopics());
-        return "admin/grammar";
-    }
-
-    @GetMapping("/grammar/topics/{id}")
-    public String grammarLessons(@PathVariable String id, Model model, RedirectAttributes ra) {
-        try {
-            model.addAttribute("lessons", grammarService.getLessonsByTopicId(id));
-            model.addAttribute("topicId", id);
-            return "admin/grammar-lessons";
-        } catch (ResponseStatusException ex) {
-            ra.addFlashAttribute("errorMessage", "Không tìm thấy chủ đề ngữ pháp.");
-            return "redirect:/admin/grammar";
-        }
-    }
-
-    @GetMapping("/grammar/lessons/{id}")
-    public String grammarLessonDetail(@PathVariable String id, Model model, RedirectAttributes ra) {
-        try {
-            model.addAttribute("lesson", grammarService.getLessonDetail(id));
-            return "admin/grammar-lesson-detail";
-        } catch (ResponseStatusException ex) {
-            ra.addFlashAttribute("errorMessage", "Không tìm thấy bài học.");
-            return "redirect:/admin/grammar";
-        }
     }
 
     @GetMapping("/placement-test")

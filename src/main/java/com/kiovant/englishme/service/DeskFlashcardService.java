@@ -174,6 +174,50 @@ public class DeskFlashcardService {
     }
 
     @Transactional
+    public FlashcardResponse updateFlashcard(String firebaseUid, UUID deskId, UUID flashcardId, CreateFlashcardRequest req) {
+        User owner = getUserByFirebaseUidOrThrow(firebaseUid);
+        getDeskOrThrow(deskId, owner.getId());
+        Flashcard fc = flashcardRepository.findByIdAndDesk_Id(flashcardId, deskId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Flashcard not found"));
+
+        if (req.word() == null || req.word().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "word is required");
+        }
+        if (req.cefr() == null || req.cefr().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cefr is required");
+        }
+        String newWord = req.word().trim();
+        if (!newWord.equals(fc.getWord()) && flashcardRepository.existsByDesk_IdAndWord(deskId, newWord)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Flashcard already exists for this word on this desk");
+        }
+
+        fc.setWord(newWord);
+        fc.setCefr(req.cefr().trim().toUpperCase());
+        fc.setPosJson(emptyToNull(req.pos()));
+        fc.setAllLevelsJson(emptyToNull(req.allLevels()));
+        fc.setIpa(trimToNull(req.ipa()));
+        fc.setAudioUrl(trimToNull(req.audioUrl()));
+        fc.setDefinition(trimToNull(req.definition()));
+        fc.setExample(trimToNull(req.example()));
+        fc.setTopic(trimToNull(req.topic()));
+        fc.setVietnamese(trimToNull(req.vietnamese()));
+        fc.setViDefinition(trimToNull(req.viDefinition()));
+        fc.setViExample(trimToNull(req.viExample()));
+
+        fc = flashcardRepository.save(fc);
+        return toFlashcardResponse(fc, deskId);
+    }
+
+    @Transactional
+    public void deleteFlashcard(String firebaseUid, UUID deskId, UUID flashcardId) {
+        User owner = getUserByFirebaseUidOrThrow(firebaseUid);
+        getDeskOrThrow(deskId, owner.getId());
+        Flashcard fc = flashcardRepository.findByIdAndDesk_Id(flashcardId, deskId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Flashcard not found"));
+        flashcardRepository.delete(fc);
+    }
+
+    @Transactional
     public void deleteFlashcard(UUID deskId, UUID flashcardId) {
         getDeskOrThrow(deskId);
         Flashcard fc = flashcardRepository.findById(flashcardId)

@@ -24,17 +24,40 @@
         if (selectedKeyword == null) selectedKeyword = "";
     %>
 
+    <%
+        String successMessage = (String) request.getAttribute("successMessage");
+        String errorMessage = (String) request.getAttribute("errorMessage");
+    %>
+
     <div class="p-8 space-y-8">
-        <div class="flex justify-between items-end">
+        <% if (successMessage != null) { %>
+        <div class="rounded-2xl bg-emerald-50 text-emerald-800 px-5 py-3 text-sm font-semibold border border-emerald-100">
+            <%= successMessage %>
+        </div>
+        <% } %>
+        <% if (errorMessage != null) { %>
+        <div class="rounded-2xl bg-rose-50 text-rose-800 px-5 py-3 text-sm font-semibold border border-rose-100">
+            <%= errorMessage %>
+        </div>
+        <% } %>
+
+        <div class="flex justify-between items-end flex-wrap gap-4">
             <div class="space-y-1">
                 <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline">Quản lý người dùng</h1>
                 <p class="text-slate-500 font-medium">Theo dõi và quản lý <%= totalUsers %> học viên trong hệ thống.</p>
             </div>
-            <button type="button" id="openUserModal"
-                    class="primary-gradient text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
-                <span class="material-symbols-outlined text-xl">person_add</span>
-                Thêm người dùng
-            </button>
+            <div class="flex gap-2">
+                <a href="${pageContext.request.contextPath}/admin/users/export?cefr=<%= selectedCefr %>&status=<%= selectedStatus %>&q=<%= selectedKeyword %>"
+                   class="bg-slate-100 text-slate-700 px-5 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200">
+                    <span class="material-symbols-outlined text-lg">download</span>
+                    Export CSV
+                </a>
+                <button type="button" id="openUserModal"
+                        class="primary-gradient text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2">
+                    <span class="material-symbols-outlined text-xl">person_add</span>
+                    Thêm người dùng
+                </button>
+            </div>
         </div>
 
         <section class="bg-surface-container-low p-6 rounded-[2rem] space-y-6">
@@ -83,6 +106,8 @@
                         <th class="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Họ và tên</th>
                         <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Email</th>
                         <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Trình độ CEFR</th>
+                        <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">XP</th>
+                        <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Streak</th>
                         <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Ngày tham gia</th>
                         <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400">Trạng thái</th>
                         <th class="px-6 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Hành động</th>
@@ -93,7 +118,7 @@
                         if (users == null || users.isEmpty()) {
                     %>
                     <tr>
-                        <td colspan="6" class="px-8 py-10 text-center text-slate-500 font-semibold">
+                        <td colspan="8" class="px-8 py-10 text-center text-slate-500 font-semibold">
                             Chưa có người dùng nào trong hệ thống.
                         </td>
                     </tr>
@@ -126,6 +151,8 @@
                         <td class="px-6 py-5">
                             <span class="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg"><%= level %></span>
                         </td>
+                        <td class="px-6 py-5 text-center text-sm font-bold text-indigo-950"><%= user.getTotalXp() == null ? 0 : user.getTotalXp() %></td>
+                        <td class="px-6 py-5 text-center text-sm font-bold text-slate-600"><%= user.getCurrentStreak() == null ? 0 : user.getCurrentStreak() %></td>
                         <td class="px-6 py-5 text-center"><span class="text-xs font-medium text-slate-500 italic"><%= createdAt %></span></td>
                         <td class="px-6 py-5">
                             <span class="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full <%= statusClass %>">
@@ -134,6 +161,11 @@
                         </td>
                         <td class="px-6 py-5 text-right">
                             <div class="inline-flex flex-wrap items-center justify-end gap-2">
+                            <a href="${pageContext.request.contextPath}/admin/users/<%= user.getId() %>"
+                               class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+                                <span class="material-symbols-outlined text-base">visibility</span>
+                                Chi tiết
+                            </a>
                             <% if (accountActive) { %>
                             <form method="post"
                                   action="${pageContext.request.contextPath}/admin/users/<%= user.getId() %>/lock"

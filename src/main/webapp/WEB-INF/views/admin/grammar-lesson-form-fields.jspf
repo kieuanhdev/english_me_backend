@@ -1,0 +1,56 @@
+<div class="grid grid-cols-3 gap-3">
+    <div class="space-y-2 col-span-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Source ID (duy nhất)</label>
+        <input type="text" name="sourceId" required maxlength="120"
+               class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-mono text-slate-700"
+               placeholder="present-simple-001">
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Sort order</label>
+        <input type="number" name="sortOrderRaw"
+               class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+    </div>
+</div>
+<div class="space-y-2">
+    <label class="text-xs font-bold text-slate-500 uppercase px-1">Tiêu đề</label>
+    <input type="text" name="title" required
+           class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"
+           placeholder="VD: Cấu trúc thì hiện tại đơn">
+</div>
+<div class="space-y-2">
+    <label class="text-xs font-bold text-slate-500 uppercase px-1">Giải thích (VI)</label>
+    <textarea name="explanationVi" rows="3"
+              class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm text-slate-700"></textarea>
+</div>
+<div class="grid grid-cols-2 gap-3">
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Khi nào dùng (VI)</label>
+        <textarea name="whenToUseVi" rows="3"
+                  class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm text-slate-700"></textarea>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Mẹo (VI)</label>
+        <textarea name="tipsVi" rows="3"
+                  class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm text-slate-700"></textarea>
+    </div>
+</div>
+<div class="space-y-2">
+    <label class="text-xs font-bold text-slate-500 uppercase px-1">Formulas (JSON array of objects, ví dụ: <code>[{"label":"+","form":"S + V(s/es)"}]</code>)</label>
+    <textarea name="formulasJson" rows="3" placeholder='[{"label":"+","form":"S + V(s/es)"}]'
+              class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700"></textarea>
+</div>
+<div class="space-y-2">
+    <label class="text-xs font-bold text-slate-500 uppercase px-1">Key words (JSON array of strings, ví dụ: <code>["always","usually"]</code>)</label>
+    <textarea name="keyWordsJson" rows="2" placeholder='["always","usually","often"]'
+              class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700"></textarea>
+</div>
+<div class="space-y-2">
+    <label class="text-xs font-bold text-slate-500 uppercase px-1">Examples (JSON array of objects)</label>
+    <textarea name="examplesJson" rows="3" placeholder='[{"en":"She works here.","vi":"Cô ấy làm việc ở đây."}]'
+              class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700"></textarea>
+</div>
+<div class="space-y-2">
+    <label class="text-xs font-bold text-slate-500 uppercase px-1">Common mistakes (JSON array of objects)</label>
+    <textarea name="commonMistakesJson" rows="3" placeholder='[{"wrong":"She work here","right":"She works here"}]'
+              class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700"></textarea>
+</div>
