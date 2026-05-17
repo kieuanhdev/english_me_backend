@@ -36,3 +36,4 @@ src/main/resources/application-local.yaml
 serviceAccountKey.json
 src/main/resources/application.yaml
 .env
+.phase0-runlog.txt
