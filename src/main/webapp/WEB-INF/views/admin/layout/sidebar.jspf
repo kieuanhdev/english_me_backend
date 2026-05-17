@@ -15,8 +15,6 @@
     boolean badgesActive = uri.startsWith(adminRoot + "/badges");
     boolean studySessionsActive = uri.startsWith(adminRoot + "/study-sessions");
     boolean homeContentActive = uri.startsWith(adminRoot + "/home-content");
-    boolean notificationsActive = uri.startsWith(adminRoot + "/notifications");
-    boolean announcementsActive = uri.startsWith(adminRoot + "/announcements");
     boolean adminAccountsActive = uri.startsWith(adminRoot + "/admins");
     boolean auditLogActive = uri.startsWith(adminRoot + "/audit-log");
     boolean configActive = uri.startsWith(adminRoot + "/config");
@@ -45,8 +43,6 @@
         <a href="${pageContext.request.contextPath}/admin/badges" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= badgesActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">emoji_events</span>Badges</a>
         <a href="${pageContext.request.contextPath}/admin/study-sessions" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= studySessionsActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">timeline</span>Study Sessions</a>
         <a href="${pageContext.request.contextPath}/admin/home-content/word-of-day" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= homeContentActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">home</span>Home Content</a>
-        <a href="${pageContext.request.contextPath}/admin/notifications" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= notificationsActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">notifications_active</span>Push Notifications</a>
-        <a href="${pageContext.request.contextPath}/admin/announcements" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= announcementsActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">campaign</span>Announcements</a>
         <a href="${pageContext.request.contextPath}/admin/admins" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= adminAccountsActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">admin_panel_settings</span>Admin Accounts</a>
         <a href="${pageContext.request.contextPath}/admin/audit-log" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= auditLogActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">history</span>Audit Log</a>
         <a href="${pageContext.request.contextPath}/admin/config" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= configActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">tune</span>System Config</a>
