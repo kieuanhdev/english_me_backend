@@ -185,60 +185,6 @@ public class AdminUserService {
     // ── Actions ─────────────────────────────────────────────────────────────
 
     @Transactional
-    public void grantXp(UUID userId, int amount) {
-        if (amount <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Số XP phải lớn hơn 0.");
-        }
-        User user = getUserOrThrow(userId);
-        user.setTotalXp((user.getTotalXp() == null ? 0 : user.getTotalXp()) + amount);
-        userRepository.save(user);
-    }
-
-    @Transactional
-    public void changeLevel(UUID userId, String newLevel) {
-        if (newLevel == null || !ALLOWED_LEVELS.contains(newLevel.trim().toUpperCase(Locale.ROOT))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CEFR level phải thuộc A1–C2.");
-        }
-        User user = getUserOrThrow(userId);
-        user.setCefrLevel(newLevel.trim().toUpperCase(Locale.ROOT));
-        userRepository.save(user);
-    }
-
-    @Transactional
-    public void awardBadge(UUID userId, UUID badgeId) {
-        User user = getUserOrThrow(userId);
-        Badge badge = badgeRepository.findById(badgeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy badge."));
-        if (userBadgeRepository.existsByUser_IdAndBadge_Id(userId, badgeId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "User đã có badge này.");
-        }
-        UserBadge ub = new UserBadge();
-        ub.setUser(user);
-        ub.setBadge(badge);
-        userBadgeRepository.save(ub);
-    }
-
-    /**
-     * Xóa toàn bộ session/attempt/badge/progress và reset XP/streak. KHÔNG ĐỘNG vào desk/flashcard
-     * (đó là content do user tạo, không phải progress).
-     */
-    @Transactional
-    public void resetProgress(UUID userId) {
-        User user = getUserOrThrow(userId);
-        flashcardProgressRepository.deleteByUser_Id(userId);
-        studySessionRepository.deleteByUser_Id(userId);
-        exerciseSessionRepository.deleteByUser_Id(userId);
-        testSessionRepository.deleteByUser_Id(userId);
-        pronunciationAttemptRepository.deleteByUser_Id(userId);
-        userBadgeRepository.deleteByUser_Id(userId);
-        user.setTotalXp(0);
-        user.setCurrentStreak(0);
-        user.setLongestStreak(0);
-        user.setLastActiveDate(null);
-        userRepository.save(user);
-    }
-
-    @Transactional
     public void softDelete(UUID userId) {
         User user = getUserOrThrow(userId);
         user.setDeletedAt(LocalDateTime.now());
@@ -287,11 +233,6 @@ public class AdminUserService {
               .append(csv(u.getCreatedAt() == null ? null : u.getCreatedAt().toString())).append('\n');
         }
         return sb.toString();
-    }
-
-    @Transactional(readOnly = true)
-    public List<Badge> listAllBadges() {
-        return badgeRepository.findAll();
     }
 
     private static String csv(String value) {

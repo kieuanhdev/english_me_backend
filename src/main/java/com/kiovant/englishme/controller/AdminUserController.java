@@ -1,7 +1,6 @@
 package com.kiovant.englishme.controller;
 
 import com.kiovant.englishme.dto.UserDetailDto;
-import com.kiovant.englishme.entity.Badge;
 import com.kiovant.englishme.service.AdminUserService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -36,9 +35,7 @@ public class AdminUserController {
     public String detail(@PathVariable UUID id, Model model, RedirectAttributes ra) {
         try {
             UserDetailDto detail = adminUserService.getDetail(id);
-            List<Badge> badges = adminUserService.listAllBadges();
             model.addAttribute("detail", detail);
-            model.addAttribute("allBadges", badges);
             return "admin/user-detail";
         } catch (ResponseStatusException ex) {
             ra.addFlashAttribute("errorMessage", reasonOr(ex, "Không tìm thấy người dùng."));
@@ -69,57 +66,6 @@ public class AdminUserController {
     }
 
     // ── Mutations ───────────────────────────────────────────────────────────
-
-    @PostMapping("/{id}/grant-xp")
-    public String grantXp(@PathVariable UUID id,
-                          @RequestParam int amount,
-                          RedirectAttributes ra) {
-        try {
-            adminUserService.grantXp(id, amount);
-            ra.addFlashAttribute("successMessage", "Đã cấp " + amount + " XP.");
-        } catch (ResponseStatusException ex) {
-            ra.addFlashAttribute("errorMessage", reasonOr(ex, "Không thể cấp XP."));
-        }
-        return "redirect:/admin/users/" + id;
-    }
-
-    @PostMapping("/{id}/change-level")
-    public String changeLevel(@PathVariable UUID id,
-                              @RequestParam String cefrLevel,
-                              RedirectAttributes ra) {
-        try {
-            adminUserService.changeLevel(id, cefrLevel);
-            ra.addFlashAttribute("successMessage", "Đã đổi CEFR level sang " + cefrLevel + ".");
-        } catch (ResponseStatusException ex) {
-            ra.addFlashAttribute("errorMessage", reasonOr(ex, "Không thể đổi level."));
-        }
-        return "redirect:/admin/users/" + id;
-    }
-
-    @PostMapping("/{id}/award-badge")
-    public String awardBadge(@PathVariable UUID id,
-                             @RequestParam UUID badgeId,
-                             RedirectAttributes ra) {
-        try {
-            adminUserService.awardBadge(id, badgeId);
-            ra.addFlashAttribute("successMessage", "Đã gắn badge.");
-        } catch (ResponseStatusException ex) {
-            ra.addFlashAttribute("errorMessage", reasonOr(ex, "Không thể gắn badge."));
-        }
-        return "redirect:/admin/users/" + id;
-    }
-
-    @PostMapping("/{id}/reset-progress")
-    public String resetProgress(@PathVariable UUID id, RedirectAttributes ra) {
-        try {
-            adminUserService.resetProgress(id);
-            ra.addFlashAttribute("successMessage",
-                    "Đã reset toàn bộ session/badge/progress + đưa XP/streak về 0. Desk/flashcard giữ nguyên.");
-        } catch (ResponseStatusException ex) {
-            ra.addFlashAttribute("errorMessage", reasonOr(ex, "Không thể reset progress."));
-        }
-        return "redirect:/admin/users/" + id;
-    }
 
     @PostMapping("/{id}/delete")
     public String softDelete(@PathVariable UUID id, RedirectAttributes ra) {
