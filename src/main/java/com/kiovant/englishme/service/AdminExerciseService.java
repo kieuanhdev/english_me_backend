@@ -4,8 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kiovant.englishme.dto.AdminExerciseQuestionRow;
-import com.kiovant.englishme.dto.AdminExerciseSessionDetail;
-import com.kiovant.englishme.dto.AdminExerciseSessionRow;
 import com.kiovant.englishme.dto.CreateExerciseQuestionRequest;
 import com.kiovant.englishme.dto.ExerciseImportResult;
 import com.kiovant.englishme.dto.UpdateExerciseQuestionRequest;
@@ -212,80 +210,6 @@ public class AdminExerciseService {
         return sb.toString();
     }
 
-    // ── Sessions ────────────────────────────────────────────────────────────
-
-    @Transactional(readOnly = true)
-    public Page<AdminExerciseSessionRow> listSessions(String category, String status, UUID userId, int page, int size) {
-        Page<ExerciseSession> sessions = sessionRepository.searchSessions(
-                blankToNull(category),
-                blankToNull(status),
-                userId,
-                PageRequest.of(Math.max(0, page), Math.max(1, Math.min(size, 100))));
-
-        List<UUID> sessionIds = sessions.stream().map(ExerciseSession::getId).toList();
-        Map<UUID, long[]> stats = sessionIds.isEmpty()
-                ? Collections.emptyMap()
-                : loadSessionAnswerStats(sessionIds);
-
-        return sessions.map(s -> new AdminExerciseSessionRow(
-                s.getId(),
-                s.getUser() == null ? null : s.getUser().getId(),
-                s.getUser() == null ? null : s.getUser().getEmail(),
-                s.getUser() == null ? null : s.getUser().getFullName(),
-                s.getCategory(),
-                s.getStatus(),
-                s.getQuestionIds() == null ? 0 : s.getQuestionIds().size(),
-                stats.getOrDefault(s.getId(), new long[]{0L, 0L})[0],
-                stats.getOrDefault(s.getId(), new long[]{0L, 0L})[1],
-                s.getCreatedAt(),
-                s.getCompletedAt()));
-    }
-
-    @Transactional(readOnly = true)
-    public AdminExerciseSessionDetail getSessionDetail(UUID sessionId) {
-        ExerciseSession session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise session not found"));
-
-        List<ExerciseAnswer> answers = answerRepository.findBySessionId(sessionId);
-        long answered = answers.size();
-        long correct = answers.stream().filter(a -> Boolean.TRUE.equals(a.getIsCorrect())).count();
-
-        List<AdminExerciseSessionDetail.AnswerRow> answerRows = new ArrayList<>(answers.size());
-        for (ExerciseAnswer a : answers) {
-            ExerciseQuestion q = a.getQuestion();
-            answerRows.add(new AdminExerciseSessionDetail.AnswerRow(
-                    a.getId(),
-                    q == null ? null : q.getId(),
-                    q == null ? null : q.getQuestion(),
-                    q == null ? null : toJsonInline(q.getOptions()),
-                    q == null ? null : q.getCorrectAnswer(),
-                    a.getSelectedAnswer(),
-                    a.getIsCorrect(),
-                    q == null ? null : q.getLevel(),
-                    q == null ? null : q.getDifficulty()));
-        }
-
-        Long durationSec = null;
-        if (session.getCreatedAt() != null && session.getCompletedAt() != null) {
-            durationSec = Duration.between(session.getCreatedAt(), session.getCompletedAt()).toSeconds();
-        }
-
-        return new AdminExerciseSessionDetail(
-                session.getId(),
-                session.getUser() == null ? null : session.getUser().getId(),
-                session.getUser() == null ? null : session.getUser().getEmail(),
-                session.getUser() == null ? null : session.getUser().getFullName(),
-                session.getCategory(),
-                session.getStatus(),
-                session.getCreatedAt(),
-                session.getCompletedAt(),
-                durationSec,
-                session.getQuestionIds() == null ? 0 : session.getQuestionIds().size(),
-                answered,
-                correct,
-                answerRows);
-    }
-
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     private Map<UUID, long[]> loadQuestionStats(List<UUID> questionIds) {
@@ -298,16 +222,6 @@ public class AdminExerciseService {
             result.put(qid, new long[]{attempts, correct});
         }
         return result;
-    }
-
-    private Map<UUID, long[]> loadSessionAnswerStats(List<UUID> sessionIds) {
-        Map<UUID, long[]> map = new HashMap<>();
-        for (UUID sid : sessionIds) {
-            long total = answerRepository.countBySessionId(sid);
-            long correct = answerRepository.countCorrectBySessionId(sid);
-            map.put(sid, new long[]{total, correct});
-        }
-        return map;
     }
 
     private void validateQuestionPayload(String category, String difficulty, String level,

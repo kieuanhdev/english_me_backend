@@ -1,7 +1,5 @@
 package com.kiovant.englishme.controller;
 
-import com.kiovant.englishme.dto.AdminExerciseSessionDetail;
-import com.kiovant.englishme.dto.AdminExerciseSessionRow;
 import com.kiovant.englishme.dto.CreateExerciseQuestionRequest;
 import com.kiovant.englishme.dto.ExerciseImportResult;
 import com.kiovant.englishme.dto.UpdateExerciseQuestionRequest;
@@ -164,37 +162,6 @@ public class AdminExerciseController {
                 .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"exercise-bank.csv\"")
                 .body(out);
-    }
-
-    // ── Sessions ────────────────────────────────────────────────────────────
-
-    @GetMapping("/sessions")
-    public String sessions(
-            @RequestParam(required = false, defaultValue = "") String category,
-            @RequestParam(required = false, defaultValue = "") String status,
-            @RequestParam(required = false) UUID userId,
-            @RequestParam(required = false, defaultValue = "0") int page,
-            @RequestParam(required = false, defaultValue = "20") int size,
-            Model model
-    ) {
-        Page<AdminExerciseSessionRow> sessions = adminExerciseService.listSessions(category, status, userId, page, size);
-        model.addAttribute("sessions", sessions);
-        model.addAttribute("selectedCategory", category);
-        model.addAttribute("selectedStatus", status);
-        model.addAttribute("selectedUserId", userId);
-        return "admin/exercise-sessions";
-    }
-
-    @GetMapping("/sessions/{id}")
-    public String sessionDetail(@PathVariable UUID id, Model model, RedirectAttributes ra) {
-        try {
-            AdminExerciseSessionDetail detail = adminExerciseService.getSessionDetail(id);
-            model.addAttribute("session", detail);
-            return "admin/exercise-session-detail";
-        } catch (ResponseStatusException ex) {
-            ra.addFlashAttribute("errorMessage", reasonOr(ex, "Không tìm thấy session."));
-            return "redirect:/admin/exercises/sessions";
-        }
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────

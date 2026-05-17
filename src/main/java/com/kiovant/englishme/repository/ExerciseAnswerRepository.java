@@ -10,15 +10,6 @@ import java.util.UUID;
 
 public interface ExerciseAnswerRepository extends JpaRepository<ExerciseAnswer, UUID> {
 
-    @Query("SELECT a FROM ExerciseAnswer a WHERE a.session.id = :sessionId")
-    List<ExerciseAnswer> findBySessionId(@Param("sessionId") UUID sessionId);
-
-    @Query("SELECT COUNT(a) FROM ExerciseAnswer a WHERE a.session.id = :sessionId")
-    long countBySessionId(@Param("sessionId") UUID sessionId);
-
-    @Query("SELECT COUNT(a) FROM ExerciseAnswer a WHERE a.session.id = :sessionId AND a.isCorrect = true")
-    long countCorrectBySessionId(@Param("sessionId") UUID sessionId);
-
     /** [questionId, attempts, correctAttempts] cho mọi câu hỏi đã được trả lời. */
     @Query("""
             SELECT a.question.id, COUNT(a),
