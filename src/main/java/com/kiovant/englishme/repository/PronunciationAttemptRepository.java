@@ -59,38 +59,4 @@ public interface PronunciationAttemptRepository extends JpaRepository<Pronunciat
 
     void deleteByUser_Id(UUID userId);
 
-    // ── Admin analytics ─────────────────────────────────────────────────────
-
-    /** Trả về [exerciseId, attemptCount, avgScore] để đính kèm vào list exercise. */
-    @Query("""
-            SELECT p.exerciseId, COUNT(p), AVG(p.overallScore)
-            FROM PronunciationAttempt p
-            WHERE p.exerciseId IS NOT NULL
-            GROUP BY p.exerciseId
-            """)
-    List<Object[]> aggregateStatsByExercise();
-
-    /** Phân bố điểm theo bucket 10 (0–9, 10–19, ..., 90–100). */
-    @Query("""
-            SELECT FLOOR(p.overallScore / 10), COUNT(p)
-            FROM PronunciationAttempt p
-            GROUP BY FLOOR(p.overallScore / 10)
-            ORDER BY FLOOR(p.overallScore / 10)
-            """)
-    List<Object[]> scoreDistributionBuckets();
-
-    /** So sánh provider: count + avg. */
-    @Query("""
-            SELECT p.provider, COUNT(p), AVG(p.overallScore), AVG(p.accuracyScore), AVG(p.fluencyScore)
-            FROM PronunciationAttempt p
-            GROUP BY p.provider
-            ORDER BY COUNT(p) DESC
-            """)
-    List<Object[]> providerComparison();
-
-    @Query("SELECT COUNT(p) FROM PronunciationAttempt p")
-    long countAll();
-
-    @Query("SELECT AVG(p.overallScore) FROM PronunciationAttempt p")
-    Double averageOverallScore();
 }
