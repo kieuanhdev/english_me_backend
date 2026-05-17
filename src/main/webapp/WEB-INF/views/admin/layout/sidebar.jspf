@@ -10,7 +10,6 @@
     boolean grammarActive = uri.startsWith(adminRoot + "/grammar");
     boolean exercisesActive = uri.startsWith(adminRoot + "/exercises");
     boolean placementTestActive = uri.startsWith(adminRoot + "/placement-test");
-    boolean testBankActive = uri.startsWith(adminRoot + "/test-bank");
     boolean badgesActive = uri.startsWith(adminRoot + "/badges");
     boolean studySessionsActive = uri.startsWith(adminRoot + "/study-sessions");
     boolean adminAccountsActive = uri.startsWith(adminRoot + "/admins");
@@ -36,7 +35,6 @@
         <a href="${pageContext.request.contextPath}/admin/grammar" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= grammarActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">auto_stories</span>Grammar</a>
         <a href="${pageContext.request.contextPath}/admin/exercises" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= exercisesActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">quiz</span>Exercise Bank</a>
         <a href="${pageContext.request.contextPath}/admin/placement-test" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= placementTestActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">quiz</span>Placement Test</a>
-        <a href="${pageContext.request.contextPath}/admin/test-bank" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= testBankActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">library_books</span>Test Bank</a>
         <a href="${pageContext.request.contextPath}/admin/badges" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= badgesActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">emoji_events</span>Badges</a>
         <a href="${pageContext.request.contextPath}/admin/study-sessions" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= studySessionsActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">timeline</span>Study Sessions</a>
         <a href="${pageContext.request.contextPath}/admin/admins" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= adminAccountsActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">admin_panel_settings</span>Admin Accounts</a>

@@ -18,24 +18,4 @@ public interface TestAnswerRepository extends JpaRepository<TestAnswer, UUID> {
     Optional<TestAnswer> findByTestSessionAndQuestion(TestSession testSession, Question question);
 
     long countByTestSession(TestSession testSession);
-
-    /** [questionId, attempts, correctAttempts] cho mọi câu hỏi đã được trả lời trong test bank. */
-    @Query("""
-            SELECT a.question.id, COUNT(a),
-                   SUM(CASE WHEN a.isCorrect = true THEN 1 ELSE 0 END)
-            FROM TestAnswer a
-            WHERE a.question.id IN :questionIds
-            GROUP BY a.question.id
-            """)
-    List<Object[]> aggregateStatsByQuestionIds(@Param("questionIds") List<UUID> questionIds);
-
-    /** [cefrLevel, attempts, correctAttempts] gộp theo CEFR level. */
-    @Query("""
-            SELECT a.question.cefrLevel, COUNT(a),
-                   SUM(CASE WHEN a.isCorrect = true THEN 1 ELSE 0 END)
-            FROM TestAnswer a
-            GROUP BY a.question.cefrLevel
-            ORDER BY a.question.cefrLevel ASC
-            """)
-    List<Object[]> aggregateStatsByCefrLevel();
 }
