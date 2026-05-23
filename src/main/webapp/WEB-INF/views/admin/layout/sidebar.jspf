@@ -10,6 +10,7 @@
     boolean grammarActive = uri.startsWith(adminRoot + "/grammar");
     boolean exercisesActive = uri.startsWith(adminRoot + "/exercises");
     boolean placementTestActive = uri.startsWith(adminRoot + "/placement-test");
+    boolean configActive = uri.startsWith(adminRoot + "/config");
 %>
 <aside class="fixed left-0 top-0 h-screen w-64 bg-surface-container-lowest p-6">
     <div class="flex items-center gap-3 mb-8">
@@ -30,5 +31,6 @@
         <a href="${pageContext.request.contextPath}/admin/grammar" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= grammarActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">auto_stories</span>Grammar</a>
         <a href="${pageContext.request.contextPath}/admin/exercises" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= exercisesActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">quiz</span>Exercise Bank</a>
         <a href="${pageContext.request.contextPath}/admin/placement-test" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= placementTestActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">quiz</span>Placement Test</a>
+        <a href="${pageContext.request.contextPath}/admin/config" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= configActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">settings</span>Cấu hình</a>
     </nav>
 </aside>

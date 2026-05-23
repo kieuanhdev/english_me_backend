@@ -5,7 +5,11 @@
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\bidan\\\\Downloads\\\\EnglishMe\\\\src\\\\main\\\\java\\\\com\\\\kiovant\\\\englishme\" -Recurse -Name -File | Where-Object { $_ -match \"\\\\.\\(java|jsp\\)$\" })",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\bidan\\\\Downloads\\\\EnglishMe\\\\src\\\\main\\\\java\\\\com\\\\kiovant\\\\englishme\" -Recurse -Directory)",
       "Bash(Select-Object FullName)",
-      "Bash(mvn -q -DskipTests compile)"
+      "Bash(mvn -q -DskipTests compile)",
+      "Bash(git mv *)",
+      "PowerShell(Move-Item -Path \"src\\\\test\\\\java\\\\com\\\\kiovant\\\\englishme\\\\integration\\\\PlacementTestFlowIT.java\" -Destination \"src\\\\test\\\\java\\\\com\\\\kiovant\\\\englishme\\\\integration\\\\PlacementTestFlowTest.java\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
