@@ -1,0 +1,248 @@
+﻿# Snapshot of HTTP route declarations BEFORE scope reduction
+# Generated: 2026-05-17 22:10:18
+# Branch: scope-reduction
+# Source: src\main\java\com\kiovant\englishme\controller
+
+## AdminAuditController.java
+  L14: @RequestMapping("/admin/audit-log")
+  L23: @GetMapping
+
+## AdminAuthViewController.java
+  L13: @RequestMapping("/admin")
+  L22: @GetMapping("/login")
+  L31: @PostMapping("/login")
+  L48: @PostMapping("/logout")
+
+## AdminBadgeController.java
+  L20: @RequestMapping("/admin/badges")
+  L31: @GetMapping
+  L39: @PostMapping
+  L63: @PostMapping("/{id}/update")
+  L88: @PostMapping("/{id}/delete")
+  L101: @PostMapping("/{id}/icon")
+  L116: @GetMapping("/{id}/users")
+  L131: @PostMapping("/{id}/reevaluate")
+
+## AdminConfigController.java
+  L17: @RequestMapping("/admin/config")
+  L26: @GetMapping
+  L35: @PostMapping("/{key}")
+  L44: @PutMapping("/{key}")
+  L52: @PostMapping("/reload")
+
+## AdminExerciseController.java
+  L27: @RequestMapping("/admin/exercises")
+  L38: @GetMapping
+  L56: @PostMapping
+  L80: @PostMapping("/{id}/update")
+  L105: @PostMapping("/{id}/delete")
+  L118: @PostMapping("/import")
+  L150: @GetMapping("/export")
+  L171: @GetMapping("/sessions")
+  L188: @GetMapping("/sessions/{id}")
+
+## AdminGrammarController.java
+  L25: @RequestMapping("/admin/grammar")
+  L36: @GetMapping
+  L48: @PostMapping("/topics")
+  L70: @PostMapping("/topics/{id}/update")
+  L93: @PostMapping("/topics/{id}/delete")
+  L106: @GetMapping("/topics/{id}")
+  L119: @PostMapping("/topics/{id}/lessons")
+  L154: @PostMapping("/lessons/{id}/update")
+  L196: @PostMapping("/lessons/{id}/delete")
+  L212: @GetMapping("/lessons/{id}")
+  L223: @PostMapping("/lessons/{id}/exercises")
+  L244: @PostMapping("/exercises/{id}/update")
+  L266: @PostMapping("/exercises/{id}/delete")
+  L280: @PostMapping("/import")
+
+## AdminHomeContentController.java
+  L21: @RequestMapping("/admin/home-content")
+  L32: @GetMapping("/word-of-day")
+  L41: @PostMapping("/word-of-day")
+  L58: @PostMapping("/word-of-day/{id}/delete")
+  L71: @GetMapping("/recommendations")
+  L77: @PostMapping("/recommendations")
+  L96: @PostMapping("/recommendations/{id}/update")
+  L116: @PostMapping("/recommendations/{id}/delete")
+  L129: @GetMapping("/banners")
+  L135: @PostMapping("/banners")
+  L154: @PostMapping("/banners/{id}/update")
+  L174: @PostMapping("/banners/{id}/delete")
+  L185: @PostMapping("/banners/{id}/image")
+
+## AdminManagementController.java
+  L17: @RequestMapping("/admin/admins")
+  L26: @GetMapping
+  L33: @PostMapping
+  L49: @PostMapping("/{id}/role")
+  L63: @PostMapping("/{id}/reset-password")
+  L81: @PostMapping("/{id}/disable")
+  L92: @PostMapping("/{id}/enable")
+
+## AdminNotificationController.java
+  L21: @RequestMapping("/admin")
+  L32: @GetMapping("/notifications")
+  L38: @PostMapping("/notifications/broadcast")
+  L57: @PostMapping("/notifications/targeted")
+  L82: @GetMapping("/notifications/{id}/stats")
+  L96: @GetMapping("/announcements")
+  L102: @PostMapping("/announcements")
+  L121: @PostMapping("/announcements/{id}/update")
+  L140: @PostMapping("/announcements/{id}/delete")
+
+## AdminPronunciationExerciseController.java
+  L20: @RequestMapping("/admin/pronunciation/exercises")
+  L31: @GetMapping
+  L47: @PostMapping
+  L70: @PostMapping("/{id}/update")
+  L94: @PostMapping("/{id}/delete")
+  L107: @PostMapping("/{id}/audio")
+  L122: @GetMapping("/analytics")
+
+## AdminShortcutController.java
+  L9: @GetMapping({"/", "/a"})
+
+## AdminStudySessionController.java
+  L16: @RequestMapping("/admin/study-sessions")
+  L25: @GetMapping
+  L44: @GetMapping("/{id}")
+
+## AdminTestBankController.java
+  L24: @RequestMapping("/admin/test-bank")
+  L35: @GetMapping
+  L51: @PostMapping
+  L74: @PostMapping("/{id}/update")
+  L98: @PostMapping("/{id}/delete")
+  L111: @PostMapping("/import")
+  L143: @GetMapping("/export")
+  L163: @GetMapping("/stats")
+
+## AdminUserController.java
+  L24: @RequestMapping("/admin/users")
+  L35: @GetMapping("/{id}")
+  L51: @GetMapping("/{id}/activity")
+  L56: @GetMapping("/{id}/sessions")
+  L61: @GetMapping("/{id}/xp-history")
+  L66: @GetMapping("/{id}/desks")
+  L73: @PostMapping("/{id}/grant-xp")
+  L86: @PostMapping("/{id}/change-level")
+  L99: @PostMapping("/{id}/award-badge")
+  L112: @PostMapping("/{id}/reset-progress")
+  L124: @PostMapping("/{id}/delete")
+  L137: @GetMapping("/export")
+
+## AdminViewController.java
+  L35: @RequestMapping("/admin")
+  L73: @GetMapping
+  L89: @GetMapping("/desks")
+  L95: @PostMapping("/desks")
+  L125: @GetMapping("/desks/{id}")
+  L147: @PostMapping("/desks/{id}/flashcards")
+  L178: @PostMapping("/desks/{deskId}/flashcards/{flashcardId}/delete")
+  L214: @GetMapping("/users")
+  L228: @PostMapping("/users/{id}/unlock")
+  L239: @PostMapping("/users/{id}/lock")
+  L261: @GetMapping("/pronunciation")
+  L280: @GetMapping("/placement-test")
+  L295: @GetMapping("/placement-test/{id}")
+
+## AdminVocabularyController.java
+  L28: @RequestMapping("/admin/vocabulary")
+  L39: @GetMapping
+  L51: @PostMapping("/topics")
+  L80: @PostMapping("/topics/{id}/update")
+  L110: @PostMapping("/topics/{id}/delete")
+  L123: @GetMapping("/topics/{id}")
+  L142: @PostMapping("/topics/{id}/words")
+  L176: @PostMapping("/words/{id}/update")
+  L218: @PostMapping("/words/{id}/delete")
+  L234: @PostMapping("/topics/{id}/import")
+  L267: @GetMapping("/topics/{id}/export")
+
+## AnnouncementApiController.java
+  L13: @RequestMapping("/api/announcements")
+  L23: @GetMapping("/active")
+
+## AuthController.java
+  L11: @RequestMapping("/api/auth")
+  L22: @PostMapping("/sync")
+
+## ChatApiController.java
+  L10: @RequestMapping("/api/chat")
+  L21: @PostMapping
+
+## DeskApiController.java
+  L20: @RequestMapping("/api/desks")
+  L32: @GetMapping
+  L44: @GetMapping("/{deskId}/flashcards")
+  L58: @PostMapping
+  L69: @PutMapping("/{deskId}")
+  L80: @DeleteMapping("/{deskId}")
+  L91: @PostMapping("/{deskId}/flashcards")
+  L103: @PutMapping("/{deskId}/flashcards/{flashcardId}")
+  L115: @DeleteMapping("/{deskId}/flashcards/{flashcardId}")
+
+## DeviceTokenApiController.java
+  L20: @RequestMapping("/api/users/me/devices")
+  L35: @PostMapping
+  L46: @DeleteMapping
+
+## ExerciseApiController.java
+  L15: @RequestMapping("/api/exercises")
+  L26: @GetMapping("/sessions")
+  L36: @PostMapping("/sessions/{sessionId}/complete")
+
+## GrammarController.java
+  L15: @RequestMapping("/api/grammar")
+  L24: @GetMapping("/topics")
+  L29: @GetMapping("/topics/{id}/lessons")
+  L34: @GetMapping("/lessons/{id}")
+
+## HomeApiController.java
+  L13: @RequestMapping("/api/home")
+  L24: @GetMapping("/dashboard")
+
+## PlacementTestController.java
+  L12: @RequestMapping("/api/placement-test")
+  L24: @PostMapping("/start")
+  L31: @PostMapping("/{sessionId}/answer")
+  L42: @PostMapping("/{sessionId}/complete")
+
+## PronunciationApiController.java
+  L17: @RequestMapping("/api/pronunciation")
+  L34: @GetMapping("/exercises")
+  L39: @PostMapping("/assess")
+  L55: @GetMapping("/history")
+
+## PronunciationViewController.java
+  L8: @RequestMapping("/practice")
+  L11: @GetMapping("/pronunciation")
+
+## StudySessionApiController.java
+  L20: @RequestMapping("/api/study-sessions")
+  L32: @GetMapping("/due-cards")
+  L42: @PostMapping("/start")
+  L53: @PostMapping("/{sessionId}/review")
+  L69: @GetMapping("/{sessionId}/summary")
+
+## UserApiController.java
+  L17: @RequestMapping("/api/users/me")
+  L32: @GetMapping
+  L40: @PutMapping
+  L49: @GetMapping("/progress")
+  L57: @GetMapping("/xp-history")
+  L66: @GetMapping("/streak-calendar")
+
+## UserTestApiController.java
+  L19: @RequestMapping("/api/tests")
+  L30: @PostMapping("/sessions")
+  L42: @PostMapping("/sessions/{sessionId}/submit")
+  L57: @GetMapping("/history")
+
+## VocabularyController.java
+  L12: @RequestMapping("/api/vocabulary")
+  L21: @GetMapping("/topics")
+  L26: @GetMapping("/topics/{topicId}/words")
+

@@ -1,0 +1,27 @@
+# Profile cho integration test — H2 in-memory thay vì Postgres.
+# Tắt Flyway, dùng Hibernate create-drop để schema khớp entity hiện tại.
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:englishme_test;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  flyway:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+
+# Pronunciation provider = mock để không gọi Speechace
+englishme:
+  ai:
+    pronunciation:
+      provider: mock
+      api-key: ""

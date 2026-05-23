@@ -1,10 +1,8 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="com.kiovant.englishme.dto.UserDetailDto" %>
-<%@ page import="com.kiovant.englishme.entity.Badge" %>
 <%@ page import="java.time.LocalDate" %>
 <%@ page import="java.time.format.DateTimeFormatter" %>
 <%@ page import="java.util.HashSet" %>
-<%@ page import="java.util.List" %>
 <%@ page import="java.util.Set" %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -18,8 +16,6 @@
 
     <%
         UserDetailDto d = (UserDetailDto) request.getAttribute("detail");
-        @SuppressWarnings("unchecked")
-        List<Badge> allBadges = (List<Badge>) request.getAttribute("allBadges");
         String successMessage = (String) request.getAttribute("successMessage");
         String errorMessage = (String) request.getAttribute("errorMessage");
         DateTimeFormatter dt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -36,12 +32,6 @@
         // Set ngày hoạt động cho streak calendar
         Set<String> activeDaySet = new HashSet<>();
         if (d != null) activeDaySet.addAll(d.activeDays());
-
-        // Set badge ids đã đạt (cho dropdown award)
-        Set<String> earnedBadgeIds = new HashSet<>();
-        if (d != null) {
-            for (UserDetailDto.BadgeRow b : d.badges()) earnedBadgeIds.add(b.badgeId().toString());
-        }
     %>
 
     <div class="p-8 space-y-8">
@@ -132,90 +122,17 @@
         <!-- Admin actions -->
         <div class="bg-surface-container-lowest rounded-[2rem] p-6 space-y-5">
             <h2 class="text-lg font-headline font-extrabold text-primary">Hành động quản trị</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Grant XP -->
-                <form method="post" action="${pageContext.request.contextPath}/admin/users/<%= d.id() %>/grant-xp"
-                      class="bg-surface-container-low p-5 rounded-2xl space-y-3">
-                    <p class="text-xs font-black uppercase tracking-widest text-slate-500">Cấp thêm XP thủ công</p>
-                    <div class="flex gap-2">
-                        <input type="number" name="amount" min="1" required placeholder="VD: 100"
-                               class="flex-1 bg-surface-container-lowest border-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700"/>
-                        <button type="submit"
-                                class="primary-gradient text-white px-5 py-2.5 rounded-xl font-bold text-sm">
-                            Cấp XP
-                        </button>
-                    </div>
+            <div class="bg-surface-container-low p-5 rounded-2xl space-y-3">
+                <p class="text-xs font-black uppercase tracking-widest text-slate-500">Hành động nguy hiểm</p>
+                <form method="post"
+                      action="${pageContext.request.contextPath}/admin/users/<%= d.id() %>/delete"
+                      onsubmit="return confirm('Soft-delete tài khoản này?\nUser sẽ bị ẩn khỏi list và chặn đăng nhập sync Firebase.');">
+                    <button type="submit"
+                            class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 hover:bg-rose-100">
+                        <span class="material-symbols-outlined text-base">delete</span>
+                        Xóa user (soft)
+                    </button>
                 </form>
-
-                <!-- Change level -->
-                <form method="post" action="${pageContext.request.contextPath}/admin/users/<%= d.id() %>/change-level"
-                      class="bg-surface-container-low p-5 rounded-2xl space-y-3">
-                    <p class="text-xs font-black uppercase tracking-widest text-slate-500">Đổi CEFR level</p>
-                    <div class="flex gap-2">
-                        <select name="cefrLevel" required
-                                class="flex-1 bg-surface-container-lowest border-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700">
-                            <% for (String lv : new String[]{"A1","A2","B1","B2","C1","C2"}) { %>
-                                <option value="<%= lv %>" <%= lv.equalsIgnoreCase(d.cefrLevel()) ? "selected" : "" %>><%= lv %></option>
-                            <% } %>
-                        </select>
-                        <button type="submit"
-                                class="primary-gradient text-white px-5 py-2.5 rounded-xl font-bold text-sm">
-                            Đổi
-                        </button>
-                    </div>
-                </form>
-
-                <!-- Award badge -->
-                <form method="post" action="${pageContext.request.contextPath}/admin/users/<%= d.id() %>/award-badge"
-                      class="bg-surface-container-low p-5 rounded-2xl space-y-3">
-                    <p class="text-xs font-black uppercase tracking-widest text-slate-500">Gắn badge thủ công</p>
-                    <div class="flex gap-2">
-                        <select name="badgeId" required
-                                class="flex-1 bg-surface-container-lowest border-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700">
-                            <% if (allBadges == null || allBadges.isEmpty()) { %>
-                                <option value="">— Chưa có badge nào trong hệ thống —</option>
-                            <% } else {
-                                   for (Badge b : allBadges) {
-                                       boolean owned = earnedBadgeIds.contains(b.getId().toString());
-                            %>
-                                <option value="<%= b.getId() %>" <%= owned ? "disabled" : "" %>>
-                                    <%= b.getName() %><%= owned ? " (đã có)" : "" %>
-                                </option>
-                            <%     }
-                               }
-                            %>
-                        </select>
-                        <button type="submit"
-                                class="primary-gradient text-white px-5 py-2.5 rounded-xl font-bold text-sm">
-                            Gắn
-                        </button>
-                    </div>
-                </form>
-
-                <!-- Reset progress + soft delete -->
-                <div class="bg-surface-container-low p-5 rounded-2xl space-y-3">
-                    <p class="text-xs font-black uppercase tracking-widest text-slate-500">Hành động nguy hiểm</p>
-                    <div class="flex flex-wrap gap-2">
-                        <form method="post"
-                              action="${pageContext.request.contextPath}/admin/users/<%= d.id() %>/reset-progress"
-                              onsubmit="return confirm('Reset toàn bộ session/badge/progress + đưa XP/streak về 0?\nDesk/flashcard sẽ được giữ nguyên.\nTiếp tục?');">
-                            <button type="submit"
-                                    class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-800 hover:bg-amber-100">
-                                <span class="material-symbols-outlined text-base">restart_alt</span>
-                                Reset progress
-                            </button>
-                        </form>
-                        <form method="post"
-                              action="${pageContext.request.contextPath}/admin/users/<%= d.id() %>/delete"
-                              onsubmit="return confirm('Soft-delete tài khoản này?\nUser sẽ bị ẩn khỏi list và chặn đăng nhập sync Firebase.');">
-                            <button type="submit"
-                                    class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 hover:bg-rose-100">
-                                <span class="material-symbols-outlined text-base">delete</span>
-                                Xóa user (soft)
-                            </button>
-                        </form>
-                    </div>
-                </div>
             </div>
         </div>
 

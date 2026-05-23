@@ -1,8 +1,6 @@
 package com.kiovant.englishme.repository;
 
 import com.kiovant.englishme.entity.ExerciseSession;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,18 +18,6 @@ public interface ExerciseSessionRepository extends JpaRepository<ExerciseSession
 
     @Query("SELECT COUNT(DISTINCT e.user.id) FROM ExerciseSession e WHERE e.createdAt >= :since")
     long countDistinctUsersSince(@Param("since") LocalDateTime since);
-
-    @Query("""
-            SELECT s FROM ExerciseSession s
-            WHERE (:category IS NULL OR s.category = :category)
-              AND (:status   IS NULL OR s.status   = :status)
-              AND (:userId   IS NULL OR s.user.id  = :userId)
-            ORDER BY s.createdAt DESC
-            """)
-    Page<ExerciseSession> searchSessions(@Param("category") String category,
-                                         @Param("status") String status,
-                                         @Param("userId") UUID userId,
-                                         Pageable pageable);
 
     long countByUser_Id(UUID userId);
 
