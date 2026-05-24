@@ -15,6 +15,7 @@ public record LearningPathDetailResponse(
 ) {
     public record ActivitySummary(
             String id,
+            String lessonId,
             String pathId,
             String title,
             String subtitle,

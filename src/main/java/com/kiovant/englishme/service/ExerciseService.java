@@ -23,7 +23,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -65,8 +64,8 @@ public class ExerciseService {
         User user = loadUser(firebaseUid);
 
         List<ExerciseQuestion> picked = questionRepository.findRandomByCategory(cat, cap);
-        if (picked.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No questions available for category: " + cat);
+        if (picked.size() < cap) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Not enough questions available for category: " + cat);
         }
 
         ExerciseSession session = new ExerciseSession();
@@ -98,7 +97,7 @@ public class ExerciseService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Exercise session not found"));
 
         if ("completed".equalsIgnoreCase(session.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exercise session is already completed");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Exercise session is already completed");
         }
         if (answers == null) {
             answers = List.of();
@@ -206,13 +205,7 @@ public class ExerciseService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User profile not found. Please sync account first."));
     }
 
-    private static Map<String, String> toOptionsMap(List<String> options) {
-        if (options == null) return Map.of();
-        String[] labels = {"A", "B", "C", "D"};
-        Map<String, String> map = new LinkedHashMap<>();
-        for (int i = 0; i < options.size() && i < labels.length; i++) {
-            map.put(labels[i], options.get(i));
-        }
-        return map;
+    private static Map<String, String> toOptionsMap(Map<String, String> options) {
+        return options == null ? Map.of() : options;
     }
 }

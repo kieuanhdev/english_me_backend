@@ -5,7 +5,7 @@ import lombok.Data;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -28,7 +28,7 @@ public class ExerciseQuestion {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")
-    private List<String> options;
+    private Map<String, String> options;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String correctAnswer;

@@ -214,6 +214,7 @@ public class LearningService {
             }
             activitySummaries.add(new LearningPathDetailResponse.ActivitySummary(
                     act.getId(),
+                    act.getLessonId(),
                     act.getPathId(),
                     act.getTitle(),
                     act.getSubtitle(),
@@ -249,14 +250,15 @@ public class LearningService {
     @Transactional(readOnly = true)
     public LessonDetailResponse getLessonDetail(String firebaseUid, String lessonId) {
         User user = loadUser(firebaseUid);
-        LearningLesson lesson = lessonRepository.findById(lessonId)
+        String resolvedLessonId = resolveLessonId(lessonId);
+        LearningLesson lesson = lessonRepository.findById(resolvedLessonId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found: " + lessonId));
 
         List<LearningLessonActivity> activities = lessonActivityRepository
-                .findByLessonIdOrderByDisplayOrderAsc(lessonId);
+                .findByLessonIdOrderByDisplayOrderAsc(resolvedLessonId);
 
         UserLessonProgress progress = userLessonProgressRepository
-                .findById(new UserLessonProgressId(user.getId(), lessonId))
+                .findById(new UserLessonProgressId(user.getId(), resolvedLessonId))
                 .orElse(null);
         String status = progress != null ? progress.getStatus() : "available";
 
@@ -285,16 +287,17 @@ public class LearningService {
     @Transactional
     public LessonCompleteResponse completeLesson(String firebaseUid, String lessonId, LessonCompleteRequest req) {
         User user = loadUser(firebaseUid);
-        LearningLesson lesson = lessonRepository.findById(lessonId)
+        String resolvedLessonId = resolveLessonId(lessonId);
+        LearningLesson lesson = lessonRepository.findById(resolvedLessonId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found: " + lessonId));
 
         // Xác định pathId từ activity dẫn tới lesson này (nếu có).
-        String pathId = resolvePathIdForLesson(lessonId);
+        String pathId = resolvePathIdForLesson(resolvedLessonId);
 
         // 1) Ghi attempt
         UserLessonAttempt attempt = new UserLessonAttempt();
         attempt.setUserId(user.getId());
-        attempt.setLessonId(lessonId);
+        attempt.setLessonId(resolvedLessonId);
         attempt.setScore((short) req.score());
         attempt.setXpEarned((short) 0); // sẽ set lại sau
         attempt.setTimeSpentSeconds(req.timeSpentSeconds());
@@ -303,11 +306,11 @@ public class LearningService {
 
         // 2) Update / tạo user_lesson_progress
         UserLessonProgress lp = userLessonProgressRepository
-                .findById(new UserLessonProgressId(user.getId(), lessonId))
+                .findById(new UserLessonProgressId(user.getId(), resolvedLessonId))
                 .orElseGet(() -> {
                     UserLessonProgress n = new UserLessonProgress();
                     n.setUserId(user.getId());
-                    n.setLessonId(lessonId);
+                    n.setLessonId(resolvedLessonId);
                     n.setPathId(pathId);
                     n.setStatus("available");
                     return n;
@@ -353,11 +356,11 @@ public class LearningService {
                     user.getId(),
                     candidateXp,
                     "lesson",
-                    lessonId,
-                    "lesson:" + lessonId + ":first_pass",
+                    resolvedLessonId,
+                    "lesson:" + resolvedLessonId + ":first_pass",
                     java.util.Map.of(
                             "score", req.score(),
-                            "lessonId", lessonId,
+                            "lessonId", resolvedLessonId,
                             "pathId", pathId == null ? "" : pathId
                     )
             );
@@ -376,10 +379,10 @@ public class LearningService {
         // 5) Tính progress mới cho response.
         double levelProgress = computeLevelProgress(user.getId(), lesson.getLevelCode());
         double skillProgress = computeSkillProgress(user.getId(), lesson.getLevelCode(), lesson.getSkillCode());
-        String nextLessonId = pathId != null ? findNextLessonInPath(pathId, lessonId) : null;
+        String nextLessonId = pathId != null ? findNextLessonInPath(pathId, resolvedLessonId) : null;
 
         return new LessonCompleteResponse(
-                lessonId,
+                resolvedLessonId,
                 passed,
                 req.score(),
                 actualXp,
@@ -400,6 +403,15 @@ public class LearningService {
     private User loadUser(String firebaseUid) {
         return userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    private String resolveLessonId(String idOrActivityId) {
+        if (lessonRepository.existsById(idOrActivityId)) {
+            return idOrActivityId;
+        }
+        return pathActivityRepository.findById(idOrActivityId)
+                .map(LearningPathActivity::getLessonId)
+                .orElse(idOrActivityId);
     }
 
     private boolean isValidLevel(String level) {

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -242,12 +243,13 @@ public class AdminExerciseService {
         if (correctAnswer == null || correctAnswer.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Đáp án đúng không được trống.");
         }
-        List<String> options = parseOptions(optionsJson);
+        Map<String, String> options = parseOptions(optionsJson);
         if (options.size() < 2) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Options cần ít nhất 2 lựa chọn.");
         }
         // Tránh sai đáp án: bắt buộc correctAnswer phải có trong options
-        boolean match = options.stream().anyMatch(o -> o != null && o.equals(correctAnswer.trim()));
+        boolean match = options.containsKey(correctAnswer.trim())
+                || options.containsValue(correctAnswer.trim());
         if (!match) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Đáp án đúng phải khớp 1 trong các lựa chọn (kiểm tra khoảng trắng / dấu).");
@@ -261,27 +263,55 @@ public class AdminExerciseService {
         q.setDifficulty(difficulty.trim().toLowerCase(Locale.ROOT));
         q.setLevel(level == null || level.isBlank() ? null : level.trim().toUpperCase(Locale.ROOT));
         q.setQuestion(question.trim());
-        q.setOptions(parseOptions(optionsJson));
-        q.setCorrectAnswer(correctAnswer.trim());
+        Map<String, String> options = parseOptions(optionsJson);
+        q.setOptions(options);
+        q.setCorrectAnswer(normalizeCorrectAnswer(correctAnswer, options));
         q.setExplanation(blankToNull(explanation));
         q.setHint(blankToNull(hint));
     }
 
-    private List<String> parseOptions(String optionsJson) {
+    private Map<String, String> parseOptions(String optionsJson) {
         if (optionsJson == null || optionsJson.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Options không được trống.");
         }
         try {
-            List<String> raw = objectMapper.readValue(optionsJson, new TypeReference<List<String>>() {});
-            List<String> cleaned = new ArrayList<>();
-            for (String s : raw) {
-                if (s != null && !s.isBlank()) cleaned.add(s.trim());
+            JsonNode node = objectMapper.readTree(optionsJson);
+            Map<String, String> cleaned = new LinkedHashMap<>();
+            if (node.isObject()) {
+                for (String label : List.of("A", "B", "C", "D")) {
+                    JsonNode value = node.get(label);
+                    if (value != null && value.isTextual() && !value.asText().isBlank()) {
+                        cleaned.put(label, value.asText().trim());
+                    }
+                }
+            } else if (node.isArray()) {
+                List<String> raw = objectMapper.convertValue(node, new TypeReference<List<String>>() {});
+                String[] labels = {"A", "B", "C", "D"};
+                for (int i = 0; i < raw.size() && i < labels.length; i++) {
+                    String s = raw.get(i);
+                    if (s != null && !s.isBlank()) cleaned.put(labels[i], s.trim());
+                }
+            } else {
+                throw new IllegalArgumentException("Options must be a JSON object or array.");
             }
             return cleaned;
         } catch (Exception ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Options phải là mảng JSON các chuỗi: " + ex.getMessage());
         }
+    }
+
+    private String normalizeCorrectAnswer(String correctAnswer, Map<String, String> options) {
+        String raw = correctAnswer.trim();
+        if (options.containsKey(raw)) {
+            return raw;
+        }
+        for (Map.Entry<String, String> entry : options.entrySet()) {
+            if (entry.getValue().equals(raw)) {
+                return entry.getKey();
+            }
+        }
+        return raw;
     }
 
     private String toJsonInline(Object value) {
