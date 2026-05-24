@@ -3,6 +3,7 @@ package com.kiovant.englishme.service;
 import com.kiovant.englishme.dto.*;
 import com.kiovant.englishme.entity.*;
 import com.kiovant.englishme.repository.*;
+import com.kiovant.englishme.dto.XpGrantResult;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,7 +40,7 @@ public class LearningService {
     private final UserLessonProgressRepository userLessonProgressRepository;
     private final UserLessonAttemptRepository userLessonAttemptRepository;
     private final UserDailyGoalRepository userDailyGoalRepository;
-    private final ProgressService progressService;
+    private final XpService xpService;
 
     public LearningService(UserRepository userRepository,
                            CefrLevelRepository cefrLevelRepository,
@@ -54,7 +55,7 @@ public class LearningService {
                            UserLessonProgressRepository userLessonProgressRepository,
                            UserLessonAttemptRepository userLessonAttemptRepository,
                            UserDailyGoalRepository userDailyGoalRepository,
-                           ProgressService progressService) {
+                           XpService xpService) {
         this.userRepository = userRepository;
         this.cefrLevelRepository = cefrLevelRepository;
         this.skillRepository = skillRepository;
@@ -68,7 +69,7 @@ public class LearningService {
         this.userLessonProgressRepository = userLessonProgressRepository;
         this.userLessonAttemptRepository = userLessonAttemptRepository;
         this.userDailyGoalRepository = userDailyGoalRepository;
-        this.progressService = progressService;
+        this.xpService = xpService;
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -333,25 +334,44 @@ public class LearningService {
         lp.setTimeSpentSeconds((lp.getTimeSpentSeconds() == null ? 0 : lp.getTimeSpentSeconds())
                 + req.timeSpentSeconds());
 
-        int xpEarned = (passed && firstTimePass) ? lesson.getXpReward() : 0;
-        lp.setXpEarned((lp.getXpEarned() == null ? 0 : lp.getXpEarned()) + xpEarned);
+        int candidateXp = (passed && firstTimePass) ? lesson.getXpReward() : 0;
         if (passed && firstTimePass) {
             lp.setCompletedAt(Instant.now());
         }
         userLessonProgressRepository.save(lp);
-        attempt.setXpEarned((short) xpEarned);
-        userLessonAttemptRepository.save(attempt);
 
         // 3) Update user_path_progress khi pass lần đầu.
         if (passed && firstTimePass && pathId != null) {
             updatePathProgress(user.getId(), pathId);
         }
 
-        // 4) Daily goal + XP/streak.
-        boolean streakUpdated = false;
-        if (xpEarned > 0) {
-            streakUpdated = updateDailyGoalAndStreak(user.getId(), xpEarned);
+        // 4) Cộng XP idempotent qua XpService. Key = "lesson:{lessonId}:first_pass" — retry mạng
+        //    hoặc submit lại sau khi đã pass đều KHÔNG cộng XP đôi.
+        XpGrantResult xpResult;
+        if (candidateXp > 0) {
+            xpResult = xpService.grant(
+                    user.getId(),
+                    candidateXp,
+                    "lesson",
+                    lessonId,
+                    "lesson:" + lessonId + ":first_pass",
+                    java.util.Map.of(
+                            "score", req.score(),
+                            "lessonId", lessonId,
+                            "pathId", pathId == null ? "" : pathId
+                    )
+            );
+        } else {
+            // Không có XP để cộng (đã pass từ trước, hoặc trượt) — vẫn cần trả totalXp.
+            xpResult = xpService.readOnlyResult(user.getId(), 0, false, !firstTimePass);
         }
+        int actualXp = xpResult.xpEarned();
+
+        // Ghi xp_earned thực sự lên progress + attempt (có thể là 0 nếu duplicate idempotency).
+        lp.setXpEarned((lp.getXpEarned() == null ? 0 : lp.getXpEarned()) + actualXp);
+        userLessonProgressRepository.save(lp);
+        attempt.setXpEarned((short) actualXp);
+        userLessonAttemptRepository.save(attempt);
 
         // 5) Tính progress mới cho response.
         double levelProgress = computeLevelProgress(user.getId(), lesson.getLevelCode());
@@ -362,11 +382,14 @@ public class LearningService {
                 lessonId,
                 passed,
                 req.score(),
-                xpEarned,
+                actualXp,
+                xpResult.totalXp(),
+                xpResult.dailyEarnedXp(),
                 levelProgress,
                 skillProgress,
                 nextLessonId,
-                streakUpdated
+                xpResult.streakUpdated(),
+                xpResult.bonuses()
         );
     }
 
@@ -660,21 +683,6 @@ public class LearningService {
                         });
             }
         }
-    }
-
-    /**
-     * Cộng XP vào daily goal + chuyển XP/streak xuống ProgressService.
-     * Trả true nếu là lần đầu trong ngày → streak tăng.
-     */
-    private boolean updateDailyGoalAndStreak(UUID userId, int xp) {
-        UserDailyGoal goal = ensureDailyGoal(userId);
-        boolean wasEmpty = goal.getEarnedXp() == 0;
-        goal.setEarnedXp((short) Math.min(Short.MAX_VALUE, goal.getEarnedXp() + xp));
-        goal.setCompletedActivities((short) Math.min(Short.MAX_VALUE, goal.getCompletedActivities() + 1));
-        userDailyGoalRepository.save(goal);
-
-        progressService.recordActivity(userId, xp);
-        return wasEmpty;
     }
 
     private String findNextLessonInPath(String pathId, String currentLessonId) {

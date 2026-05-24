@@ -4,6 +4,7 @@ import com.kiovant.englishme.dto.DueCardResponse;
 import com.kiovant.englishme.dto.ReviewResponse;
 import com.kiovant.englishme.dto.StudySessionStartResponse;
 import com.kiovant.englishme.dto.StudySessionSummaryResponse;
+import com.kiovant.englishme.dto.XpGrantResult;
 import com.kiovant.englishme.entity.Desk;
 import com.kiovant.englishme.entity.Flashcard;
 import com.kiovant.englishme.entity.FlashcardProgress;
@@ -40,7 +41,7 @@ public class StudySessionService {
     private final FlashcardProgressRepository progressRepository;
     private final StudySessionRepository sessionRepository;
     private final SM2Service sm2Service;
-    private final ProgressService progressService;
+    private final XpService xpService;
 
     public StudySessionService(UserRepository userRepository,
                                DeskRepository deskRepository,
@@ -48,14 +49,14 @@ public class StudySessionService {
                                FlashcardProgressRepository progressRepository,
                                StudySessionRepository sessionRepository,
                                SM2Service sm2Service,
-                               ProgressService progressService) {
+                               XpService xpService) {
         this.userRepository = userRepository;
         this.deskRepository = deskRepository;
         this.flashcardRepository = flashcardRepository;
         this.progressRepository = progressRepository;
         this.sessionRepository = sessionRepository;
         this.sm2Service = sm2Service;
-        this.progressService = progressService;
+        this.xpService = xpService;
     }
 
     // ── Due cards (preview, no session created) ──────────────────────────
@@ -147,10 +148,6 @@ public class StudySessionService {
         sm2Service.applyReview(progress, q);
         progressRepository.save(progress);
 
-        // Update session counters
-        int xpEarned = sm2Service.xpForQuality(q);
-        session.setXpEarned((session.getXpEarned() == null ? 0 : session.getXpEarned()) + xpEarned);
-
         if (q < 3) {
             session.setAgainCards(safeIncr(session.getAgainCards()));
         } else if (q == 3) {
@@ -161,12 +158,25 @@ public class StudySessionService {
         if (isNew && q >= 3) {
             session.setNewWordsLearned(safeIncr(session.getNewWordsLearned()));
         }
-        session = sessionRepository.save(session);
 
-        // Record XP/streak only when card is actually learned (q>=3)
-        if (xpEarned > 0) {
-            progressService.recordActivity(user.getId(), xpEarned);
-        }
+        // Idempotent XP grant — 1 card review chỉ được cộng XP 1 lần/ngày.
+        int candidateXp = sm2Service.xpForQuality(q);
+        java.time.LocalDate today = java.time.LocalDate.now();
+        XpGrantResult xpResult = xpService.grant(
+                user.getId(),
+                candidateXp,
+                "sm2_review",
+                flashcardId.toString(),
+                "sm2_review:" + flashcardId + ":" + today,
+                java.util.Map.of(
+                        "quality", q,
+                        "sessionId", session.getId().toString(),
+                        "deskId", session.getDesk().getId().toString()
+                )
+        );
+        int xpEarned = xpResult.xpEarned();
+        session.setXpEarned((session.getXpEarned() == null ? 0 : session.getXpEarned()) + xpEarned);
+        session = sessionRepository.save(session);
 
         int reviewed = nullToZero(session.getMasteredCards())
                 + nullToZero(session.getHardCards())
@@ -179,6 +189,9 @@ public class StudySessionService {
                 progress.getIntervalDays(),
                 progress.getNextReviewAt(),
                 xpEarned,
+                xpResult.totalXp(),
+                xpResult.dailyEarnedXp(),
+                xpResult.streakUpdated(),
                 session.getXpEarned(),
                 reviewed,
                 session.getTotalCards()

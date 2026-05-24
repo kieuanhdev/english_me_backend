@@ -5,6 +5,7 @@ import com.kiovant.englishme.dto.TestHistoryItem;
 import com.kiovant.englishme.dto.TestQuestionResponse;
 import com.kiovant.englishme.dto.UserTestStartResponse;
 import com.kiovant.englishme.dto.UserTestSubmitResponse;
+import com.kiovant.englishme.dto.XpGrantResult;
 import com.kiovant.englishme.entity.Question;
 import com.kiovant.englishme.entity.User;
 import com.kiovant.englishme.entity.UserTestSession;
@@ -35,16 +36,19 @@ public class UserTestService {
     private final UserRepository userRepository;
     private final QuestionRepository questionRepository;
     private final UserTestSessionRepository sessionRepository;
-    private final ProgressService progressService;
+    private final XpService xpService;
+    private final XpRuleService xpRuleService;
 
     public UserTestService(UserRepository userRepository,
                            QuestionRepository questionRepository,
                            UserTestSessionRepository sessionRepository,
-                           ProgressService progressService) {
+                           XpService xpService,
+                           XpRuleService xpRuleService) {
         this.userRepository = userRepository;
         this.questionRepository = questionRepository;
         this.sessionRepository = sessionRepository;
-        this.progressService = progressService;
+        this.xpService = xpService;
+        this.xpRuleService = xpRuleService;
     }
 
     @Transactional
@@ -136,7 +140,7 @@ public class UserTestService {
 
         int total = session.getQuestionIds().size();
         int accuracy = total == 0 ? 0 : (int) Math.round((correct * 100.0) / total);
-        int xpEarned = xpForResult(correct, total);
+        int candidateXp = xpRuleService.computeAccuracyBased("test", correct, total);
         String cefrSuggestion = suggestCefr(session.getLevel(), accuracy);
 
         int safeTime = timeTakenSeconds == null || timeTakenSeconds < 0 ? 0 : timeTakenSeconds;
@@ -144,15 +148,27 @@ public class UserTestService {
         session.setStatus("completed");
         session.setCorrect(correct);
         session.setTotal(total);
-        session.setXpEarned(xpEarned);
         session.setTimeTakenSeconds(safeTime);
         session.setCefrSuggestion(cefrSuggestion);
         session.setCompletedAt(LocalDateTime.now());
-        sessionRepository.save(session);
 
-        if (xpEarned > 0) {
-            progressService.recordActivity(session.getUser().getId(), xpEarned);
-        }
+        // Idempotent grant — 1 session chỉ được cộng XP 1 lần dù retry mạng.
+        XpGrantResult xpResult = xpService.grant(
+                session.getUser().getId(),
+                candidateXp,
+                "test",
+                session.getId().toString(),
+                "test:" + session.getId() + ":submit",
+                java.util.Map.of(
+                        "topic", session.getTopic(),
+                        "level", session.getLevel(),
+                        "correct", correct,
+                        "total", total,
+                        "accuracy", accuracy
+                )
+        );
+        session.setXpEarned(xpResult.xpEarned());
+        sessionRepository.save(session);
 
         return new UserTestSubmitResponse(
                 session.getId(),
@@ -162,7 +178,10 @@ public class UserTestService {
                 correct,
                 total - correct,
                 accuracy,
-                xpEarned,
+                xpResult.xpEarned(),
+                xpResult.totalXp(),
+                xpResult.dailyEarnedXp(),
+                xpResult.streakUpdated(),
                 safeTime,
                 cefrSuggestion
         );
@@ -194,17 +213,6 @@ public class UserTestService {
                     );
                 })
                 .toList();
-    }
-
-    /** 3 XP per correct + 10 bonus if accuracy >= 80%. */
-    private static int xpForResult(int correct, int total) {
-        if (total <= 0) return 0;
-        int xp = correct * 3;
-        int accuracy = (int) Math.round((correct * 100.0) / total);
-        if (accuracy >= 80) {
-            xp += 10;
-        }
-        return xp;
     }
 
     /** Suggest CEFR upgrade/downgrade based on accuracy at chosen level. */

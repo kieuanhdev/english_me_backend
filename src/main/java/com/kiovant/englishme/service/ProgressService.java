@@ -5,14 +5,19 @@ import com.kiovant.englishme.dto.SkillScore;
 import com.kiovant.englishme.dto.StreakCalendarResponse;
 import com.kiovant.englishme.dto.WeekSummary;
 import com.kiovant.englishme.dto.XpHistoryItem;
+import com.kiovant.englishme.dto.XpLedgerItem;
+import com.kiovant.englishme.dto.XpLedgerPage;
 import com.kiovant.englishme.entity.Badge;
 import com.kiovant.englishme.entity.User;
 import com.kiovant.englishme.entity.UserBadge;
 import com.kiovant.englishme.entity.XpHistory;
+import com.kiovant.englishme.entity.XpLedger;
 import com.kiovant.englishme.repository.BadgeRepository;
 import com.kiovant.englishme.repository.UserBadgeRepository;
 import com.kiovant.englishme.repository.UserRepository;
 import com.kiovant.englishme.repository.XpHistoryRepository;
+import com.kiovant.englishme.repository.XpLedgerRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,15 +44,18 @@ public class ProgressService {
     private final XpHistoryRepository xpHistoryRepository;
     private final BadgeRepository badgeRepository;
     private final UserBadgeRepository userBadgeRepository;
+    private final XpLedgerRepository xpLedgerRepository;
 
     public ProgressService(UserRepository userRepository,
                            XpHistoryRepository xpHistoryRepository,
                            BadgeRepository badgeRepository,
-                           UserBadgeRepository userBadgeRepository) {
+                           UserBadgeRepository userBadgeRepository,
+                           XpLedgerRepository xpLedgerRepository) {
         this.userRepository = userRepository;
         this.xpHistoryRepository = xpHistoryRepository;
         this.badgeRepository = badgeRepository;
         this.userBadgeRepository = userBadgeRepository;
+        this.xpLedgerRepository = xpLedgerRepository;
     }
 
     @Transactional(readOnly = true)
@@ -123,6 +131,43 @@ public class ProgressService {
                 user.getLongestStreak(),
                 streakDays
         );
+    }
+
+    /**
+     * Lịch sử transaction XP (per-row của xp_ledger), cursor pagination giảm dần theo id.
+     *
+     * @param cursor id của row cuối cùng trang trước (null nếu trang đầu).
+     * @param limit  số row tối đa (clamp [1, 100], default 20).
+     */
+    @Transactional(readOnly = true)
+    public XpLedgerPage getXpLedger(String firebaseUid, String cursor, int limit) {
+        User user = loadUser(firebaseUid);
+        int safeLimit = Math.min(Math.max(limit, 1), 100);
+
+        List<XpLedger> rows;
+        if (cursor == null || cursor.isBlank()) {
+            rows = xpLedgerRepository.findFirstPage(user.getId(), PageRequest.of(0, safeLimit));
+        } else {
+            Long cursorId;
+            try {
+                cursorId = Long.parseLong(cursor.trim());
+            } catch (NumberFormatException ex) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cursor must be a numeric ledger id");
+            }
+            rows = xpLedgerRepository.findByUserIdBeforeCursor(user.getId(), cursorId, PageRequest.of(0, safeLimit));
+        }
+
+        List<XpLedgerItem> items = rows.stream()
+                .map(r -> new XpLedgerItem(
+                        r.getId(),
+                        r.getAmount(),
+                        r.getSourceType(),
+                        r.getSourceId(),
+                        r.getOccurredAt()))
+                .toList();
+        String nextCursor = items.size() < safeLimit ? null
+                : String.valueOf(items.get(items.size() - 1).id());
+        return new XpLedgerPage(items, nextCursor);
     }
 
     /**

@@ -11,6 +11,9 @@ public record UserTestSubmitResponse(
         int incorrect,
         int accuracyPercent,
         int xpEarned,
+        long totalXp,
+        int dailyEarnedXp,
+        boolean streakUpdated,
         int timeTakenSeconds,
         String cefrSuggestion
 ) {

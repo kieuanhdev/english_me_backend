@@ -27,4 +27,8 @@ public class UserDailyGoal {
 
     @Column(name = "completed_activities", nullable = false)
     private Short completedActivities = 0;
+
+    /** Đã cộng bonus 5 XP khi đạt target_xp trong ngày chưa (chống cộng nhiều lần). */
+    @Column(name = "daily_bonus_granted", nullable = false)
+    private Boolean dailyBonusGranted = false;
 }

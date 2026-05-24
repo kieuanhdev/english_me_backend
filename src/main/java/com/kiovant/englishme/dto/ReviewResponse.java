@@ -10,6 +10,9 @@ public record ReviewResponse(
         Integer intervalDays,
         LocalDateTime nextReviewAt,
         Integer xpEarned,
+        Long totalXp,
+        Integer dailyEarnedXp,
+        Boolean streakUpdated,
         Integer sessionXp,
         Integer reviewedCount,
         Integer totalCards

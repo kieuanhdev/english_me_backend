@@ -11,6 +11,9 @@ public record ExerciseCompleteResponse(
         int incorrect,
         int accuracyPercent,
         int xpEarned,
+        long totalXp,
+        int dailyEarnedXp,
+        boolean streakUpdated,
         List<ExerciseAnswerResult> results
 ) {
 }

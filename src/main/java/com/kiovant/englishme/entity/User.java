@@ -45,6 +45,10 @@ public class User {
 
     private LocalDate lastActiveDate;
 
+    /** Ngày cuối cùng user thực sự kiếm được XP — chuẩn cho tính streak (spec XP_SYSTEM_SPEC §2.1). */
+    @Column(name = "last_xp_date")
+    private LocalDate lastXpDate;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

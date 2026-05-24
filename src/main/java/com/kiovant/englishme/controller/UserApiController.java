@@ -6,6 +6,7 @@ import com.kiovant.englishme.dto.StreakCalendarResponse;
 import com.kiovant.englishme.dto.UpdateProfileRequest;
 import com.kiovant.englishme.dto.UserProfileResponse;
 import com.kiovant.englishme.dto.XpHistoryItem;
+import com.kiovant.englishme.dto.XpLedgerPage;
 import com.kiovant.englishme.service.FirebaseAuthHelper;
 import com.kiovant.englishme.service.ProfileService;
 import com.kiovant.englishme.service.ProgressService;
@@ -70,5 +71,21 @@ public class UserApiController {
     ) {
         FirebaseToken token = authHelper.verifyBearer(authorization);
         return progressService.getStreakCalendar(token.getUid(), month);
+    }
+
+    /**
+     * Lịch sử transaction XP (per-row của xp_ledger), cursor-based pagination.
+     *
+     * @param cursor id của row cuối cùng trang trước (bỏ qua để lấy trang đầu).
+     * @param limit  1..100, default 20.
+     */
+    @GetMapping("/xp/ledger")
+    public XpLedgerPage getXpLedger(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "20") int limit
+    ) {
+        FirebaseToken token = authHelper.verifyBearer(authorization);
+        return progressService.getXpLedger(token.getUid(), cursor, limit);
     }
 }

@@ -5,6 +5,7 @@ import com.kiovant.englishme.dto.ExerciseAnswerResult;
 import com.kiovant.englishme.dto.ExerciseCompleteResponse;
 import com.kiovant.englishme.dto.ExerciseQuestionResponse;
 import com.kiovant.englishme.dto.ExerciseSessionResponse;
+import com.kiovant.englishme.dto.XpGrantResult;
 import com.kiovant.englishme.entity.ExerciseAnswer;
 import com.kiovant.englishme.entity.ExerciseQuestion;
 import com.kiovant.englishme.entity.ExerciseSession;
@@ -38,18 +39,21 @@ public class ExerciseService {
     private final ExerciseQuestionRepository questionRepository;
     private final ExerciseSessionRepository sessionRepository;
     private final ExerciseAnswerRepository answerRepository;
-    private final ProgressService progressService;
+    private final XpService xpService;
+    private final XpRuleService xpRuleService;
 
     public ExerciseService(UserRepository userRepository,
                            ExerciseQuestionRepository questionRepository,
                            ExerciseSessionRepository sessionRepository,
                            ExerciseAnswerRepository answerRepository,
-                           ProgressService progressService) {
+                           XpService xpService,
+                           XpRuleService xpRuleService) {
         this.userRepository = userRepository;
         this.questionRepository = questionRepository;
         this.sessionRepository = sessionRepository;
         this.answerRepository = answerRepository;
-        this.progressService = progressService;
+        this.xpService = xpService;
+        this.xpRuleService = xpRuleService;
     }
 
     @Transactional
@@ -143,16 +147,25 @@ public class ExerciseService {
 
         int total = session.getQuestionIds().size();
         int accuracy = total == 0 ? 0 : (int) Math.round((correct * 100.0) / total);
-        int xpEarned = xpForResult(correct, total);
+        int candidateXp = xpRuleService.computeAccuracyBased("exercise", correct, total);
 
         session.setStatus("completed");
         session.setCompletedAt(LocalDateTime.now());
         sessionRepository.save(session);
 
-        if (xpEarned > 0) {
-            User user = session.getUser();
-            progressService.recordActivity(user.getId(), xpEarned);
-        }
+        XpGrantResult xpResult = xpService.grant(
+                session.getUser().getId(),
+                candidateXp,
+                "exercise",
+                session.getId().toString(),
+                "exercise:" + session.getId() + ":submit",
+                java.util.Map.of(
+                        "category", session.getCategory(),
+                        "correct", correct,
+                        "total", total,
+                        "accuracy", accuracy
+                )
+        );
 
         return new ExerciseCompleteResponse(
                 session.getId(),
@@ -161,19 +174,12 @@ public class ExerciseService {
                 correct,
                 total - correct,
                 accuracy,
-                xpEarned,
+                xpResult.xpEarned(),
+                xpResult.totalXp(),
+                xpResult.dailyEarnedXp(),
+                xpResult.streakUpdated(),
                 results
         );
-    }
-
-    private static int xpForResult(int correct, int total) {
-        if (total <= 0) return 0;
-        // 2 XP per correct, +5 bonus for 100% accuracy
-        int xp = correct * 2;
-        if (correct == total) {
-            xp += 5;
-        }
-        return xp;
     }
 
     private static String normalizeCategory(String raw) {
