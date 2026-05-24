@@ -1,15 +1,16 @@
 package com.kiovant.englishme.dto;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.Map;
 
 public record ExerciseQuestionResponse(
-        UUID id,
+        String id,
+        String type,
         String category,
         String difficulty,
         String question,
-        List<String> options,
-        String hint,
-        String level
+        Map<String, String> options,
+        String correctAnswer,
+        String explanation,
+        String hint
 ) {
 }

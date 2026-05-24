@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -77,13 +78,15 @@ public class ExerciseService {
 
         List<ExerciseQuestionResponse> questions = picked.stream()
                 .map(q -> new ExerciseQuestionResponse(
-                        q.getId(),
+                        q.getId().toString(),
+                        "multipleChoice",
                         q.getCategory(),
                         q.getDifficulty(),
                         q.getQuestion(),
-                        q.getOptions(),
-                        q.getHint(),
-                        q.getLevel()))
+                        toOptionsMap(q.getOptions()),
+                        q.getCorrectAnswer(),
+                        q.getExplanation(),
+                        q.getHint()))
                 .toList();
 
         return new ExerciseSessionResponse(session.getId(), cat, picked.size(), questions);
@@ -146,7 +149,7 @@ public class ExerciseService {
         }
 
         int total = session.getQuestionIds().size();
-        int accuracy = total == 0 ? 0 : (int) Math.round((correct * 100.0) / total);
+        double accuracy = total == 0 ? 0.0 : Math.round((correct * 1000.0) / total) / 10.0;
         int candidateXp = xpRuleService.computeAccuracyBased("exercise", correct, total);
 
         session.setStatus("completed");
@@ -201,5 +204,15 @@ public class ExerciseService {
     private User loadUser(String firebaseUid) {
         return userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User profile not found. Please sync account first."));
+    }
+
+    private static Map<String, String> toOptionsMap(List<String> options) {
+        if (options == null) return Map.of();
+        String[] labels = {"A", "B", "C", "D"};
+        Map<String, String> map = new LinkedHashMap<>();
+        for (int i = 0; i < options.size() && i < labels.length; i++) {
+            map.put(labels[i], options.get(i));
+        }
+        return map;
     }
 }

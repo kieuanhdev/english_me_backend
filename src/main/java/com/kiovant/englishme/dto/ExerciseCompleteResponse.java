@@ -9,7 +9,7 @@ public record ExerciseCompleteResponse(
         int totalQuestions,
         int correct,
         int incorrect,
-        int accuracyPercent,
+        double accuracyPercent,
         int xpEarned,
         long totalXp,
         int dailyEarnedXp,
