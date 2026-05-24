@@ -1,6 +1,7 @@
 package com.kiovant.englishme.controller;
 
 import com.kiovant.englishme.dto.*;
+import com.kiovant.englishme.service.FirebaseAuthHelper;
 import com.kiovant.englishme.service.LearningService;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,39 +10,47 @@ import org.springframework.web.bind.annotation.*;
 public class LearningController {
 
     private final LearningService learningService;
+    private final FirebaseAuthHelper authHelper;
 
-    public LearningController(LearningService learningService) {
+    public LearningController(LearningService learningService, FirebaseAuthHelper authHelper) {
         this.learningService = learningService;
+        this.authHelper = authHelper;
     }
 
     @GetMapping("/hub")
-    public LearningHubResponse getHub(@RequestParam(required = false) String level) {
-        return learningService.getHub(level);
-    }
-
-    @GetMapping("/levels/{level}")
-    public LevelDetailResponse getLevel(@PathVariable String level) {
-        return learningService.getLevel(level);
+    public LearningHubResponse getHub(@RequestHeader("Authorization") String token,
+                                       @RequestParam(required = false) String level) {
+        var decoded = authHelper.verifyBearer(token);
+        return learningService.getHub(decoded.getUid(), level);
     }
 
     @GetMapping("/levels/{level}/skills/{skill}/lessons")
-    public SkillLessonsResponse getSkillLessons(@PathVariable String level, @PathVariable String skill) {
-        return learningService.getSkillLessons(level, skill);
+    public SkillLessonsResponse getSkillLessons(@RequestHeader("Authorization") String token,
+                                                 @PathVariable String level,
+                                                 @PathVariable String skill) {
+        var decoded = authHelper.verifyBearer(token);
+        return learningService.getSkillLessons(decoded.getUid(), level, skill);
+    }
+
+    @GetMapping("/paths/{pathId}")
+    public LearningPathDetailResponse getPathDetail(@RequestHeader("Authorization") String token,
+                                                     @PathVariable String pathId) {
+        var decoded = authHelper.verifyBearer(token);
+        return learningService.getPathDetail(decoded.getUid(), pathId);
     }
 
     @GetMapping("/lessons/{lessonId}")
-    public LessonDetailResponse getLessonDetail(@PathVariable String lessonId) {
-        return learningService.getLessonDetail(lessonId);
+    public LessonDetailResponse getLessonDetail(@RequestHeader("Authorization") String token,
+                                                 @PathVariable String lessonId) {
+        var decoded = authHelper.verifyBearer(token);
+        return learningService.getLessonDetail(decoded.getUid(), lessonId);
     }
 
     @PostMapping("/lessons/{lessonId}/complete")
-    public LessonCompleteResponse completeLesson(@PathVariable String lessonId,
+    public LessonCompleteResponse completeLesson(@RequestHeader("Authorization") String token,
+                                                  @PathVariable String lessonId,
                                                   @RequestBody LessonCompleteRequest request) {
-        return learningService.completeLesson(lessonId, request);
-    }
-
-    @GetMapping("/recommendations")
-    public RecommendationsResponse getRecommendations() {
-        return learningService.getRecommendations();
+        var decoded = authHelper.verifyBearer(token);
+        return learningService.completeLesson(decoded.getUid(), lessonId, request);
     }
 }

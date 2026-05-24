@@ -5,11 +5,13 @@ import java.util.List;
 public record LearningHubResponse(
         String currentLevel,
         String selectedLevel,
+        String currentPathId,
         String nextRecommendedSkill,
         DailyGoal dailyGoal,
         List<LevelSummary> levels,
         List<SkillTrackSummary> skillTracks,
         List<UnitSummary> units,
+        List<PathSummary> paths,
         List<SupportTrackSummary> supportTracks
 ) {
     public record DailyGoal(
@@ -40,6 +42,7 @@ public record LearningHubResponse(
             boolean enabled
     ) {}
 
+    /** Giữ tương thích ngược với client cũ (units = []). */
     public record UnitSummary(
             String id,
             String level,
@@ -49,6 +52,20 @@ public record LearningHubResponse(
             int completedLessonCount,
             String status,
             List<String> skillCoverage
+    ) {}
+
+    /** Spec mục 4.1 — Learning Path tóm tắt trong hub. */
+    public record PathSummary(
+            String id,
+            String level,
+            String title,
+            String description,
+            int order,
+            String status,
+            double progress,
+            int activityCount,
+            int completedActivityCount,
+            List<String> skillsCoverage
     ) {}
 
     public record SupportTrackSummary(

@@ -13,15 +13,21 @@ import java.util.stream.Collectors;
 @Service
 public class PlacementTestService {
 
-    private static final int TOTAL_QUESTIONS = 12;
+    private static final int TOTAL_QUESTIONS = 20;
 
+    // Tổng 20 câu trải đều A1..C2 (theo LEARNING_PATH_BACKEND_SPEC mục 3.1).
     private static final Map<String, Integer> LEVEL_DISTRIBUTION = new LinkedHashMap<>();
 
     static {
         LEVEL_DISTRIBUTION.put("A1", 4);
         LEVEL_DISTRIBUTION.put("A2", 4);
-        // Mở rộng sau: B1 -> 2, B2 -> 2
+        LEVEL_DISTRIBUTION.put("B1", 4);
+        LEVEL_DISTRIBUTION.put("B2", 4);
+        LEVEL_DISTRIBUTION.put("C1", 2);
+        LEVEL_DISTRIBUTION.put("C2", 2);
     }
+
+    private static final List<String> CEFR_ORDER = List.of("A1", "A2", "B1", "B2", "C1", "C2");
 
     private final QuestionRepository questionRepository;
     private final TestSessionRepository testSessionRepository;
@@ -140,27 +146,51 @@ public class PlacementTestService {
         session.setResultLevel(resultLevel);
         testSessionRepository.save(session);
 
-        // Cập nhật cefrLevel của user nếu chưa có
+        // Cập nhật cefrLevel của user:
+        //  - Lần đầu (cefrLevel == null) → set & bật onboarded.
+        //  - Re-test: chỉ nâng level khi resultLevel > current_level (theo spec mục 6.4).
         User user = session.getUser();
         if (user.getCefrLevel() == null) {
             user.setCefrLevel(resultLevel);
             user.setIsOnboarded(true);
+            userRepository.save(user);
+        } else if (compareCefr(resultLevel, user.getCefrLevel()) > 0) {
+            user.setCefrLevel(resultLevel);
             userRepository.save(user);
         }
 
         return buildResult(session, questions, answers);
     }
 
+    /**
+     * Spec mục 3.4:
+     *   resultLevel = level cao nhất mà user đạt ≥70% câu đúng ở level đó
+     *   VÀ ≥50% ở level kế tiếp. Không đạt mức nào → A1.
+     */
     private String calculateCefrLevel(Map<String, int[]> levelStats) {
-        List<String> orderedLevels = List.of("A1", "A2", "B1", "B2", "C1", "C2");
         String highestPassed = "A1";
-        for (String level : orderedLevels) {
-            int[] stats = levelStats.get(level);
-            if (stats == null) continue;
-            double accuracy = (double) stats[0] / stats[1];
-            if (accuracy >= 0.5) highestPassed = level;
+        for (int i = 0; i < CEFR_ORDER.size(); i++) {
+            String level = CEFR_ORDER.get(i);
+            double accuracy = accuracyOf(levelStats, level);
+            if (accuracy < 0.7) continue;
+            // Yêu cầu ≥50% ở level kế tiếp (nếu có); level cao nhất (C2) bỏ qua check kế tiếp.
+            if (i + 1 < CEFR_ORDER.size()) {
+                double nextAcc = accuracyOf(levelStats, CEFR_ORDER.get(i + 1));
+                if (nextAcc < 0.5) continue;
+            }
+            highestPassed = level;
         }
         return highestPassed;
+    }
+
+    private double accuracyOf(Map<String, int[]> levelStats, String level) {
+        int[] stats = levelStats.get(level);
+        if (stats == null || stats[1] == 0) return 0.0;
+        return (double) stats[0] / stats[1];
+    }
+
+    private int compareCefr(String a, String b) {
+        return Integer.compare(CEFR_ORDER.indexOf(a), CEFR_ORDER.indexOf(b));
     }
 
     private List<Question> selectQuestions() {
@@ -171,8 +201,8 @@ public class PlacementTestService {
             int count = entry.getValue();
             int grammarCount = count / 2;
             int vocabCount = count - grammarCount;
-            result.addAll(questionRepository.findRandomByCefrLevelAndSkillCategory(level, "Grammar", grammarCount));
-            result.addAll(questionRepository.findRandomByCefrLevelAndSkillCategory(level, "Vocabulary", vocabCount));
+            result.addAll(questionRepository.findRandomByCefrLevelAndSkillCategory(level, "grammar", grammarCount));
+            result.addAll(questionRepository.findRandomByCefrLevelAndSkillCategory(level, "vocabulary", vocabCount));
         }
 
         if (result.size() < TOTAL_QUESTIONS) {

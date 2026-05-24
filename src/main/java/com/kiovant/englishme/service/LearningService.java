@@ -1,447 +1,747 @@
 package com.kiovant.englishme.service;
 
 import com.kiovant.englishme.dto.*;
+import com.kiovant.englishme.entity.*;
+import com.kiovant.englishme.repository.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 
+/**
+ * Service Learning Hub — đọc DB thật theo LEARNING_PATH_BACKEND_SPEC.md.
+ * Các bảng nguồn: cefr_levels, skills, support_tracks, learning_paths,
+ * learning_path_activities, learning_lessons, learning_lesson_activities,
+ * user_levels, user_path_progress, user_lesson_progress, user_lesson_attempts,
+ * user_daily_goals.
+ */
 @Service
 public class LearningService {
 
-    private static final Set<String> VALID_LEVELS = Set.of("A1", "A2", "B1", "B2", "C1", "C2");
     private static final Set<String> VALID_SKILLS = Set.of("listening", "speaking", "reading", "writing");
     private static final String DEFAULT_LEVEL = "A1";
+    private static final List<String> CEFR_ORDER = List.of("A1", "A2", "B1", "B2", "C1", "C2");
 
-    // ─── GET /api/learning/hub ────────────────────────────────────────
+    private final UserRepository userRepository;
+    private final CefrLevelRepository cefrLevelRepository;
+    private final SkillRepository skillRepository;
+    private final SupportTrackRepository supportTrackRepository;
+    private final LearningPathRepository pathRepository;
+    private final LearningPathActivityRepository pathActivityRepository;
+    private final LearningLessonRepository lessonRepository;
+    private final LearningLessonActivityRepository lessonActivityRepository;
+    private final UserLevelRepository userLevelRepository;
+    private final UserPathProgressRepository userPathProgressRepository;
+    private final UserLessonProgressRepository userLessonProgressRepository;
+    private final UserLessonAttemptRepository userLessonAttemptRepository;
+    private final UserDailyGoalRepository userDailyGoalRepository;
+    private final ProgressService progressService;
 
-    public LearningHubResponse getHub(String level) {
-        String resolved = (level != null && VALID_LEVELS.contains(level)) ? level : DEFAULT_LEVEL;
+    public LearningService(UserRepository userRepository,
+                           CefrLevelRepository cefrLevelRepository,
+                           SkillRepository skillRepository,
+                           SupportTrackRepository supportTrackRepository,
+                           LearningPathRepository pathRepository,
+                           LearningPathActivityRepository pathActivityRepository,
+                           LearningLessonRepository lessonRepository,
+                           LearningLessonActivityRepository lessonActivityRepository,
+                           UserLevelRepository userLevelRepository,
+                           UserPathProgressRepository userPathProgressRepository,
+                           UserLessonProgressRepository userLessonProgressRepository,
+                           UserLessonAttemptRepository userLessonAttemptRepository,
+                           UserDailyGoalRepository userDailyGoalRepository,
+                           ProgressService progressService) {
+        this.userRepository = userRepository;
+        this.cefrLevelRepository = cefrLevelRepository;
+        this.skillRepository = skillRepository;
+        this.supportTrackRepository = supportTrackRepository;
+        this.pathRepository = pathRepository;
+        this.pathActivityRepository = pathActivityRepository;
+        this.lessonRepository = lessonRepository;
+        this.lessonActivityRepository = lessonActivityRepository;
+        this.userLevelRepository = userLevelRepository;
+        this.userPathProgressRepository = userPathProgressRepository;
+        this.userLessonProgressRepository = userLessonProgressRepository;
+        this.userLessonAttemptRepository = userLessonAttemptRepository;
+        this.userDailyGoalRepository = userDailyGoalRepository;
+        this.progressService = progressService;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // GET /api/learning/hub?level={code}
+    // ═══════════════════════════════════════════════════════════════════
+    @Transactional
+    public LearningHubResponse getHub(String firebaseUid, String levelParam) {
+        User user = loadUser(firebaseUid);
+        UserLevel userLevel = ensureUserLevel(user);
+
+        String selected = (levelParam != null && isValidLevel(levelParam))
+                ? levelParam
+                : userLevel.getSelectedLevel();
+        if (!isValidLevel(selected)) selected = DEFAULT_LEVEL;
+
+        // Persist lựa chọn level
+        if (!selected.equals(userLevel.getSelectedLevel())) {
+            userLevel.setSelectedLevel(selected);
+            userLevelRepository.save(userLevel);
+        }
+
+        // Lấy paths của level đã chọn + bootstrap user_path_progress nếu cần.
+        List<LearningPath> paths = pathRepository.findByLevelCodeAndIsActiveTrueOrderByDisplayOrderAsc(selected);
+        Map<String, UserPathProgress> pathProgressMap = ensurePathProgress(user.getId(), paths);
+
+        List<LearningHubResponse.PathSummary> pathSummaries = buildPathSummaries(paths, pathProgressMap);
+
+        // Skill tracks (4 skill cố định, totalLessons + completedLessons theo DB).
+        List<LearningHubResponse.SkillTrackSummary> skillTracks = buildSkillTracks(user.getId(), selected);
+
+        // Support tracks (master data, progress 0 cho phase này).
+        List<LearningHubResponse.SupportTrackSummary> supportTracks = buildSupportTracks();
+
+        // Levels overview với progress = % path completed/level.
+        List<LearningHubResponse.LevelSummary> levels = buildLevels(user.getId(), userLevel.getCurrentLevel());
+
+        // Daily goal hôm nay.
+        UserDailyGoal goal = ensureDailyGoal(user.getId());
+
+        // currentPathId: ưu tiên path đang in_progress của selected level, fallback path đầu tiên available.
+        String currentPathId = resolveCurrentPathId(paths, pathProgressMap);
+        if (currentPathId != null && !currentPathId.equals(userLevel.getCurrentPathId())) {
+            userLevel.setCurrentPathId(currentPathId);
+            userLevelRepository.save(userLevel);
+        }
+
+        String nextRecommendedSkill = guessNextRecommendedSkill(user.getId(), selected);
 
         return new LearningHubResponse(
-                DEFAULT_LEVEL,
-                resolved,
-                "speaking",
-                new LearningHubResponse.DailyGoal(30, 12, 2),
-                levels(),
-                skillTracks(resolved),
-                units(resolved),
-                supportTracks()
+                userLevel.getCurrentLevel(),
+                selected,
+                currentPathId,
+                nextRecommendedSkill,
+                new LearningHubResponse.DailyGoal(goal.getTargetXp(), goal.getEarnedXp(), goal.getCompletedActivities()),
+                levels,
+                skillTracks,
+                List.of(), // units rỗng theo spec — paths thay thế.
+                pathSummaries,
+                supportTracks
         );
     }
 
-    // ─── GET /api/learning/levels/{level} ─────────────────────────────
-
-    public LevelDetailResponse getLevel(String level) {
-        validateLevel(level);
-
-        return new LevelDetailResponse(
-                new LevelDetailResponse.LevelInfo(
-                        level,
-                        levelTitle(level),
-                        levelDescription(level),
-                        levelProgress(level),
-                        levelStatus(level),
-                        "A1".equals(level)
-                ),
-                levelOutcomes(level),
-                units(level),
-                skillTracks(level)
-        );
-    }
-
-    // ─── GET /api/learning/levels/{level}/skills/{skill}/lessons ──────
-
-    public SkillLessonsResponse getSkillLessons(String level, String skill) {
+    // ═══════════════════════════════════════════════════════════════════
+    // GET /api/learning/levels/{level}/skills/{skill}/lessons
+    // ═══════════════════════════════════════════════════════════════════
+    @Transactional(readOnly = true)
+    public SkillLessonsResponse getSkillLessons(String firebaseUid, String level, String skill) {
+        User user = loadUser(firebaseUid);
         validateLevel(level);
         validateSkill(skill);
+
+        List<LearningLesson> lessons = lessonRepository
+                .findByLevelCodeAndSkillCodeAndIsActiveTrueOrderByIdAsc(level, skill);
+
+        Map<String, UserLessonProgress> progressMap = userLessonProgressRepository
+                .findByUserIdAndLessonIdIn(user.getId(),
+                        lessons.stream().map(LearningLesson::getId).toList())
+                .stream().collect(java.util.stream.Collectors.toMap(UserLessonProgress::getLessonId, p -> p));
+
+        List<SkillLessonsResponse.LessonSummary> summaries = new ArrayList<>();
+        int order = 1;
+        for (LearningLesson lesson : lessons) {
+            UserLessonProgress p = progressMap.get(lesson.getId());
+            String status = p != null ? p.getStatus() : (order == 1 ? "available" : "locked");
+            summaries.add(new SkillLessonsResponse.LessonSummary(
+                    lesson.getId(),
+                    lesson.getUnitId(),
+                    lesson.getTitle(),
+                    lesson.getSubtitle(),
+                    "lesson", // activityType placeholder cho FE skill-list (FE chỉ dùng để chọn icon)
+                    lesson.getDurationMinutes(),
+                    lesson.getXpReward(),
+                    status,
+                    order
+            ));
+            order++;
+        }
 
         return new SkillLessonsResponse(
                 level,
                 skill,
                 skillTitleVi(skill) + " " + level,
-                skillDescription(level, skill),
-                lessons(level, skill)
+                "Bài học " + skillTitleVi(skill) + " cấp " + level + ".",
+                summaries
         );
     }
 
-    // ─── GET /api/learning/lessons/{lessonId} ─────────────────────────
+    // ═══════════════════════════════════════════════════════════════════
+    // GET /api/learning/paths/{pathId} (spec mục 4.3)
+    // ═══════════════════════════════════════════════════════════════════
+    @Transactional(readOnly = true)
+    public LearningPathDetailResponse getPathDetail(String firebaseUid, String pathId) {
+        User user = loadUser(firebaseUid);
+        LearningPath path = pathRepository.findById(pathId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Path not found: " + pathId));
 
-    public LessonDetailResponse getLessonDetail(String lessonId) {
-        String[] parts = lessonId.split("-");
-        if (parts.length < 3)
-            throw new IllegalArgumentException("Invalid lessonId format. Expected: {level}-{skill}-{number}");
+        List<LearningPathActivity> activities = pathActivityRepository
+                .findByPathIdOrderByDisplayOrderAsc(pathId);
 
-        String level = parts[0].toUpperCase();
-        String skill = parts[1].toLowerCase();
-        int num = Integer.parseInt(parts[2]);
+        UserPathProgress pathProgress = userPathProgressRepository
+                .findById(new UserPathProgressId(user.getId(), pathId))
+                .orElse(null);
 
-        validateLevel(level);
-        validateSkill(skill);
+        Map<String, UserLessonProgress> lessonProgress = userLessonProgressRepository
+                .findByUserIdAndPathId(user.getId(), pathId).stream()
+                .collect(java.util.stream.Collectors.toMap(UserLessonProgress::getLessonId, p -> p));
 
-        return buildLessonDetail(level, skill, num, lessonId);
+        // Tính status từng activity tuần tự theo display_order.
+        List<LearningPathDetailResponse.ActivitySummary> activitySummaries = new ArrayList<>();
+        boolean prevCompleted = true; // activity đầu mặc định available.
+        for (LearningPathActivity act : activities) {
+            UserLessonProgress lp = lessonProgress.get(act.getLessonId());
+            String status;
+            if (lp != null && "completed".equals(lp.getStatus())) {
+                status = "completed";
+                prevCompleted = true;
+            } else if (prevCompleted) {
+                status = lp != null && "in_progress".equals(lp.getStatus()) ? "in_progress" : "available";
+                prevCompleted = false;
+            } else {
+                status = "locked";
+            }
+            activitySummaries.add(new LearningPathDetailResponse.ActivitySummary(
+                    act.getId(),
+                    act.getPathId(),
+                    act.getTitle(),
+                    act.getSubtitle(),
+                    act.getSkillCode(),
+                    act.getActivityType(),
+                    status,
+                    act.getDisplayOrder(),
+                    act.getDurationMinutes(),
+                    act.getXpReward()
+            ));
+        }
+
+        double progress = pathProgress != null && pathProgress.getTotalCount() > 0
+                ? (double) pathProgress.getCompletedCount() / pathProgress.getTotalCount()
+                : 0.0;
+        String status = pathProgress != null ? pathProgress.getStatus() : "available";
+
+        return new LearningPathDetailResponse(
+                path.getId(),
+                path.getLevelCode(),
+                path.getTitle(),
+                path.getDescription(),
+                status,
+                Math.min(1.0, progress),
+                path.getRequiredScoreToPass(),
+                activitySummaries
+        );
     }
 
-    // ─── POST /api/learning/lessons/{lessonId}/complete ───────────────
+    // ═══════════════════════════════════════════════════════════════════
+    // GET /api/learning/lessons/{lessonId}
+    // ═══════════════════════════════════════════════════════════════════
+    @Transactional(readOnly = true)
+    public LessonDetailResponse getLessonDetail(String firebaseUid, String lessonId) {
+        User user = loadUser(firebaseUid);
+        LearningLesson lesson = lessonRepository.findById(lessonId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found: " + lessonId));
 
-    public LessonCompleteResponse completeLesson(String lessonId, LessonCompleteRequest request) {
-        String[] parts = lessonId.split("-");
-        String level = parts.length >= 1 ? parts[0].toUpperCase() : "A1";
-        String skill = parts.length >= 2 ? parts[1].toLowerCase() : "listening";
-        int num = Integer.parseInt(parts.length >= 3 ? parts[2] : "1");
+        List<LearningLessonActivity> activities = lessonActivityRepository
+                .findByLessonIdOrderByDisplayOrderAsc(lessonId);
 
-        int nextNum = num + 1;
-        String nextLessonId = level.toLowerCase() + "-" + skill + "-" + String.format("%03d", nextNum);
+        UserLessonProgress progress = userLessonProgressRepository
+                .findById(new UserLessonProgressId(user.getId(), lessonId))
+                .orElse(null);
+        String status = progress != null ? progress.getStatus() : "available";
+
+        List<LessonDetailResponse.Activity> activityDtos = activities.stream()
+                .map(this::toActivityDto)
+                .toList();
+
+        return new LessonDetailResponse(
+                lesson.getId(),
+                lesson.getLevelCode(),
+                lesson.getSkillCode(),
+                lesson.getUnitId(),
+                lesson.getTitle(),
+                lesson.getSubtitle(),
+                lesson.getDurationMinutes(),
+                lesson.getXpReward(),
+                status,
+                lesson.getContent(),
+                activityDtos
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // POST /api/learning/lessons/{lessonId}/complete (spec mục 4.5)
+    // ═══════════════════════════════════════════════════════════════════
+    @Transactional
+    public LessonCompleteResponse completeLesson(String firebaseUid, String lessonId, LessonCompleteRequest req) {
+        User user = loadUser(firebaseUid);
+        LearningLesson lesson = lessonRepository.findById(lessonId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found: " + lessonId));
+
+        // Xác định pathId từ activity dẫn tới lesson này (nếu có).
+        String pathId = resolvePathIdForLesson(lessonId);
+
+        // 1) Ghi attempt
+        UserLessonAttempt attempt = new UserLessonAttempt();
+        attempt.setUserId(user.getId());
+        attempt.setLessonId(lessonId);
+        attempt.setScore((short) req.score());
+        attempt.setXpEarned((short) 0); // sẽ set lại sau
+        attempt.setTimeSpentSeconds(req.timeSpentSeconds());
+        attempt.setAnswers(serializeAnswers(req.answers()));
+        userLessonAttemptRepository.save(attempt);
+
+        // 2) Update / tạo user_lesson_progress
+        UserLessonProgress lp = userLessonProgressRepository
+                .findById(new UserLessonProgressId(user.getId(), lessonId))
+                .orElseGet(() -> {
+                    UserLessonProgress n = new UserLessonProgress();
+                    n.setUserId(user.getId());
+                    n.setLessonId(lessonId);
+                    n.setPathId(pathId);
+                    n.setStatus("available");
+                    return n;
+                });
+
+        boolean firstTimePass = !"completed".equals(lp.getStatus());
+        int passThreshold = 70; // mặc định, có thể đọc từ path.required_score_to_pass.
+        if (pathId != null) {
+            passThreshold = pathRepository.findById(pathId)
+                    .map(LearningPath::getRequiredScoreToPass)
+                    .map(Short::intValue)
+                    .orElse(70);
+        }
+
+        boolean passed = req.score() >= passThreshold;
+        if (passed) lp.setStatus("completed");
+        else if (!"completed".equals(lp.getStatus())) lp.setStatus("in_progress");
+
+        lp.setLastScore((short) req.score());
+        if (lp.getBestScore() == null || req.score() > lp.getBestScore()) {
+            lp.setBestScore((short) req.score());
+        }
+        lp.setAttempts((lp.getAttempts() == null ? 0 : lp.getAttempts()) + 1);
+        lp.setTimeSpentSeconds((lp.getTimeSpentSeconds() == null ? 0 : lp.getTimeSpentSeconds())
+                + req.timeSpentSeconds());
+
+        int xpEarned = (passed && firstTimePass) ? lesson.getXpReward() : 0;
+        lp.setXpEarned((lp.getXpEarned() == null ? 0 : lp.getXpEarned()) + xpEarned);
+        if (passed && firstTimePass) {
+            lp.setCompletedAt(Instant.now());
+        }
+        userLessonProgressRepository.save(lp);
+        attempt.setXpEarned((short) xpEarned);
+        userLessonAttemptRepository.save(attempt);
+
+        // 3) Update user_path_progress khi pass lần đầu.
+        if (passed && firstTimePass && pathId != null) {
+            updatePathProgress(user.getId(), pathId);
+        }
+
+        // 4) Daily goal + XP/streak.
+        boolean streakUpdated = false;
+        if (xpEarned > 0) {
+            streakUpdated = updateDailyGoalAndStreak(user.getId(), xpEarned);
+        }
+
+        // 5) Tính progress mới cho response.
+        double levelProgress = computeLevelProgress(user.getId(), lesson.getLevelCode());
+        double skillProgress = computeSkillProgress(user.getId(), lesson.getLevelCode(), lesson.getSkillCode());
+        String nextLessonId = pathId != null ? findNextLessonInPath(pathId, lessonId) : null;
 
         return new LessonCompleteResponse(
                 lessonId,
-                true,
-                request.score(),
-                12,
-                0.38,
-                0.28,
+                passed,
+                req.score(),
+                xpEarned,
+                levelProgress,
+                skillProgress,
                 nextLessonId,
-                true
+                streakUpdated
         );
-    }
-
-    // ─── GET /api/learning/recommendations ────────────────────────────
-
-    public RecommendationsResponse getRecommendations() {
-        return new RecommendationsResponse(List.of(
-                new RecommendationsResponse.Recommendation(
-                        "continue",
-                        "Tiếp tục Nói A1",
-                        "Bạn còn 1 bài trong unit Greetings.",
-                        "A1",
-                        "speaking",
-                        "a1-speaking-005",
-                        1
-                ),
-                new RecommendationsResponse.Recommendation(
-                        "weak_skill",
-                        "Củng cố Nghe A1",
-                        "Điểm nghe đang thấp hơn các kỹ năng khác.",
-                        "A1",
-                        "listening",
-                        "a1-listening-003",
-                        2
-                )
-        ));
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // Mock data builders
+    // Helpers
     // ═══════════════════════════════════════════════════════════════════
 
-    private List<LearningHubResponse.LevelSummary> levels() {
-        return List.of(
-                new LearningHubResponse.LevelSummary("A1", "Beginner", "Làm quen câu đơn, từ vựng hằng ngày và phản xạ cơ bản.", 0.35, "in_progress", false),
-                new LearningHubResponse.LevelSummary("A2", "Elementary", "Mở rộng giao tiếp thường ngày và mô tả trải nghiệm đơn giản.", 0.0, "locked", true),
-                new LearningHubResponse.LevelSummary("B1", "Intermediate", "Xử lý hầu hết tình huống khi du lịch. Diễn đạt ý kiến và kể chuyện.", 0.0, "locked", true),
-                new LearningHubResponse.LevelSummary("B2", "Upper Intermediate", "Tương tác trôi chảy với người bản xứ. Trình bày quan điểm chi tiết.", 0.0, "locked", true),
-                new LearningHubResponse.LevelSummary("C1", "Advanced", "Diễn đạt linh hoạt trong xã hội, học thuật và công việc.", 0.0, "locked", true),
-                new LearningHubResponse.LevelSummary("C2", "Proficient", "Hiểu hầu hết mọi thứ nghe/đọc. Tóm tắt thông tin từ nhiều nguồn.", 0.0, "locked", true)
-        );
+    private User loadUser(String firebaseUid) {
+        return userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
-    private List<LearningHubResponse.SkillTrackSummary> skillTracks(String level) {
-        String l = level.toLowerCase();
-        return List.of(
-                new LearningHubResponse.SkillTrackSummary(
-                        "listening", "Nghe", "Nghe ý chính, chi tiết và phản xạ tình huống.",
-                        "headphones", "#E53935", skillProgress("listening", level), 12, 2,
-                        l + "-listening-001", !"C1".equals(level) && !"C2".equals(level)
-                ),
-                new LearningHubResponse.SkillTrackSummary(
-                        "speaking", "Nói", "Phát âm, câu mẫu và trả lời theo ngữ cảnh.",
-                        "record_voice_over", "#E67E22", skillProgress("speaking", level), 10, 4,
-                        l + "-speaking-001", true
-                ),
-                new LearningHubResponse.SkillTrackSummary(
-                        "reading", "Đọc", "Đọc hiểu đoạn văn và trả lời câu hỏi.",
-                        "menu_book", "#43A047", skillProgress("reading", level), 8, 1,
-                        l + "-reading-001", !"C1".equals(level) && !"C2".equals(level)
-                ),
-                new LearningHubResponse.SkillTrackSummary(
-                        "writing", "Viết", "Viết câu và đoạn theo chủ đề.",
-                        "edit", "#1E88E5", skillProgress("writing", level), 6, 0,
-                        l + "-writing-001", !"C2".equals(level)
-                )
-        );
+    private boolean isValidLevel(String level) {
+        return level != null && CEFR_ORDER.contains(level);
     }
 
-    private List<LearningHubResponse.UnitSummary> units(String level) {
-        String l = level.toLowerCase();
-        return switch (level) {
-            case "A1" -> List.of(
-                    new LearningHubResponse.UnitSummary(
-                            l + "-unit-001", level, "Greetings", "Chào hỏi và giới thiệu bản thân",
-                            8, 3, "in_progress", List.of("listening", "speaking", "reading", "writing")
-                    ),
-                    new LearningHubResponse.UnitSummary(
-                            l + "-unit-002", level, "Daily Life", "Mô tả hoạt động hằng ngày",
-                            6, 0, "available", List.of("listening", "speaking", "reading")
-                    )
-            );
-            case "A2" -> List.of(
-                    new LearningHubResponse.UnitSummary(
-                            l + "-unit-001", level, "Plans", "Lịch trình, dự định và lời mời",
-                            9, 1, "in_progress", List.of("listening", "speaking", "reading", "writing")
-                    ),
-                    new LearningHubResponse.UnitSummary(
-                            l + "-unit-002", level, "Travel", "Hỏi đường, đặt phòng, mua vé",
-                            7, 0, "locked", List.of("listening", "speaking", "writing")
-                    )
-            );
-            default -> List.of(
-                    new LearningHubResponse.UnitSummary(
-                            l + "-unit-001", level, "Opinions", "Bày tỏ quan điểm và thảo luận",
-                            10, 0, "locked", List.of("listening", "speaking", "reading", "writing")
-                    ),
-                    new LearningHubResponse.UnitSummary(
-                            l + "-unit-002", level, "Work", "Giao tiếp nơi làm việc và email",
-                            8, 0, "locked", List.of("reading", "writing")
-                    )
-            );
-        };
+    private void validateLevel(String level) {
+        if (!isValidLevel(level)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid level: " + level);
+        }
     }
 
-    private List<LearningHubResponse.SupportTrackSummary> supportTracks() {
-        return List.of(
-                new LearningHubResponse.SupportTrackSummary(
-                        "grammar", "Ngữ pháp theo level",
-                        "Mẫu câu và quy tắc cần cho từng chặng học.",
-                        "/learn/grammar", 0.3, true
-                ),
-                new LearningHubResponse.SupportTrackSummary(
-                        "vocabulary", "Từ vựng theo chủ đề",
-                        "Từ nền tảng cho nghe, nói, đọc và viết.",
-                        "/vocabulary", 0.25, true
-                ),
-                new LearningHubResponse.SupportTrackSummary(
-                        "flashcard", "Flashcard ôn tập",
-                        "Ôn lại từ và cụm từ đã học bằng spaced repetition.",
-                        "/learn/flashcards", 0.1, true
-                )
-        );
+    private void validateSkill(String skill) {
+        if (skill == null || !VALID_SKILLS.contains(skill)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid skill: " + skill);
+        }
     }
 
-    private List<SkillLessonsResponse.LessonSummary> lessons(String level, String skill) {
-        String l = level.toLowerCase();
-        String s = skill;
-        return switch (skill) {
-            case "listening" -> List.of(
-                    lesson(l + "-" + s + "-001", l + "-unit-001", "Hello and goodbye", "Nhận diện lời chào và lời tạm biệt", "lesson", 6, 10, "completed", 1),
-                    lesson(l + "-" + s + "-002", l + "-unit-001", "What is your name?", "Nghe và chọn thông tin cá nhân", "quiz", 8, 12, "available", 2),
-                    lesson(l + "-" + s + "-003", l + "-unit-001", "How are you?", "Nghe hội thoại hỏi thăm sức khỏe", "lesson", 5, 10, "available", 3),
-                    lesson(l + "-" + s + "-004", l + "-unit-002", "Morning routine", "Nghe mô tả thói quen buổi sáng", "pronunciation", 7, 12, "available", 4),
-                    lesson(l + "-" + s + "-005", l + "-unit-002", "At the cafe", "Nghe đoạn hội thoại tại quán cà phê", "review", 10, 15, "locked", 5)
-            );
-            case "speaking" -> List.of(
-                    lesson(l + "-" + s + "-001", l + "-unit-001", "Introduce yourself", "Luyện nói câu giới thiệu bản thân", "pronunciation", 7, 12, "completed", 1),
-                    lesson(l + "-" + s + "-002", l + "-unit-001", "Say hello", "Luyện phát âm lời chào", "pronunciation", 5, 10, "completed", 2),
-                    lesson(l + "-" + s + "-003", l + "-unit-001", "Ask a question", "Luyện đặt câu hỏi đơn giản", "quiz", 8, 12, "in_progress", 3),
-                    lesson(l + "-" + s + "-004", l + "-unit-002", "Describe your day", "Nói về một ngày của bạn", "review", 9, 15, "available", 4),
-                    lesson(l + "-" + s + "-005", l + "-unit-002", "Order food", "Luyện gọi món trong nhà hàng", "lesson", 6, 12, "available", 5)
-            );
-            case "reading" -> List.of(
-                    lesson(l + "-" + s + "-001", l + "-unit-001", "A short profile", "Đọc hồ sơ cá nhân ngắn", "lesson", 8, 10, "completed", 1),
-                    lesson(l + "-" + s + "-002", l + "-unit-001", "Signs and notices", "Đọc biển báo và thông báo", "quiz", 6, 10, "available", 2),
-                    lesson(l + "-" + s + "-003", l + "-unit-002", "A simple email", "Đọc email ngắn", "lesson", 7, 12, "available", 3),
-                    lesson(l + "-" + s + "-004", l + "-unit-002", "Weather forecast", "Đọc dự báo thời tiết", "review", 5, 8, "locked", 4)
-            );
-            case "writing" -> List.of(
-                    lesson(l + "-" + s + "-001", l + "-unit-001", "Write your name and country", "Viết câu giới thiệu cơ bản", "lesson", 8, 12, "available", 1),
-                    lesson(l + "-" + s + "-002", l + "-unit-001", "Fill a form", "Điền mẫu đơn cơ bản", "quiz", 7, 10, "available", 2),
-                    lesson(l + "-" + s + "-003", l + "-unit-002", "Write about your day", "Viết đoạn ngắn về ngày của bạn", "review", 10, 15, "locked", 3)
-            );
-            default -> List.of();
-        };
+    /** Tạo row user_levels nếu user mới mở learning hub. */
+    private UserLevel ensureUserLevel(User user) {
+        return userLevelRepository.findById(user.getId()).orElseGet(() -> {
+            UserLevel ul = new UserLevel();
+            ul.setUserId(user.getId());
+            String level = user.getCefrLevel() != null ? user.getCefrLevel() : DEFAULT_LEVEL;
+            ul.setCurrentLevel(level);
+            ul.setSelectedLevel(level);
+            return userLevelRepository.save(ul);
+        });
     }
 
-    private LessonDetailResponse buildLessonDetail(String level, String skill, int num, String lessonId) {
-        int lessonIndex = (num - 1) % 4;
-        String unitId = level.toLowerCase() + "-unit-001";
-        List<String> titles = List.of(
-                skillTitle(skill, "A", num), skillTitle(skill, "B", num),
-                skillTitle(skill, "C", num), skillTitle(skill, "D", num)
-        );
-        String title = lessonIndex < titles.size() ? titles.get(lessonIndex) : "Lesson " + num;
-        int[] durations = {6, 8, 7, 10};
-        int[] xps = {10, 12, 12, 15};
-        String[] statuses = {"completed", "available", "available", "locked"};
+    /** Bootstrap user_path_progress cho mọi path của level đang xem. */
+    private Map<String, UserPathProgress> ensurePathProgress(UUID userId, List<LearningPath> paths) {
+        if (paths.isEmpty()) return Map.of();
+        List<String> pathIds = paths.stream().map(LearningPath::getId).toList();
+        Map<String, UserPathProgress> existing = userPathProgressRepository
+                .findByUserIdAndPathIdIn(userId, pathIds).stream()
+                .collect(java.util.stream.Collectors.toMap(UserPathProgress::getPathId, p -> p));
 
-        return new LessonDetailResponse(
-                lessonId, level, skill, unitId,
-                title, "Bài học " + skill + " cấp độ " + level,
-                durations[lessonIndex], xps[lessonIndex],
-                lessonIndex == 0 ? "completed" : (num <= 3 ? "available" : "locked"),
-                buildContent(skill, num),
-                buildActivities(skill, num)
-        );
+        for (LearningPath p : paths) {
+            if (existing.containsKey(p.getId())) continue;
+            UserPathProgress upp = new UserPathProgress();
+            upp.setUserId(userId);
+            upp.setPathId(p.getId());
+            upp.setStatus(p.getDisplayOrder() == 1 ? "available" : "locked");
+            upp.setTotalCount((int) pathActivityRepository.countByPathId(p.getId()));
+            upp.setCompletedCount(0);
+            existing.put(p.getId(), userPathProgressRepository.save(upp));
+        }
+        return existing;
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> buildContent(String skill, int num) {
-        Map<String, Object> content = new LinkedHashMap<>();
-        switch (skill) {
-            case "listening" -> {
-                content.put("instruction", "Nghe đoạn hội thoại và chọn đáp án đúng.");
-                content.put("audioUrl", "https://cdn.example.com/a1/listening/what-is-your-name.mp3");
-                content.put("transcript", "Hello. My name is Anna. What is your name?");
-                content.put("translationVi", "Xin chào. Tên tôi là Anna. Bạn tên là gì?");
+    /** Daily goal cho hôm nay (auto-create). */
+    private UserDailyGoal ensureDailyGoal(UUID userId) {
+        LocalDate today = LocalDate.now();
+        return userDailyGoalRepository.findByUserIdAndGoalDate(userId, today).orElseGet(() -> {
+            UserDailyGoal g = new UserDailyGoal();
+            g.setUserId(userId);
+            g.setGoalDate(today);
+            return userDailyGoalRepository.save(g);
+        });
+    }
+
+    private List<LearningHubResponse.PathSummary> buildPathSummaries(List<LearningPath> paths,
+                                                                     Map<String, UserPathProgress> progress) {
+        List<LearningHubResponse.PathSummary> list = new ArrayList<>(paths.size());
+        for (LearningPath p : paths) {
+            UserPathProgress upp = progress.get(p.getId());
+            int total = upp != null ? upp.getTotalCount() : 0;
+            int done = upp != null ? upp.getCompletedCount() : 0;
+            double prog = total > 0 ? Math.min(1.0, (double) done / total) : 0.0;
+            String status = upp != null ? upp.getStatus() : "locked";
+            list.add(new LearningHubResponse.PathSummary(
+                    p.getId(),
+                    p.getLevelCode(),
+                    p.getTitle(),
+                    p.getDescription(),
+                    p.getDisplayOrder(),
+                    status,
+                    prog,
+                    total,
+                    done,
+                    p.getSkillsCoverage() != null ? p.getSkillsCoverage() : List.of()
+            ));
+        }
+        return list;
+    }
+
+    private List<LearningHubResponse.SkillTrackSummary> buildSkillTracks(UUID userId, String level) {
+        List<Skill> skills = skillRepository.findAllByOrderByDisplayOrderAsc();
+        List<LearningHubResponse.SkillTrackSummary> list = new ArrayList<>(skills.size());
+        for (Skill s : skills) {
+            long total = lessonRepository.countByLevelCodeAndSkillCode(level, s.getCode());
+            List<LearningLesson> lessons = lessonRepository
+                    .findByLevelCodeAndSkillCodeAndIsActiveTrueOrderByIdAsc(level, s.getCode());
+            long completed = 0;
+            String nextLessonId = null;
+            if (!lessons.isEmpty()) {
+                Map<String, UserLessonProgress> map = userLessonProgressRepository
+                        .findByUserIdAndLessonIdIn(userId, lessons.stream().map(LearningLesson::getId).toList())
+                        .stream().collect(java.util.stream.Collectors.toMap(UserLessonProgress::getLessonId, p -> p));
+                for (LearningLesson l : lessons) {
+                    UserLessonProgress lp = map.get(l.getId());
+                    if (lp != null && "completed".equals(lp.getStatus())) {
+                        completed++;
+                    } else if (nextLessonId == null) {
+                        nextLessonId = l.getId();
+                    }
+                }
             }
-            case "speaking" -> {
-                content.put("instruction", "Nghe mẫu, sau đó ghi âm lại câu của bạn.");
-                content.put("sampleText", "Hello, my name is Linh.");
-                content.put("phonetic", "həˈloʊ, maɪ neɪm ɪz lɪn");
-                content.put("translationVi", "Xin chào, tên tôi là Linh.");
-                content.put("audioUrl", "https://cdn.example.com/a1/speaking/introduce-yourself.mp3");
+            double progress = total > 0 ? (double) completed / total : 0.0;
+            list.add(new LearningHubResponse.SkillTrackSummary(
+                    s.getCode(),
+                    s.getTitle(),
+                    s.getDescription(),
+                    s.getIcon(),
+                    s.getAccentColor(),
+                    progress,
+                    (int) total,
+                    (int) completed,
+                    nextLessonId,
+                    true
+            ));
+        }
+        return list;
+    }
+
+    private List<LearningHubResponse.SupportTrackSummary> buildSupportTracks() {
+        return supportTrackRepository.findAllByEnabledTrueOrderByDisplayOrderAsc().stream()
+                .map(s -> new LearningHubResponse.SupportTrackSummary(
+                        s.getType(), s.getTitle(), s.getDescription(), s.getRoute(),
+                        0.0, s.getEnabled()))
+                .toList();
+    }
+
+    private List<LearningHubResponse.LevelSummary> buildLevels(UUID userId, String currentLevel) {
+        List<CefrLevel> rows = cefrLevelRepository.findAllByIsActiveTrueOrderByDisplayOrderAsc();
+        List<LearningHubResponse.LevelSummary> list = new ArrayList<>(rows.size());
+        int currentIdx = CEFR_ORDER.indexOf(currentLevel);
+        if (currentIdx < 0) currentIdx = 0;
+
+        for (CefrLevel lv : rows) {
+            int idx = CEFR_ORDER.indexOf(lv.getCode());
+            double prog = computeLevelProgress(userId, lv.getCode());
+            String status;
+            boolean locked;
+            if (idx < currentIdx) {
+                status = "completed";
+                locked = false;
+            } else if (idx == currentIdx) {
+                status = prog > 0 ? "in_progress" : "available";
+                locked = false;
+            } else if (idx == currentIdx + 1) {
+                status = "available";
+                locked = false;
+            } else {
+                status = "locked";
+                locked = true;
             }
-            case "reading" -> {
-                content.put("instruction", "Đọc đoạn văn và trả lời câu hỏi.");
-                content.put("passage", "My name is Ben. I am from Canada. I am a student.");
-                content.put("translationVi", "Tên tôi là Ben. Tôi đến từ Canada. Tôi là học sinh.");
-            }
-            case "writing" -> {
-                content.put("instruction", "Viết 2 câu giới thiệu tên và quốc gia của bạn.");
-                content.put("prompt", "Write your name and where you are from.");
-                content.put("exampleAnswer", "My name is Mai. I am from Vietnam.");
-                content.put("minWords", 6);
-                content.put("maxWords", 30);
+            list.add(new LearningHubResponse.LevelSummary(
+                    lv.getCode(), lv.getTitle(), lv.getDescription(), prog, status, locked));
+        }
+        return list;
+    }
+
+    /** levelProgress = số path completed / tổng path active của level. */
+    private double computeLevelProgress(UUID userId, String level) {
+        List<LearningPath> paths = pathRepository.findByLevelCodeAndIsActiveTrueOrderByDisplayOrderAsc(level);
+        if (paths.isEmpty()) return 0.0;
+        Map<String, UserPathProgress> map = userPathProgressRepository
+                .findByUserIdAndPathIdIn(userId, paths.stream().map(LearningPath::getId).toList())
+                .stream().collect(java.util.stream.Collectors.toMap(UserPathProgress::getPathId, p -> p));
+        long completed = paths.stream()
+                .filter(p -> {
+                    UserPathProgress upp = map.get(p.getId());
+                    return upp != null && "completed".equals(upp.getStatus());
+                }).count();
+        return (double) completed / paths.size();
+    }
+
+    private double computeSkillProgress(UUID userId, String level, String skill) {
+        long total = lessonRepository.countByLevelCodeAndSkillCode(level, skill);
+        if (total == 0) return 0.0;
+        List<LearningLesson> lessons = lessonRepository
+                .findByLevelCodeAndSkillCodeAndIsActiveTrueOrderByIdAsc(level, skill);
+        Map<String, UserLessonProgress> map = userLessonProgressRepository
+                .findByUserIdAndLessonIdIn(userId, lessons.stream().map(LearningLesson::getId).toList())
+                .stream().collect(java.util.stream.Collectors.toMap(UserLessonProgress::getLessonId, p -> p));
+        long done = lessons.stream()
+                .filter(l -> {
+                    UserLessonProgress lp = map.get(l.getId());
+                    return lp != null && "completed".equals(lp.getStatus());
+                }).count();
+        return (double) done / total;
+    }
+
+    private String resolveCurrentPathId(List<LearningPath> paths, Map<String, UserPathProgress> progress) {
+        for (LearningPath p : paths) {
+            UserPathProgress upp = progress.get(p.getId());
+            if (upp != null && "in_progress".equals(upp.getStatus())) return p.getId();
+        }
+        for (LearningPath p : paths) {
+            UserPathProgress upp = progress.get(p.getId());
+            if (upp == null || "available".equals(upp.getStatus())) return p.getId();
+        }
+        return paths.isEmpty() ? null : paths.get(0).getId();
+    }
+
+    private String guessNextRecommendedSkill(UUID userId, String level) {
+        List<Skill> skills = skillRepository.findAllByOrderByDisplayOrderAsc();
+        double minProg = 1.1;
+        String pick = "listening";
+        for (Skill s : skills) {
+            double p = computeSkillProgress(userId, level, s.getCode());
+            if (p < minProg) { minProg = p; pick = s.getCode(); }
+        }
+        return pick;
+    }
+
+    private String resolvePathIdForLesson(String lessonId) {
+        // 1 lesson có thể được tham chiếu bởi nhiều path activity — chọn cái đầu tiên tìm được.
+        return pathActivityRepository.findAll().stream()
+                .filter(a -> lessonId.equals(a.getLessonId()))
+                .map(LearningPathActivity::getPathId)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void updatePathProgress(UUID userId, String pathId) {
+        UserPathProgress upp = userPathProgressRepository
+                .findById(new UserPathProgressId(userId, pathId))
+                .orElseGet(() -> {
+                    UserPathProgress n = new UserPathProgress();
+                    n.setUserId(userId);
+                    n.setPathId(pathId);
+                    n.setStatus("in_progress");
+                    n.setTotalCount((int) pathActivityRepository.countByPathId(pathId));
+                    return n;
+                });
+
+        // Đếm số lesson trong path đã completed.
+        List<LearningPathActivity> acts = pathActivityRepository.findByPathIdOrderByDisplayOrderAsc(pathId);
+        List<String> lessonIds = acts.stream().map(LearningPathActivity::getLessonId).toList();
+        long done = userLessonProgressRepository.findByUserIdAndLessonIdIn(userId, lessonIds).stream()
+                .filter(p -> "completed".equals(p.getStatus()))
+                .count();
+        upp.setCompletedCount((int) done);
+        if (upp.getTotalCount() == null || upp.getTotalCount() == 0) {
+            upp.setTotalCount(acts.size());
+        }
+        if (done >= upp.getTotalCount() && upp.getTotalCount() > 0) {
+            upp.setStatus("completed");
+            if (upp.getCompletedAt() == null) upp.setCompletedAt(Instant.now());
+        } else if (done > 0) {
+            upp.setStatus("in_progress");
+            if (upp.getStartedAt() == null) upp.setStartedAt(Instant.now());
+        }
+        userPathProgressRepository.save(upp);
+
+        // Mở khóa path kế tiếp khi path hiện tại completed.
+        if ("completed".equals(upp.getStatus())) {
+            LearningPath cur = pathRepository.findById(pathId).orElse(null);
+            if (cur != null) {
+                pathRepository
+                        .findByLevelCodeAndIsActiveTrueOrderByDisplayOrderAsc(cur.getLevelCode()).stream()
+                        .filter(p -> p.getDisplayOrder() == cur.getDisplayOrder() + 1)
+                        .findFirst()
+                        .ifPresent(next -> {
+                            UserPathProgress nx = userPathProgressRepository
+                                    .findById(new UserPathProgressId(userId, next.getId()))
+                                    .orElseGet(() -> {
+                                        UserPathProgress n = new UserPathProgress();
+                                        n.setUserId(userId);
+                                        n.setPathId(next.getId());
+                                        n.setTotalCount((int) pathActivityRepository.countByPathId(next.getId()));
+                                        return n;
+                                    });
+                            if ("locked".equals(nx.getStatus())) {
+                                nx.setStatus("available");
+                                userPathProgressRepository.save(nx);
+                            }
+                        });
             }
         }
-        return content;
     }
 
-    private List<LessonDetailResponse.Activity> buildActivities(String skill, int num) {
-        return switch (skill) {
-            case "listening" -> List.of(
-                    activityMultipleChoice("act-001", "What is the speaker's name?",
-                            List.of(option("A", "Anna"), option("B", "Emma"), option("C", "Lana")),
-                            "A", "Người nói nói: My name is Anna.")
-            );
-            case "speaking" -> List.of(
-                    activityPronunciation("act-001", "Hello, my name is Linh.", 70)
-            );
-            case "reading" -> List.of(
-                    activityMultipleChoice("act-001", "Where is Ben from?",
-                            List.of(option("A", "Canada"), option("B", "Japan"), option("C", "Vietnam")),
-                            "A", "Trong bài có câu: I am from Canada.")
-            );
-            case "writing" -> List.of(
-                    activityWriting("act-001", "Write your name and where you are from.",
-                            List.of("Có câu giới thiệu tên.", "Có câu giới thiệu quốc gia.", "Dùng đúng cấu trúc: My name is... / I am from..."))
-            );
-            default -> List.of();
-        };
+    /**
+     * Cộng XP vào daily goal + chuyển XP/streak xuống ProgressService.
+     * Trả true nếu là lần đầu trong ngày → streak tăng.
+     */
+    private boolean updateDailyGoalAndStreak(UUID userId, int xp) {
+        UserDailyGoal goal = ensureDailyGoal(userId);
+        boolean wasEmpty = goal.getEarnedXp() == 0;
+        goal.setEarnedXp((short) Math.min(Short.MAX_VALUE, goal.getEarnedXp() + xp));
+        goal.setCompletedActivities((short) Math.min(Short.MAX_VALUE, goal.getCompletedActivities() + 1));
+        userDailyGoalRepository.save(goal);
+
+        progressService.recordActivity(userId, xp);
+        return wasEmpty;
     }
 
-    // ─── Helper methods ──────────────────────────────────────────────
-
-    private static SkillLessonsResponse.LessonSummary lesson(String id, String unitId, String title, String subtitle,
-                                                              String activityType, int mins, int xp, String status, int order) {
-        return new SkillLessonsResponse.LessonSummary(id, unitId, title, subtitle, activityType, mins, xp, status, order);
+    private String findNextLessonInPath(String pathId, String currentLessonId) {
+        List<LearningPathActivity> acts = pathActivityRepository.findByPathIdOrderByDisplayOrderAsc(pathId);
+        for (int i = 0; i < acts.size(); i++) {
+            if (currentLessonId.equals(acts.get(i).getLessonId()) && i + 1 < acts.size()) {
+                return acts.get(i + 1).getLessonId();
+            }
+        }
+        return null;
     }
 
-    private static LessonDetailResponse.Activity.Option option(String id, String text) {
-        return new LessonDetailResponse.Activity.Option(id, text);
+    private LessonDetailResponse.Activity toActivityDto(LearningLessonActivity row) {
+        Map<String, Object> p = row.getPayload();
+        String type = row.getActivityType();
+
+        String question = strOrNull(p, "question");
+        String correctOptionId = strOrNull(p, "correctOptionId");
+        String explanationVi = strOrNull(p, "explanationVi");
+        String expectedText = strOrNull(p, "expectedText");
+        Integer minScoreToPass = intOrNull(p, "minScoreToPass");
+        String prompt = strOrNull(p, "prompt");
+        List<String> rubric = listOrNull(p, "rubric");
+        String textAnswer = strOrNull(p, "textAnswer");
+
+        List<LessonDetailResponse.Activity.Option> options = null;
+        Object raw = p != null ? p.get("options") : null;
+        if (raw instanceof List<?> rawList) {
+            options = new ArrayList<>(rawList.size());
+            for (Object item : rawList) {
+                if (item instanceof Map<?, ?> opt) {
+                    options.add(new LessonDetailResponse.Activity.Option(
+                            String.valueOf(opt.get("id")),
+                            String.valueOf(opt.get("text"))
+                    ));
+                }
+            }
+        }
+
+        return new LessonDetailResponse.Activity(
+                row.getId(),
+                type,
+                question,
+                options,
+                correctOptionId,
+                explanationVi,
+                expectedText,
+                minScoreToPass,
+                prompt,
+                rubric,
+                textAnswer
+        );
     }
 
-    private static LessonDetailResponse.Activity activityMultipleChoice(String id, String question,
-                                                                         List<LessonDetailResponse.Activity.Option> options,
-                                                                         String correctId, String explanation) {
-        return new LessonDetailResponse.Activity(id, "multiple_choice", question, options, correctId, explanation, null, null, null, null, null);
-    }
-
-    private static LessonDetailResponse.Activity activityPronunciation(String id, String expectedText, int minScore) {
-        return new LessonDetailResponse.Activity(id, "pronunciation", null, null, null, null, expectedText, minScore, null, null, null);
-    }
-
-    private static LessonDetailResponse.Activity activityWriting(String id, String prompt, List<String> rubric) {
-        return new LessonDetailResponse.Activity(id, "writing_prompt", null, null, null, null, null, null, prompt, rubric, null);
-    }
-
-    // ─── Level helpers ────────────────────────────────
-
-    private String levelTitle(String level) {
-        return switch (level) {
-            case "A1" -> "Beginner";
-            case "A2" -> "Elementary";
-            case "B1" -> "Intermediate";
-            case "B2" -> "Upper Intermediate";
-            case "C1" -> "Advanced";
-            case "C2" -> "Proficient";
-            default -> level;
-        };
-    }
-
-    private String levelDescription(String level) {
-        return switch (level) {
-            case "A1" -> "Làm quen câu đơn, từ vựng hằng ngày và phản xạ cơ bản.";
-            case "A2" -> "Mở rộng giao tiếp thường ngày và mô tả trải nghiệm đơn giản.";
-            case "B1" -> "Xử lý hầu hết tình huống khi du lịch. Diễn đạt ý kiến và kể chuyện.";
-            case "B2" -> "Tương tác trôi chảy với người bản xứ. Trình bày quan điểm chi tiết.";
-            case "C1" -> "Diễn đạt linh hoạt trong xã hội, học thuật và công việc.";
-            case "C2" -> "Hiểu hầu hết mọi thứ nghe/đọc. Tóm tắt thông tin từ nhiều nguồn.";
-            default -> "";
-        };
-    }
-
-    private double levelProgress(String level) {
-        return "A1".equals(level) ? 0.35 : ("A2".equals(level) ? 0.18 : 0.0);
-    }
-
-    private String levelStatus(String level) {
-        if ("A1".equals(level)) return "in_progress";
-        if ("A2".equals(level)) return "available";
-        return "locked";
-    }
-
-    private double skillProgress(String skill, String level) {
-        if (!"A1".equals(level)) return 0.0;
-        return switch (skill) {
-            case "listening" -> 0.2;
-            case "speaking" -> 0.45;
-            case "reading" -> 0.12;
-            case "writing" -> 0.05;
-            default -> 0.0;
-        };
-    }
-
-    private List<String> levelOutcomes(String level) {
-        return switch (level) {
-            case "A1" -> List.of(
-                    "Hiểu và dùng các câu đơn giản hằng ngày.",
-                    "Giới thiệu bản thân và trả lời câu hỏi cá nhân cơ bản.",
-                    "Tương tác đơn giản với người nói chậm và rõ ràng."
-            );
-            case "A2" -> List.of(
-                    "Hiểu câu nói ngắn trong tình huống quen thuộc.",
-                    "Viết đoạn ngắn 4-6 câu về bản thân hoặc kế hoạch.",
-                    "Trao đổi thông tin đơn giản khi đi học, đi làm hoặc du lịch."
-            );
-            case "B1" -> List.of(
-                    "Xử lý hầu hết tình huống khi du lịch.",
-                    "Viết đoạn liên kết về chủ đề quen thuộc.",
-                    "Mô tả trải nghiệm, sự kiện và đưa ra lý do ngắn gọn."
-            );
-            default -> List.of(
-                    "Tiếp tục mở rộng vốn từ và mẫu câu.",
-                    "Thực hành giao tiếp trong tình huống thực tế.",
-                    "Phát triển khả năng đọc hiểu và viết đoạn."
-            );
-        };
-    }
-
-    private String skillTitle(String skill, String prefix, int num) {
-        return switch (skill) {
-            case "listening" -> prefix + " - Nghe bài " + num;
-            case "speaking" -> prefix + " - Nói bài " + num;
-            case "reading" -> prefix + " - Đọc bài " + num;
-            case "writing" -> prefix + " - Viết bài " + num;
-            default -> prefix + " - Bài " + num;
-        };
+    private List<Map<String, Object>> serializeAnswers(List<LessonCompleteRequest.Answer> answers) {
+        if (answers == null) return List.of();
+        List<Map<String, Object>> list = new ArrayList<>(answers.size());
+        for (LessonCompleteRequest.Answer a : answers) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("activityId", a.activityId());
+            m.put("type", a.type());
+            if (a.selectedOptionId() != null) m.put("selectedOptionId", a.selectedOptionId());
+            if (a.isCorrect() != null) m.put("isCorrect", a.isCorrect());
+            if (a.textAnswer() != null) m.put("textAnswer", a.textAnswer());
+            list.add(m);
+        }
+        return list;
     }
 
     private String skillTitleVi(String skill) {
@@ -454,27 +754,29 @@ public class LearningService {
         };
     }
 
-    private String skillDescription(String level, String skill) {
-        return switch (skill) {
-            case "listening" -> "Nghe câu và đoạn hội thoại ngắn trong tình huống quen thuộc.";
-            case "speaking" -> "Phát âm, câu mẫu và trả lời theo ngữ cảnh.";
-            case "reading" -> "Đọc đoạn văn ngắn và trả lời câu hỏi.";
-            case "writing" -> "Viết câu và đoạn theo chủ đề quen thuộc.";
-            default -> "";
-        };
+    private String strOrNull(Map<String, Object> map, String key) {
+        if (map == null) return null;
+        Object v = map.get(key);
+        return v == null ? null : String.valueOf(v);
     }
 
-    // ─── Validation ────────────────────────────────────────────────────
-
-    private void validateLevel(String level) {
-        if (level == null || !VALID_LEVELS.contains(level)) {
-            throw new IllegalArgumentException("Invalid level: " + level + ". Valid values: " + VALID_LEVELS);
-        }
+    private Integer intOrNull(Map<String, Object> map, String key) {
+        if (map == null) return null;
+        Object v = map.get(key);
+        if (v instanceof Number n) return n.intValue();
+        if (v instanceof String s) try { return Integer.parseInt(s); } catch (NumberFormatException ignored) { return null; }
+        return null;
     }
 
-    private void validateSkill(String skill) {
-        if (skill == null || !VALID_SKILLS.contains(skill)) {
-            throw new IllegalArgumentException("Invalid skill: " + skill + ". Valid values: " + VALID_SKILLS);
+    @SuppressWarnings("unchecked")
+    private List<String> listOrNull(Map<String, Object> map, String key) {
+        if (map == null) return null;
+        Object v = map.get(key);
+        if (v instanceof List<?> list) {
+            List<String> out = new ArrayList<>(list.size());
+            for (Object o : list) out.add(String.valueOf(o));
+            return out;
         }
+        return null;
     }
 }

@@ -20,7 +20,7 @@ public class PlacementTestController {
         this.authHelper = authHelper;
     }
 
-    // Bắt đầu bài kiểm tra — trả về 12 câu hỏi (không có đáp án)
+    // Bắt đầu bài kiểm tra — trả về 20 câu hỏi spread A1..C2 (không có đáp án)
     @PostMapping("/start")
     public StartTestResponse startTest(@RequestHeader("Authorization") String token) {
         FirebaseToken decoded = authHelper.verifyBearer(token);
