@@ -16,16 +16,21 @@ public interface ExerciseQuestionRepository extends JpaRepository<ExerciseQuesti
     @Query(value = "SELECT * FROM exercise_question WHERE category = :category AND level = :level ORDER BY random() LIMIT :size", nativeQuery = true)
     List<ExerciseQuestion> findRandomByCategoryAndLevel(String category, String level, int size);
 
+    /**
+     * Admin search. {@code levelUpper} đã được uppercase và {@code keywordPattern}
+     * đã được lowercase + bọc '%...%' ở caller — query không gọi UPPER/LOWER trên param
+     * để tránh lỗi "function lower(bytea) does not exist" khi PostgreSQL bind NULL.
+     */
     @Query("""
             SELECT q FROM ExerciseQuestion q
             WHERE (:category IS NULL OR q.category = :category)
               AND (:difficulty IS NULL OR q.difficulty = :difficulty)
-              AND (:level IS NULL OR UPPER(q.level) = UPPER(:level))
-              AND (:keyword IS NULL OR LOWER(q.question) LIKE LOWER(CONCAT('%', :keyword, '%')))
+              AND (:levelUpper IS NULL OR UPPER(q.level) = :levelUpper)
+              AND (:keywordPattern IS NULL OR LOWER(q.question) LIKE :keywordPattern)
             ORDER BY q.category ASC, q.difficulty ASC, q.id ASC
             """)
     List<ExerciseQuestion> searchQuestions(@Param("category") String category,
                                            @Param("difficulty") String difficulty,
-                                           @Param("level") String level,
-                                           @Param("keyword") String keyword);
+                                           @Param("levelUpper") String levelUpper,
+                                           @Param("keywordPattern") String keywordPattern);
 }

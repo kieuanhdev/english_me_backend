@@ -58,8 +58,8 @@ public class AdminExerciseService {
         List<ExerciseQuestion> questions = questionRepository.searchQuestions(
                 blankToNull(category),
                 blankToNull(difficulty),
-                blankToNull(level),
-                blankToNull(keyword));
+                toUpperOrNull(level),
+                toLikePatternOrNull(keyword));
         if (questions.isEmpty()) return List.of();
 
         Map<UUID, long[]> stats = loadQuestionStats(questions.stream().map(ExerciseQuestion::getId).toList());
@@ -193,8 +193,8 @@ public class AdminExerciseService {
         List<ExerciseQuestion> questions = questionRepository.searchQuestions(
                 blankToNull(category),
                 blankToNull(difficulty),
-                blankToNull(level),
-                blankToNull(keyword));
+                toUpperOrNull(level),
+                toLikePatternOrNull(keyword));
         StringBuilder sb = new StringBuilder();
         sb.append("category,difficulty,level,question,options,correct_answer,explanation,hint\n");
         for (ExerciseQuestion q : questions) {
@@ -295,6 +295,21 @@ public class AdminExerciseService {
 
     private static String blankToNull(String s) {
         return s == null || s.isBlank() ? null : s.trim();
+    }
+
+    /**
+     * Tiền xử lý keyword cho LIKE: lowercase + bọc '%...%'. Trả null nếu rỗng.
+     * Cần thiết vì Postgres không có lower(bytea) → không thể gọi LOWER(:keyword)
+     * trong JPQL khi param NULL.
+     */
+    private static String toLikePatternOrNull(String keyword) {
+        if (keyword == null || keyword.isBlank()) return null;
+        return "%" + keyword.trim().toLowerCase() + "%";
+    }
+
+    private static String toUpperOrNull(String s) {
+        if (s == null || s.isBlank()) return null;
+        return s.trim().toUpperCase();
     }
 
     private static String firstNonBlank(String... values) {

@@ -41,9 +41,13 @@ public class AdminLessonController {
     ) {
         String safeLevel = level == null || level.isBlank() ? null : level.trim();
         String safeSkill = skill == null || skill.isBlank() ? null : skill.trim();
-        String safeKeyword = q == null || q.isBlank() ? null : q.trim();
+        // Pre-build LIKE pattern ở Java để tránh LOWER(:keyword) với param NULL
+        // (Postgres không có lower(bytea) → query fail trên JDBC).
+        String keywordPattern = q == null || q.isBlank()
+                ? null
+                : "%" + q.trim().toLowerCase() + "%";
 
-        List<LearningLesson> lessons = lessonRepository.adminSearch(safeLevel, safeSkill, safeKeyword);
+        List<LearningLesson> lessons = lessonRepository.adminSearch(safeLevel, safeSkill, keywordPattern);
 
         model.addAttribute("lessons", lessons);
         model.addAttribute("selectedLevel", level == null ? "" : level);

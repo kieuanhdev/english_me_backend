@@ -14,18 +14,20 @@ public interface LearningLessonRepository extends JpaRepository<LearningLesson, 
 
     /**
      * Admin: list lessons với filter optional level/skill/keyword.
-     * Truyền null/blank cho field nào để bỏ qua filter đó.
+     * Truyền null cho field nào để bỏ qua filter đó. Keyword đã được lowercase ở caller
+     * (xem AdminLessonController) — query không gọi LOWER trên param để tránh
+     * lỗi "function lower(bytea) does not exist" khi Postgres bind NULL.
      */
     @Query("""
             SELECT l FROM LearningLesson l
             WHERE (:level IS NULL OR l.levelCode = :level)
               AND (:skill IS NULL OR l.skillCode = :skill)
-              AND (:keyword IS NULL
-                   OR LOWER(l.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR LOWER(l.id)    LIKE LOWER(CONCAT('%', :keyword, '%')))
+              AND (:keywordPattern IS NULL
+                   OR LOWER(l.title) LIKE :keywordPattern
+                   OR LOWER(l.id)    LIKE :keywordPattern)
             ORDER BY l.levelCode ASC, l.skillCode ASC, l.id ASC
             """)
     List<LearningLesson> adminSearch(@Param("level") String level,
                                      @Param("skill") String skill,
-                                     @Param("keyword") String keyword);
+                                     @Param("keywordPattern") String keywordPattern);
 }
