@@ -198,6 +198,8 @@ public class LearningService {
                 .collect(java.util.stream.Collectors.toMap(UserLessonProgress::getLessonId, p -> p));
 
         // Tính status từng activity tuần tự theo display_order.
+        // Status có thể là: completed, failed (đã làm xong nhưng chưa đạt pass),
+        // in_progress, available, locked.
         List<LearningPathDetailResponse.ActivitySummary> activitySummaries = new ArrayList<>();
         boolean prevCompleted = true; // activity đầu mặc định available.
         for (LearningPathActivity act : activities) {
@@ -206,6 +208,10 @@ public class LearningService {
             if (lp != null && "completed".equals(lp.getStatus())) {
                 status = "completed";
                 prevCompleted = true;
+            } else if (lp != null && lp.getLastScore() != null) {
+                // Đã có ít nhất 1 attempt nhưng chưa đạt → failed (cho phép làm lại).
+                status = "failed";
+                prevCompleted = true; // cho phép mở khoá activity kế tiếp dù chưa pass
             } else if (prevCompleted) {
                 status = lp != null && "in_progress".equals(lp.getStatus()) ? "in_progress" : "available";
                 prevCompleted = false;
