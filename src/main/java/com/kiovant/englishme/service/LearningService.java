@@ -631,11 +631,8 @@ public class LearningService {
     }
 
     private String resolvePathIdForLesson(String lessonId) {
-        // 1 lesson có thể được tham chiếu bởi nhiều path activity — chọn cái đầu tiên tìm được.
-        return pathActivityRepository.findAll().stream()
-                .filter(a -> lessonId.equals(a.getLessonId()))
+        return pathActivityRepository.findFirstByLessonId(lessonId)
                 .map(LearningPathActivity::getPathId)
-                .findFirst()
                 .orElse(null);
     }
 
