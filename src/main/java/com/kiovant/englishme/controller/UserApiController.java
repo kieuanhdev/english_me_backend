@@ -1,8 +1,10 @@
 package com.kiovant.englishme.controller;
 
 import com.google.firebase.auth.FirebaseToken;
+import com.kiovant.englishme.dto.DailyGoalResponse;
 import com.kiovant.englishme.dto.ProgressResponse;
 import com.kiovant.englishme.dto.StreakCalendarResponse;
+import com.kiovant.englishme.dto.UpdateDailyGoalRequest;
 import com.kiovant.englishme.dto.UpdateProfileRequest;
 import com.kiovant.englishme.dto.UserProfileResponse;
 import com.kiovant.englishme.dto.XpHistoryItem;
@@ -53,6 +55,23 @@ public class UserApiController {
     ) {
         FirebaseToken token = authHelper.verifyBearer(authorization);
         return progressService.getProgress(token.getUid());
+    }
+
+    @GetMapping("/daily-goal")
+    public DailyGoalResponse getDailyGoal(
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        FirebaseToken token = authHelper.verifyBearer(authorization);
+        return progressService.getDailyGoal(token.getUid());
+    }
+
+    @PutMapping("/daily-goal")
+    public DailyGoalResponse updateDailyGoal(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody UpdateDailyGoalRequest body
+    ) {
+        FirebaseToken token = authHelper.verifyBearer(authorization);
+        return progressService.updateDailyGoal(token.getUid(), body.targetXp());
     }
 
     @GetMapping("/xp-history")

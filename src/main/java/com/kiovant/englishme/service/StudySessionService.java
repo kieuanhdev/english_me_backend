@@ -194,7 +194,8 @@ public class StudySessionService {
                 xpResult.streakUpdated(),
                 session.getXpEarned(),
                 reviewed,
-                session.getTotalCards()
+                session.getTotalCards(),
+                xpResult.bonuses()
         );
     }
 

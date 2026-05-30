@@ -183,7 +183,8 @@ public class UserTestService {
                 xpResult.dailyEarnedXp(),
                 xpResult.streakUpdated(),
                 safeTime,
-                cefrSuggestion
+                cefrSuggestion,
+                xpResult.bonuses()
         );
     }
 

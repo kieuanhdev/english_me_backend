@@ -1,6 +1,7 @@
 package com.kiovant.englishme.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 public record ReviewResponse(
@@ -15,6 +16,7 @@ public record ReviewResponse(
         Boolean streakUpdated,
         Integer sessionXp,
         Integer reviewedCount,
-        Integer totalCards
+        Integer totalCards,
+        List<XpGrantResult.Bonus> bonuses
 ) {
 }

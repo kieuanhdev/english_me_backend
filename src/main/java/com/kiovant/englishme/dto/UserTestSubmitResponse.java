@@ -1,5 +1,6 @@
 package com.kiovant.englishme.dto;
 
+import java.util.List;
 import java.util.UUID;
 
 public record UserTestSubmitResponse(
@@ -15,6 +16,7 @@ public record UserTestSubmitResponse(
         int dailyEarnedXp,
         boolean streakUpdated,
         int timeTakenSeconds,
-        String cefrSuggestion
+        String cefrSuggestion,
+        List<XpGrantResult.Bonus> bonuses
 ) {
 }

@@ -14,6 +14,7 @@ public record ExerciseCompleteResponse(
         long totalXp,
         int dailyEarnedXp,
         boolean streakUpdated,
-        List<ExerciseAnswerResult> results
+        List<ExerciseAnswerResult> results,
+        List<XpGrantResult.Bonus> bonuses
 ) {
 }

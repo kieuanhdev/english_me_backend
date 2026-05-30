@@ -1,5 +1,6 @@
 package com.kiovant.englishme.service;
 
+import com.kiovant.englishme.dto.DailyGoalResponse;
 import com.kiovant.englishme.dto.ProgressResponse;
 import com.kiovant.englishme.dto.SkillScore;
 import com.kiovant.englishme.dto.StreakCalendarResponse;
@@ -10,6 +11,7 @@ import com.kiovant.englishme.dto.XpLedgerPage;
 import com.kiovant.englishme.entity.Badge;
 import com.kiovant.englishme.entity.User;
 import com.kiovant.englishme.entity.UserBadge;
+import com.kiovant.englishme.entity.UserDailyGoal;
 import com.kiovant.englishme.entity.XpHistory;
 import com.kiovant.englishme.entity.XpLedger;
 import com.kiovant.englishme.repository.BadgeRepository;
@@ -42,6 +44,8 @@ public class ProgressService {
     private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
     /** Mục tiêu XP/ngày mặc định — khớp UserDailyGoal.targetXp default (=30). */
     private static final int DEFAULT_DAILY_XP_GOAL = 30;
+    /** Các mức mục tiêu XP/ngày user được chọn (Nhẹ / Vừa / Chăm / Cường độ cao). */
+    private static final List<Integer> ALLOWED_DAILY_GOALS = List.of(20, 30, 50, 80);
 
     private final UserRepository userRepository;
     private final XpHistoryRepository xpHistoryRepository;
@@ -101,6 +105,51 @@ public class ProgressService {
                 skills,
                 week
         );
+    }
+
+    /** Trạng thái mục tiêu XP hôm nay (target + đã kiếm + danh sách preset). */
+    @Transactional(readOnly = true)
+    public DailyGoalResponse getDailyGoal(String firebaseUid) {
+        User user = loadUser(firebaseUid);
+        UserDailyGoal goal = userDailyGoalRepository
+                .findByUserIdAndGoalDate(user.getId(), LocalDate.now())
+                .orElse(null);
+        int target = goal == null || goal.getTargetXp() == null
+                ? DEFAULT_DAILY_XP_GOAL : goal.getTargetXp();
+        int earned = goal == null || goal.getEarnedXp() == null
+                ? 0 : goal.getEarnedXp();
+        return new DailyGoalResponse(target, earned, earned >= target, ALLOWED_DAILY_GOALS);
+    }
+
+    /**
+     * User tự đặt mục tiêu XP cho ngày HÔM NAY. Chỉ chấp nhận giá trị trong preset.
+     *
+     * <p>Lưu ý idempotency bonus: target chỉ ảnh hưởng tới ngày hiện tại. Nếu user đã
+     * nhận daily_goal_bonus hôm nay (daily_bonus_granted=true) rồi mới nâng target, sẽ
+     * KHÔNG cấp lại bonus dù chưa đạt target mới — đúng quy ước "1 bonus/ngày".
+     */
+    @Transactional
+    public DailyGoalResponse updateDailyGoal(String firebaseUid, Integer targetXp) {
+        if (targetXp == null || !ALLOWED_DAILY_GOALS.contains(targetXp)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "targetXp phải thuộc " + ALLOWED_DAILY_GOALS);
+        }
+        User user = loadUser(firebaseUid);
+        LocalDate today = LocalDate.now();
+        UserDailyGoal goal = userDailyGoalRepository
+                .findByUserIdAndGoalDate(user.getId(), today)
+                .orElseGet(() -> {
+                    UserDailyGoal g = new UserDailyGoal();
+                    g.setUserId(user.getId());
+                    g.setGoalDate(today);
+                    return g;
+                });
+        goal.setTargetXp(targetXp.shortValue());
+        userDailyGoalRepository.save(goal);
+
+        int earned = goal.getEarnedXp() == null ? 0 : goal.getEarnedXp();
+        return new DailyGoalResponse(targetXp, earned, earned >= targetXp, ALLOWED_DAILY_GOALS);
     }
 
     @Transactional(readOnly = true)

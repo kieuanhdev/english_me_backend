@@ -180,7 +180,8 @@ public class ExerciseService {
                 xpResult.totalXp(),
                 xpResult.dailyEarnedXp(),
                 xpResult.streakUpdated(),
-                results
+                results,
+                xpResult.bonuses()
         );
     }
 
