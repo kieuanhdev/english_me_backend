@@ -25,6 +25,19 @@ public class LearningLesson {
     @Column(name = "unit_id", length = 64)
     private String unitId;
 
+    @Column(name = "lesson_type", nullable = false, length = 20)
+    private String lessonType = "normal";
+
+    @Column(name = "lesson_order", nullable = false)
+    private Integer lessonOrder = 1;
+
+    @Column(name = "required_score_to_pass", nullable = false)
+    private Short requiredScoreToPass = 70;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "theory_content", nullable = false, columnDefinition = "jsonb")
+    private Map<String, Object> theoryContent;
+
     @Column(nullable = false, length = 160)
     private String title;
 

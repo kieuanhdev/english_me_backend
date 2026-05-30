@@ -26,6 +26,9 @@ public class UserLevel {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "last_level_up_at")
+    private Instant lastLevelUpAt;
+
     @PrePersist
     @PreUpdate
     void touch() { updatedAt = Instant.now(); }

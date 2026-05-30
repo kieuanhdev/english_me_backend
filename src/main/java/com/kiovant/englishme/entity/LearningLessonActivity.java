@@ -21,6 +21,15 @@ public class LearningLessonActivity {
     @Column(name = "activity_type", nullable = false, length = 40)
     private String activityType;
 
+    @Column(name = "phase", nullable = false, length = 12)
+    private String phase = "quiz";
+
+    @Column(name = "difficulty", length = 8)
+    private String difficulty;
+
+    @Column(name = "counts_toward_mastery", nullable = false)
+    private Boolean countsTowardMastery = true;
+
     @Column(name = "display_order", nullable = false)
     private Short displayOrder;
 

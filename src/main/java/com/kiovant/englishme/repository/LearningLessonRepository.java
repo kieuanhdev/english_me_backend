@@ -12,6 +12,14 @@ public interface LearningLessonRepository extends JpaRepository<LearningLesson, 
 
     long countByLevelCodeAndSkillCode(String levelCode, String skillCode);
 
+    /** Lesson của 1 Unit, sắp theo lesson_order (luồng giáo trình). */
+    List<LearningLesson> findByUnitIdAndIsActiveTrueOrderByLessonOrderAsc(String unitId);
+
+    long countByUnitIdAndIsActiveTrue(String unitId);
+
+    /** Tất cả lesson active thuộc các Unit cho trước (dùng rút đề checkpoint theo level). */
+    List<LearningLesson> findByUnitIdInAndIsActiveTrue(List<String> unitIds);
+
     /**
      * Admin: list lessons với filter optional level/skill/keyword.
      * Truyền null cho field nào để bỏ qua filter đó. Keyword đã được lowercase ở caller

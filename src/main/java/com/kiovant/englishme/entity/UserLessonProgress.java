@@ -42,4 +42,13 @@ public class UserLessonProgress {
 
     @Column(name = "completed_at")
     private Instant completedAt;
+
+    @Column(name = "theory_viewed", nullable = false)
+    private Boolean theoryViewed = false;
+
+    @Column(name = "practice_completed", nullable = false)
+    private Boolean practiceCompleted = false;
+
+    @Column(name = "mastered_at")
+    private Instant masteredAt;
 }
