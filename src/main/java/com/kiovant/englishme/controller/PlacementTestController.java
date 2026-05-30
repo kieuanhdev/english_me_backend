@@ -47,4 +47,14 @@ public class PlacementTestController {
         authHelper.verifyBearer(token);
         return placementTestService.completeTest(sessionId);
     }
+
+    // Tự chọn trình độ — không làm bài kiểm tra, set CEFR + onboarded
+    @PostMapping("/self-select")
+    public UserSyncResponse selfSelectLevel(
+            @RequestHeader("Authorization") String token,
+            @RequestBody SelfSelectLevelRequest request
+    ) {
+        FirebaseToken decoded = authHelper.verifyBearer(token);
+        return placementTestService.selfSelectLevel(decoded.getUid(), request);
+    }
 }

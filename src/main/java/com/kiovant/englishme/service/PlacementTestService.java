@@ -115,6 +115,36 @@ public class PlacementTestService {
         );
     }
 
+    /**
+     * Học viên tự chọn trình độ CEFR mà không làm bài kiểm tra đầu vào.
+     * Set cefrLevel + bật onboarded. Vẫn cho re-test sau để nâng level (mục 6.4).
+     */
+    @Transactional
+    public UserSyncResponse selfSelectLevel(String firebaseUid, SelfSelectLevelRequest request) {
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        userService.requireAccountNotLocked(user);
+
+        String level = request.level() == null ? "" : request.level().trim().toUpperCase();
+        if (!CEFR_ORDER.contains(level)) {
+            throw new IllegalArgumentException("Invalid CEFR level: " + request.level());
+        }
+
+        user.setCefrLevel(level);
+        user.setIsOnboarded(true);
+        userRepository.save(user);
+
+        return new UserSyncResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getAvatarUrl(),
+                user.getCefrLevel(),
+                user.getIsOnboarded(),
+                user.getCreatedAt()
+        );
+    }
+
     @Transactional
     public TestResultResponse completeTest(UUID sessionId) {
         TestSession session = testSessionRepository.findById(sessionId)
