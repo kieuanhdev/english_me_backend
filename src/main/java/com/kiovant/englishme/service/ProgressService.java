@@ -14,6 +14,7 @@ import com.kiovant.englishme.entity.XpHistory;
 import com.kiovant.englishme.entity.XpLedger;
 import com.kiovant.englishme.repository.BadgeRepository;
 import com.kiovant.englishme.repository.UserBadgeRepository;
+import com.kiovant.englishme.repository.UserDailyGoalRepository;
 import com.kiovant.englishme.repository.UserRepository;
 import com.kiovant.englishme.repository.XpHistoryRepository;
 import com.kiovant.englishme.repository.XpLedgerRepository;
@@ -39,23 +40,28 @@ import java.util.UUID;
 public class ProgressService {
 
     private static final DateTimeFormatter MONTH_FMT = DateTimeFormatter.ofPattern("yyyy-MM");
+    /** Mục tiêu XP/ngày mặc định — khớp UserDailyGoal.targetXp default (=30). */
+    private static final int DEFAULT_DAILY_XP_GOAL = 30;
 
     private final UserRepository userRepository;
     private final XpHistoryRepository xpHistoryRepository;
     private final BadgeRepository badgeRepository;
     private final UserBadgeRepository userBadgeRepository;
     private final XpLedgerRepository xpLedgerRepository;
+    private final UserDailyGoalRepository userDailyGoalRepository;
 
     public ProgressService(UserRepository userRepository,
                            XpHistoryRepository xpHistoryRepository,
                            BadgeRepository badgeRepository,
                            UserBadgeRepository userBadgeRepository,
-                           XpLedgerRepository xpLedgerRepository) {
+                           XpLedgerRepository xpLedgerRepository,
+                           UserDailyGoalRepository userDailyGoalRepository) {
         this.userRepository = userRepository;
         this.xpHistoryRepository = xpHistoryRepository;
         this.badgeRepository = badgeRepository;
         this.userBadgeRepository = userBadgeRepository;
         this.xpLedgerRepository = xpLedgerRepository;
+        this.userDailyGoalRepository = userDailyGoalRepository;
     }
 
     @Transactional(readOnly = true)
@@ -80,11 +86,18 @@ public class ProgressService {
 
         WeekSummary week = new WeekSummary(weekXp, activeDays, 0);
 
+        // Mục tiêu XP hôm nay — cùng nguồn với Home dashboard (user_daily_goals.targetXp),
+        // chưa có row hôm nay → default 30.
+        int xpGoal = userDailyGoalRepository.findByUserIdAndGoalDate(user.getId(), today)
+                .map(g -> g.getTargetXp() == null ? DEFAULT_DAILY_XP_GOAL : g.getTargetXp().intValue())
+                .orElse(DEFAULT_DAILY_XP_GOAL);
+
         return new ProgressResponse(
                 user.getTotalXp(),
                 user.getCurrentStreak(),
                 user.getLongestStreak(),
                 user.getCefrLevel(),
+                xpGoal,
                 skills,
                 week
         );

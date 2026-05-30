@@ -23,7 +23,8 @@ public record HomeDashboardResponse(
             int xpToday,
             int xpWeek,
             int activeDaysThisWeek,
-            Integer currentStreak
+            Integer currentStreak,
+            int xpGoal
     ) {}
 
     public record WordOfDay(

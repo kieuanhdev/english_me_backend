@@ -6,6 +6,7 @@ import com.kiovant.englishme.entity.User;
 import com.kiovant.englishme.entity.VocabularyWord;
 import com.kiovant.englishme.entity.XpHistory;
 import com.kiovant.englishme.repository.GrammarTopicRepository;
+import com.kiovant.englishme.repository.UserDailyGoalRepository;
 import com.kiovant.englishme.repository.UserRepository;
 import com.kiovant.englishme.repository.VocabularyWordRepository;
 import com.kiovant.englishme.repository.XpHistoryRepository;
@@ -25,20 +26,25 @@ import java.util.Optional;
 public class HomeDashboardService {
 
     private static final String DEFAULT_LEVEL = "A1";
+    /** Mục tiêu XP/ngày mặc định — khớp UserDailyGoal.targetXp default (=30). */
+    private static final int DEFAULT_DAILY_XP_GOAL = 30;
 
     private final UserRepository userRepository;
     private final XpHistoryRepository xpHistoryRepository;
     private final VocabularyWordRepository vocabularyWordRepository;
     private final GrammarTopicRepository grammarTopicRepository;
+    private final UserDailyGoalRepository userDailyGoalRepository;
 
     public HomeDashboardService(UserRepository userRepository,
                                 XpHistoryRepository xpHistoryRepository,
                                 VocabularyWordRepository vocabularyWordRepository,
-                                GrammarTopicRepository grammarTopicRepository) {
+                                GrammarTopicRepository grammarTopicRepository,
+                                UserDailyGoalRepository userDailyGoalRepository) {
         this.userRepository = userRepository;
         this.xpHistoryRepository = xpHistoryRepository;
         this.vocabularyWordRepository = vocabularyWordRepository;
         this.grammarTopicRepository = grammarTopicRepository;
+        this.userDailyGoalRepository = userDailyGoalRepository;
     }
 
     @Transactional(readOnly = true)
@@ -78,7 +84,13 @@ public class HomeDashboardService {
         int xpWeek = xpHistoryRepository.sumXpBetween(user.getId(), weekStart, today);
         int activeDays = xpHistoryRepository.countActiveDaysBetween(user.getId(), weekStart, today);
 
-        return new HomeDashboardResponse.DailyStats(xpToday, xpWeek, activeDays, user.getCurrentStreak());
+        // Mục tiêu XP của ngày hôm nay — đọc từ user_daily_goals (nguồn sự thật, cùng nơi
+        // XpService tính daily_goal_bonus). Chưa có row hôm nay → dùng default 30.
+        int xpGoal = userDailyGoalRepository.findByUserIdAndGoalDate(user.getId(), today)
+                .map(g -> g.getTargetXp() == null ? DEFAULT_DAILY_XP_GOAL : g.getTargetXp().intValue())
+                .orElse(DEFAULT_DAILY_XP_GOAL);
+
+        return new HomeDashboardResponse.DailyStats(xpToday, xpWeek, activeDays, user.getCurrentStreak(), xpGoal);
     }
 
     private HomeDashboardResponse.WordOfDay buildWordOfDay(User user, String level) {

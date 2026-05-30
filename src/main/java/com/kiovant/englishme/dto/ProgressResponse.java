@@ -7,6 +7,7 @@ public record ProgressResponse(
         Integer currentStreak,
         Integer longestStreak,
         String cefrLevel,
+        Integer xpGoal,
         List<SkillScore> skills,
         WeekSummary weekSummary
 ) {}
