@@ -70,6 +70,8 @@ public final class CurriculumDtos {
             int xpReward,
             int requiredScoreToPass,
             boolean theoryViewed,
+            boolean practiceCompleted,         // đã làm xong luyện tập → vào thẳng quiz
+            String status,                     // locked | available | in_progress | completed
             Map<String, Object> theory,        // nguyên theory_content JSONB
             List<Map<String, Object>> exercises, // phase=practice (payload + meta)
             List<Map<String, Object>> quiz       // phase=quiz

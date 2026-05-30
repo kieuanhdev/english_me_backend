@@ -170,12 +170,16 @@ public class CurriculumService {
         UserLessonProgress lp = lessonProgressRepository
                 .findById(new UserLessonProgressId(user.getId(), lessonId)).orElse(null);
         boolean theoryViewed = lp != null && Boolean.TRUE.equals(lp.getTheoryViewed());
+        boolean practiceCompleted = lp != null && Boolean.TRUE.equals(lp.getPracticeCompleted());
+        String status = lp != null ? lp.getStatus() : "available";
 
         return new LessonDetail(
                 lesson.getId(), lesson.getUnitId(), lesson.getLevelCode(), lesson.getSkillCode(),
                 lesson.getTitle(), lesson.getSubtitle(), lesson.getXpReward(),
                 lesson.getRequiredScoreToPass() != null ? lesson.getRequiredScoreToPass() : 70,
                 theoryViewed,
+                practiceCompleted,
+                status,
                 lesson.getTheoryContent() != null ? lesson.getTheoryContent() : Map.of(),
                 exercises, quiz
         );
