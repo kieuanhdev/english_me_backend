@@ -34,6 +34,12 @@ public class StudySession {
     @Column(name = "card_ids", nullable = false, columnDefinition = "jsonb")
     private List<UUID> cardIds;
 
+    /// Các thẻ đã review trong phiên — dùng để cộng "pending XP" đúng 1 lần/thẻ
+    /// (retry review cùng thẻ không làm phình XP). XP chỉ grant khi phiên hoàn thành.
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "reviewed_card_ids", columnDefinition = "jsonb")
+    private List<UUID> reviewedCardIds;
+
     @Column(name = "total_cards", nullable = false)
     private Integer totalCards;
 

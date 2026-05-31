@@ -166,28 +166,27 @@ public class StudySessionService {
             session.setNewWordsLearned(safeIncr(session.getNewWordsLearned()));
         }
 
-        // Idempotent XP grant — 1 card review chỉ được cộng XP 1 lần/ngày.
+        // XP CHỈ cộng khi hoàn thành cả session (xem getSummary). Ở mỗi thẻ chỉ
+        // TÍCH LŨY "pending XP" vào session.xp_earned, KHÔNG grant vào total_xp.
+        // Cộng đúng 1 lần/thẻ: chỉ cộng khi đây là lần review thẻ này trong phiên
+        // (flashcardId chưa nằm trong reviewedCardIds) để retry không làm phình pending.
         int candidateXp = sm2Service.xpForQuality(q);
-        java.time.LocalDate today = java.time.LocalDate.now();
-        XpGrantResult xpResult = xpService.grant(
-                user.getId(),
-                candidateXp,
-                "sm2_review",
-                flashcardId.toString(),
-                "sm2_review:" + flashcardId + ":" + today,
-                java.util.Map.of(
-                        "quality", q,
-                        "sessionId", session.getId().toString(),
-                        "deskId", session.getDesk().getId().toString()
-                )
-        );
-        int xpEarned = xpResult.xpEarned();
-        session.setXpEarned((session.getXpEarned() == null ? 0 : session.getXpEarned()) + xpEarned);
+        if (session.getReviewedCardIds() == null) {
+            session.setReviewedCardIds(new java.util.ArrayList<>());
+        }
+        if (!session.getReviewedCardIds().contains(flashcardId)) {
+            session.getReviewedCardIds().add(flashcardId);
+            session.setXpEarned((session.getXpEarned() == null ? 0 : session.getXpEarned()) + candidateXp);
+        }
         session = sessionRepository.save(session);
 
         int reviewed = nullToZero(session.getMasteredCards())
                 + nullToZero(session.getHardCards())
                 + nullToZero(session.getAgainCards());
+
+        // Review không grant → trả totalXp/dailyXp hiện tại (chưa đổi), xpEarned=0.
+        // FE sẽ nhận XP thật ở bước getSummary khi session completed.
+        XpGrantResult xpResult = xpService.readOnlyResult(user.getId(), 0, false, false);
 
         return new ReviewResponse(
                 flashcardId,
@@ -195,14 +194,14 @@ public class StudySessionService {
                 progress.getEasinessFactor(),
                 progress.getIntervalDays(),
                 progress.getNextReviewAt(),
-                xpEarned,
+                0,                          // xpEarned per-thẻ = 0 (chỉ cộng khi xong session)
                 xpResult.totalXp(),
                 xpResult.dailyEarnedXp(),
-                xpResult.streakUpdated(),
-                session.getXpEarned(),
+                false,                      // streakUpdated chỉ xảy ra khi grant cuối phiên
+                session.getXpEarned(),      // sessionXp = pending XP tích lũy
                 reviewed,
                 session.getTotalCards(),
-                xpResult.bonuses()
+                java.util.List.of()
         );
     }
 
@@ -210,6 +209,7 @@ public class StudySessionService {
 
     @Transactional
     public StudySessionSummaryResponse getSummary(String firebaseUid, UUID sessionId) {
+        User user = loadUser(firebaseUid);
         StudySession session = sessionRepository.findByIdAndUser_FirebaseUid(sessionId, firebaseUid)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Study session not found"));
 
@@ -217,10 +217,30 @@ public class StudySessionService {
                 + nullToZero(session.getHardCards())
                 + nullToZero(session.getAgainCards());
 
-        if ("active".equalsIgnoreCase(session.getStatus()) && reviewed >= nullToZero(session.getTotalCards())) {
+        // XP của session: chỉ grant khi phiên VỪA hoàn thành (review hết thẻ). Thoát
+        // giữa chừng → session vẫn "active" → không grant → 0 XP cho phiên đó.
+        XpGrantResult xpResult = null;
+        boolean justCompleted = "active".equalsIgnoreCase(session.getStatus())
+                && reviewed >= nullToZero(session.getTotalCards());
+        if (justCompleted) {
             session.setStatus("completed");
             session.setCompletedAt(LocalDateTime.now());
             session = sessionRepository.save(session);
+
+            int sessionXp = nullToZero(session.getXpEarned());
+            // Grant 1 lần cho cả phiên. Idempotency theo sessionId (KHÔNG kèm ngày)
+            // → gọi summary nhiều lần chỉ cộng đúng 1 lần. amount<=0 thì grant tự bỏ qua.
+            xpResult = xpService.grant(
+                    user.getId(),
+                    sessionXp,
+                    "sm2_review",
+                    session.getId().toString(),
+                    "sm2_session:" + session.getId() + ":complete",
+                    java.util.Map.of(
+                            "deskId", session.getDesk().getId().toString(),
+                            "totalCards", nullToZero(session.getTotalCards())
+                    )
+            );
         }
 
         return new StudySessionSummaryResponse(
@@ -234,7 +254,10 @@ public class StudySessionService {
                 session.getXpEarned(),
                 session.getNewWordsLearned(),
                 session.getStartedAt(),
-                session.getCompletedAt()
+                session.getCompletedAt(),
+                xpResult != null ? xpResult.totalXp() : null,
+                xpResult != null && xpResult.streakUpdated(),
+                xpResult != null ? xpResult.bonuses() : java.util.List.of()
         );
     }
 
