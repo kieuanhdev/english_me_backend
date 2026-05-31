@@ -324,8 +324,9 @@ public class CurriculumService {
 
         // 3) XP idempotent (chỉ pass lần đầu) — dùng chung key pattern với flow cũ.
         int actualXp = 0;
+        XpGrantResult xp;
         if (passed && firstTimePass) {
-            XpGrantResult xp = xpService.grant(
+            xp = xpService.grant(
                     user.getId(),
                     lesson.getXpReward(),
                     "lesson",
@@ -339,6 +340,10 @@ public class CurriculumService {
             lessonProgressRepository.save(lp);
             attempt.setXpEarned((short) actualXp);
             lessonAttemptRepository.save(attempt);
+        } else {
+            // Không cộng XP (chưa pass hoặc đã pass trước đó) nhưng vẫn trả totalXp
+            // + dailyEarnedXp hiện tại để FE đồng bộ state (Home/Progress/Profile).
+            xp = xpService.readOnlyResult(user.getId(), 0, false, !firstTimePass);
         }
 
         // 4) Cập nhật unit progress + mở lesson/unit kế.
@@ -352,7 +357,9 @@ public class CurriculumService {
             if (passed) nextLessonId = findNextLessonInUnit(lesson.getUnitId(), lessonId);
         }
 
-        return new LessonResult(passed, score, actualXp, unitProgress, unitCompleted, nextLessonId);
+        return new LessonResult(
+                passed, score, actualXp, unitProgress, unitCompleted, nextLessonId,
+                xp.totalXp(), xp.dailyEarnedXp(), xp.streakUpdated(), xp.bonuses());
     }
 
     // ═══════════════════════════════════════════════════════════════════

@@ -84,6 +84,10 @@ public final class CurriculumDtos {
             int xpEarned,
             double unitProgress,
             boolean unitCompleted,
-            String nextLessonId
+            String nextLessonId,
+            long totalXp,
+            int dailyEarnedXp,
+            boolean streakUpdated,
+            List<XpGrantResult.Bonus> bonuses
     ) {}
 }
