@@ -27,6 +27,17 @@ public interface FlashcardProgressRepository extends JpaRepository<FlashcardProg
     List<FlashcardProgress> findDueProgress(UUID userId, UUID deskId, LocalDateTime now, Pageable pageable);
 
     /**
+     * Tong so the den han on trong desk (khong gioi han boi limit) — cho totalDue.
+     */
+    @Query("""
+            SELECT COUNT(p) FROM FlashcardProgress p
+            WHERE p.user.id = :userId
+              AND p.flashcard.desk.id = :deskId
+              AND (p.nextReviewAt IS NULL OR p.nextReviewAt <= :now)
+            """)
+    long countDueProgress(UUID userId, UUID deskId, LocalDateTime now);
+
+    /**
      * Flashcards in a desk that user has NOT started yet (no progress row).
      */
     @Query("""
@@ -39,6 +50,19 @@ public interface FlashcardProgressRepository extends JpaRepository<FlashcardProg
             ORDER BY f.word ASC
             """)
     List<UUID> findUnseenFlashcardIds(UUID userId, UUID deskId, Pageable pageable);
+
+    /**
+     * Tong so the moi chua tung on trong desk (khong gioi han) — cho totalNew.
+     */
+    @Query("""
+            SELECT COUNT(f) FROM Flashcard f
+            WHERE f.desk.id = :deskId
+              AND f.id NOT IN (
+                  SELECT p.flashcard.id FROM FlashcardProgress p
+                  WHERE p.user.id = :userId AND p.flashcard.desk.id = :deskId
+              )
+            """)
+    long countUnseenFlashcards(UUID userId, UUID deskId);
 
     void deleteByUser_Id(UUID userId);
 }

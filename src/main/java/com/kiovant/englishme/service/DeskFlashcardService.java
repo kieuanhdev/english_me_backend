@@ -111,8 +111,17 @@ public class DeskFlashcardService {
         requireCefrLevel(req);
         requireNonNegativeSortOrder(req);
         String cefr = req.cefrLevel().trim().toUpperCase();
-        if (deskRepository.findAll().stream().anyMatch(d -> d.getOwner() == null && cefr.equalsIgnoreCase(d.getCefrLevel()))) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Desk already exists for CEFR " + cefr);
+        // Desk hệ thống (owner NULL) cho phép nhiều bộ cùng CEFR, miễn khác title
+        // (khớp uq_desk_global_cefr_title từ V33). Title rỗng -> default "Desk <cefr>".
+        String title = (req.title() == null || req.title().isBlank())
+                ? "Desk " + cefr
+                : req.title().trim();
+        if (deskRepository.findAll().stream().anyMatch(
+                d -> d.getOwner() == null
+                        && cefr.equalsIgnoreCase(d.getCefrLevel())
+                        && title.equalsIgnoreCase(d.getTitle()))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Desk already exists for CEFR " + cefr + " with title \"" + title + "\"");
         }
         int defaultOrder = deskRepository.findMaxSortOrderWhereOwnerIsNull() + 1;
         return buildAndSaveDesk(req, null, cefr, defaultOrder);
@@ -243,7 +252,8 @@ public class DeskFlashcardService {
                         d.getTitle(),
                         d.getSortOrder(),
                         d.getCreatedAt(),
-                        counts.getOrDefault(d.getId(), 0L)))
+                        counts.getOrDefault(d.getId(), 0L),
+                        d.getOwner() == null))
                 .toList();
     }
 

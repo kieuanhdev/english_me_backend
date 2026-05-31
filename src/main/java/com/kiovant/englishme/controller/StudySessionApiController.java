@@ -1,7 +1,7 @@
 package com.kiovant.englishme.controller;
 
 import com.google.firebase.auth.FirebaseToken;
-import com.kiovant.englishme.dto.DueCardResponse;
+import com.kiovant.englishme.dto.DueCardsResponse;
 import com.kiovant.englishme.dto.ReviewRequest;
 import com.kiovant.englishme.dto.ReviewResponse;
 import com.kiovant.englishme.dto.StudySessionStartResponse;
@@ -12,7 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -30,7 +29,7 @@ public class StudySessionApiController {
     }
 
     @GetMapping("/due-cards")
-    public List<DueCardResponse> getDueCards(
+    public DueCardsResponse getDueCards(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestParam UUID deskId,
             @RequestParam(defaultValue = "20") int limit

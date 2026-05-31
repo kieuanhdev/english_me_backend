@@ -1,6 +1,7 @@
 package com.kiovant.englishme.service;
 
 import com.kiovant.englishme.dto.DueCardResponse;
+import com.kiovant.englishme.dto.DueCardsResponse;
 import com.kiovant.englishme.dto.ReviewResponse;
 import com.kiovant.englishme.dto.StudySessionStartResponse;
 import com.kiovant.englishme.dto.StudySessionSummaryResponse;
@@ -62,29 +63,35 @@ public class StudySessionService {
     // ── Due cards (preview, no session created) ──────────────────────────
 
     @Transactional(readOnly = true)
-    public List<DueCardResponse> getDueCards(String firebaseUid, UUID deskId, int limit) {
+    public DueCardsResponse getDueCards(String firebaseUid, UUID deskId, int limit) {
         User user = loadUser(firebaseUid);
         Desk desk = loadAccessibleDesk(deskId, user.getId());
         int cap = clampLimit(limit);
-
-        List<DueCardResponse> result = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
 
+        // Danh sach (gioi han boi limit) — phuc vu hien thi/preview.
+        List<DueCardResponse> dueCards = new ArrayList<>();
         List<FlashcardProgress> due = progressRepository.findDueProgress(
                 user.getId(), desk.getId(), now, PageRequest.of(0, cap));
         for (FlashcardProgress p : due) {
-            result.add(toDueCard(p.getFlashcard(), p, false));
+            dueCards.add(toDueCard(p.getFlashcard(), p, false));
         }
 
-        int remaining = cap - result.size();
+        List<DueCardResponse> newCards = new ArrayList<>();
+        int remaining = cap - dueCards.size();
         if (remaining > 0) {
             List<UUID> unseenIds = progressRepository.findUnseenFlashcardIds(
                     user.getId(), desk.getId(), PageRequest.of(0, remaining));
             for (Flashcard fc : flashcardRepository.findAllById(unseenIds)) {
-                result.add(toDueCard(fc, null, true));
+                newCards.add(toDueCard(fc, null, true));
             }
         }
-        return result;
+
+        // Tong THAT SU (khong gioi han limit) — phuc vu dem tien do tren UI.
+        long totalDue = progressRepository.countDueProgress(user.getId(), desk.getId(), now);
+        long totalNew = progressRepository.countUnseenFlashcards(user.getId(), desk.getId());
+
+        return new DueCardsResponse(dueCards, newCards, totalDue, totalNew);
     }
 
     // ── Start session ────────────────────────────────────────────────────
