@@ -2,6 +2,7 @@ package com.kiovant.englishme.controller;
 
 import com.kiovant.englishme.dto.GrammarLessonDetailResponse;
 import com.kiovant.englishme.dto.GrammarLessonListItemResponse;
+import com.kiovant.englishme.dto.GrammarLevelGroupResponse;
 import com.kiovant.englishme.dto.GrammarTopicResponse;
 import com.kiovant.englishme.service.GrammarService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,6 +25,11 @@ public class GrammarController {
     @GetMapping("/topics")
     public List<GrammarTopicResponse> getTopics() {
         return grammarService.getTopics();
+    }
+
+    @GetMapping("/levels")
+    public List<GrammarLevelGroupResponse> getTopicsByLevel() {
+        return grammarService.getTopicsGroupedByLevel();
     }
 
     @GetMapping("/topics/{id}/lessons")

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Comparator;
 import java.util.Map;
 import java.util.List;
 import java.util.UUID;
@@ -46,6 +47,29 @@ public class GrammarService {
         return grammarTopicRepository.findAllByOrderBySortOrderAscCategoryAscLevelAsc()
                 .stream()
                 .map(topic -> toTopicResponse(topic, lessonCountByTopic.getOrDefault(topic.getId(), 0L)))
+                .toList();
+    }
+
+    private static final List<String> CEFR_ORDER = List.of("A1", "A2", "B1", "B2", "C1", "C2");
+
+    @Transactional(readOnly = true)
+    public List<GrammarLevelGroupResponse> getTopicsGroupedByLevel() {
+        Map<String, List<GrammarTopicResponse>> byLevel = getTopics()
+                .stream()
+                .filter(t -> t.level() != null && !t.level().isBlank())
+                .collect(Collectors.groupingBy(
+                        t -> t.level().trim().toUpperCase(),
+                        java.util.LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        return byLevel.entrySet()
+                .stream()
+                .sorted(Comparator.comparingInt(e -> {
+                    int idx = CEFR_ORDER.indexOf(e.getKey());
+                    return idx < 0 ? Integer.MAX_VALUE : idx;
+                }))
+                .map(e -> new GrammarLevelGroupResponse(e.getKey(), e.getValue()))
                 .toList();
     }
 
