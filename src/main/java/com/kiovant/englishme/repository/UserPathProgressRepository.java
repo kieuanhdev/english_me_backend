@@ -8,7 +8,5 @@ import java.util.List;
 import java.util.UUID;
 
 public interface UserPathProgressRepository extends JpaRepository<UserPathProgress, UserPathProgressId> {
-    List<UserPathProgress> findByUserId(UUID userId);
-
     List<UserPathProgress> findByUserIdAndPathIdIn(UUID userId, List<String> pathIds);
 }

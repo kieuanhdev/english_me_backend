@@ -18,7 +18,4 @@ public interface UserTestSessionRepository extends JpaRepository<UserTestSession
 
     @Query("SELECT COUNT(t) FROM UserTestSession t WHERE t.createdAt >= :since")
     long countSince(@Param("since") LocalDateTime since);
-
-    @Query("SELECT COUNT(DISTINCT t.user.id) FROM UserTestSession t WHERE t.createdAt >= :since")
-    long countDistinctUsersSince(@Param("since") LocalDateTime since);
 }

@@ -14,6 +14,4 @@ public interface GrammarExerciseRepository extends JpaRepository<GrammarExercise
 
     @Query("select coalesce(max(e.exerciseOrder), 0) from GrammarExercise e where e.lesson = :lesson")
     Integer maxOrderByLesson(@Param("lesson") GrammarLesson lesson);
-
-    long countByLesson(GrammarLesson lesson);
 }

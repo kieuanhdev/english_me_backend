@@ -12,8 +12,6 @@ import java.util.UUID;
 
 public interface TestSessionRepository extends JpaRepository<TestSession, UUID> {
 
-    List<TestSession> findByUserOrderByStartedAtDesc(User user);
-
     @Query("SELECT ts FROM TestSession ts JOIN FETCH ts.user ORDER BY ts.startedAt DESC")
     Page<TestSession> findAllWithUser(Pageable pageable);
 

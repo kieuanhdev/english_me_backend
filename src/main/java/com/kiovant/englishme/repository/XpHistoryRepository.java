@@ -27,9 +27,4 @@ public interface XpHistoryRepository extends JpaRepository<XpHistory, UUID> {
 
     @Query("SELECT COUNT(DISTINCT x.user.id) FROM XpHistory x WHERE x.activityDate >= :from AND x.activityDate <= :to AND x.xp > 0")
     long countActiveUsersBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
-
-    @Query("SELECT x.activityDate, COUNT(DISTINCT x.user.id) FROM XpHistory x " +
-            "WHERE x.activityDate >= :from AND x.activityDate <= :to AND x.xp > 0 " +
-            "GROUP BY x.activityDate ORDER BY x.activityDate ASC")
-    List<Object[]> activeUsersByDayBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
 }

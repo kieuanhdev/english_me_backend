@@ -23,6 +23,4 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
     // Lấy ngẫu nhiên N câu hỏi theo mức độ
     @Query(value = "SELECT * FROM questions WHERE cefr_level = :level ORDER BY RANDOM() LIMIT :limit", nativeQuery = true)
     List<Question> findRandomByCefrLevel(@Param("level") String level, @Param("limit") int limit);
-
-    List<Question> findByCefrLevel(String cefrLevel);
 }

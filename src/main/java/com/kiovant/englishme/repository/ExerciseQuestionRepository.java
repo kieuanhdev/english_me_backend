@@ -13,9 +13,6 @@ public interface ExerciseQuestionRepository extends JpaRepository<ExerciseQuesti
     @Query(value = "SELECT * FROM exercise_question WHERE category = :category ORDER BY random() LIMIT :size", nativeQuery = true)
     List<ExerciseQuestion> findRandomByCategory(String category, int size);
 
-    @Query(value = "SELECT * FROM exercise_question WHERE category = :category AND level = :level ORDER BY random() LIMIT :size", nativeQuery = true)
-    List<ExerciseQuestion> findRandomByCategoryAndLevel(String category, String level, int size);
-
     /**
      * Admin search. {@code levelUpper} đã được uppercase và {@code keywordPattern}
      * đã được lowercase + bọc '%...%' ở caller — query không gọi UPPER/LOWER trên param

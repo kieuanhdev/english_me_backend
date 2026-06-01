@@ -41,9 +41,6 @@ public interface PronunciationAttemptRepository extends JpaRepository<Pronunciat
     @Query("SELECT COUNT(p) FROM PronunciationAttempt p WHERE p.createdAt >= :since")
     long countSince(LocalDateTime since);
 
-    @Query("SELECT COUNT(DISTINCT p.user.id) FROM PronunciationAttempt p WHERE p.createdAt >= :since")
-    long countDistinctUsersSince(@Param("since") LocalDateTime since);
-
     long countByUser_Id(UUID userId);
 
     List<PronunciationAttempt> findTop50ByUser_IdOrderByCreatedAtDesc(UUID userId);

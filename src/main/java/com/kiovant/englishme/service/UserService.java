@@ -56,10 +56,6 @@ public class UserService {
         }
     }
 
-    public List<User> findAllUsers() {
-        return userRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
-    }
-
     public List<User> findUsersByFilter(String cefrLevel, String status, String keyword) {
         Specification<User> spec = buildFilterSpec(cefrLevel, status, keyword);
         return userRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"));

@@ -25,10 +25,6 @@ public class AppConfigService {
         return repo.findById(key).map(AppConfig::getConfigValue).orElse(null);
     }
 
-    public String getDeepseekApiKey() {
-        return getValue("DEEPSEEK_API_KEY");
-    }
-
     @Transactional
     public void setValue(String key, String value, String updatedByEmail) {
         AppConfig config = repo.findById(key)

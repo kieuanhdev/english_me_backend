@@ -28,18 +28,10 @@ public interface VocabularyWordRepository extends JpaRepository<VocabularyWord, 
     boolean existsByTopic_IdAndWordIgnoreCase(UUID topicId, String word);
 
     @Query("""
-            SELECT w FROM VocabularyWord w
-            WHERE w.topic.id = :topicId AND LOWER(w.word) = LOWER(:word)
-            """)
-    List<VocabularyWord> findByTopicAndWordIgnoreCase(@Param("topicId") UUID topicId, @Param("word") String word);
-
-    @Query("""
             SELECT w.word, COUNT(w) FROM VocabularyWord w
             WHERE w.topic.id = :topicId
             GROUP BY w.word
             HAVING COUNT(w) > 1
             """)
     List<Object[]> findDuplicateWordsByTopic(@Param("topicId") UUID topicId);
-
-    long countByTopic_Id(UUID topicId);
 }

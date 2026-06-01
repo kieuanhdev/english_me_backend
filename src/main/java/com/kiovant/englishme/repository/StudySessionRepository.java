@@ -17,9 +17,6 @@ public interface StudySessionRepository extends JpaRepository<StudySession, UUID
     @Query("SELECT COUNT(s) FROM StudySession s WHERE s.startedAt >= :since")
     long countSince(@Param("since") LocalDateTime since);
 
-    @Query("SELECT COUNT(DISTINCT s.user.id) FROM StudySession s WHERE s.startedAt >= :since")
-    long countDistinctUsersSince(@Param("since") LocalDateTime since);
-
     long countByUser_Id(UUID userId);
 
     /** [date, xpEarned] gộp theo ngày, dùng cho biểu đồ XP 30 ngày. */

@@ -33,12 +33,6 @@ public interface XpLedgerRepository extends JpaRepository<XpLedger, Long> {
                        @Param("idempotencyKey") String idempotencyKey,
                        @Param("metadataJson") String metadataJson);
 
-    @Query("SELECT COALESCE(SUM(l.amount), 0) FROM XpLedger l WHERE l.userId = :userId")
-    long sumAmountByUserId(@Param("userId") UUID userId);
-
-    /** Paginated history mới nhất trước. */
-    Page<XpLedger> findByUserIdOrderByOccurredAtDescIdDesc(UUID userId, Pageable pageable);
-
     /** Cursor-based: lấy các row có id < cursor (id giảm dần). */
     @Query("SELECT l FROM XpLedger l WHERE l.userId = :userId AND l.id < :cursorId ORDER BY l.id DESC")
     List<XpLedger> findByUserIdBeforeCursor(@Param("userId") UUID userId,

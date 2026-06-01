@@ -7,6 +7,4 @@ import java.util.List;
 
 public interface LearningUnitRepository extends JpaRepository<LearningUnit, String> {
     List<LearningUnit> findByLevelCodeAndIsActiveTrueOrderByDisplayOrderAsc(String levelCode);
-
-    long countByLevelCodeAndIsActiveTrue(String levelCode);
 }

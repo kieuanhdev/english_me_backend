@@ -17,8 +17,6 @@ public interface FlashcardRepository extends JpaRepository<Flashcard, UUID> {
 
     Optional<Flashcard> findByIdAndDesk_Id(UUID id, UUID deskId);
 
-    long countByDesk_Id(UUID deskId);
-
     boolean existsByDesk_IdAndWord(UUID deskId, String word);
 
     Page<Flashcard> findByDesk_Id(UUID deskId, Pageable pageable);

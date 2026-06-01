@@ -11,8 +11,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface GrammarLessonRepository extends JpaRepository<GrammarLesson, UUID> {
-    Optional<GrammarLesson> findBySourceId(String sourceId);
-
     boolean existsBySourceId(String sourceId);
 
     List<GrammarLesson> findByTopicOrderBySortOrderAscTitleAsc(GrammarTopic topic);
@@ -28,8 +26,6 @@ public interface GrammarLessonRepository extends JpaRepository<GrammarLesson, UU
             group by l.id
             """)
     List<LessonExerciseCountView> countExercisesByLessonForTopic(@Param("topic") GrammarTopic topic);
-
-    long countByTopic(GrammarTopic topic);
 
     interface LessonExerciseCountView {
         UUID getLessonId();

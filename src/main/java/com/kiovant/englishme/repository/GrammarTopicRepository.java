@@ -10,8 +10,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface GrammarTopicRepository extends JpaRepository<GrammarTopic, UUID> {
-    Optional<GrammarTopic> findByCategoryAndLevel(String category, String level);
-
     Optional<GrammarTopic> findBySlug(String slug);
 
     boolean existsBySlug(String slug);

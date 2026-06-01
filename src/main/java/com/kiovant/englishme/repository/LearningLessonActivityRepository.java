@@ -10,9 +10,6 @@ import java.util.List;
 public interface LearningLessonActivityRepository extends JpaRepository<LearningLessonActivity, String> {
     List<LearningLessonActivity> findByLessonIdOrderByDisplayOrderAsc(String lessonId);
 
-    /** Số câu tính điểm (mastery) của 1 lesson — dùng để biết mẫu số khi chấm quiz. */
-    long countByLessonIdAndCountsTowardMasteryTrue(String lessonId);
-
     /**
      * Câu quiz (phase='quiz', tính mastery) của một tập lesson cho trước.
      * Service truyền vào lessonIds của cả level (lấy qua LearningLessonRepository)
