@@ -4,7 +4,7 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 <script>
     tailwind.config = {
@@ -23,14 +23,14 @@
                 },
                 fontFamily: {
                     headline: ["Be Vietnam Pro", "sans-serif"],
-                    body: ["Plus Jakarta Sans", "sans-serif"]
+                    body: ["Be Vietnam Pro", "sans-serif"]
                 }
             }
         }
     };
 </script>
 <style>
-    body { font-family: "Plus Jakarta Sans", sans-serif; background-color: #f9f9f9; color: #1a1c1c; }
+    body { font-family: "Be Vietnam Pro", sans-serif; background-color: #f9f9f9; color: #1a1c1c; }
     .font-headline { font-family: "Be Vietnam Pro", sans-serif; }
     .primary-gradient { background: linear-gradient(135deg, #24389c 0%, #3f51b5 100%); }
     .glass-cta { background: rgba(226, 226, 226, 0.7); backdrop-filter: blur(12px); }

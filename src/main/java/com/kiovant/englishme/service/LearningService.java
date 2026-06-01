@@ -558,6 +558,13 @@ public class LearningService {
         int currentIdx = CEFR_ORDER.indexOf(currentLevel);
         if (currentIdx < 0) currentIdx = 0;
 
+        // Level kế tiếp chỉ mở khi level hiện tại đạt ngưỡng hoàn thành (≥80% path).
+        // Tránh cho user nhảy cấp khi chưa học đủ cấp đang theo.
+        final double UNLOCK_THRESHOLD = 0.80;
+        String curCode = currentIdx < CEFR_ORDER.size() ? CEFR_ORDER.get(currentIdx) : currentLevel;
+        double currentProg = computeLevelProgress(userId, curCode);
+        boolean nextUnlocked = currentProg >= UNLOCK_THRESHOLD;
+
         for (CefrLevel lv : rows) {
             int idx = CEFR_ORDER.indexOf(lv.getCode());
             double prog = computeLevelProgress(userId, lv.getCode());
@@ -570,8 +577,9 @@ public class LearningService {
                 status = prog > 0 ? "in_progress" : "available";
                 locked = false;
             } else if (idx == currentIdx + 1) {
-                status = "available";
-                locked = false;
+                // Mở next chỉ khi current ≥ ngưỡng; chưa đạt thì khóa.
+                locked = !nextUnlocked;
+                status = nextUnlocked ? "available" : "locked";
             } else {
                 status = "locked";
                 locked = true;
