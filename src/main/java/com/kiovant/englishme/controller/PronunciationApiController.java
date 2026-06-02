@@ -2,6 +2,7 @@ package com.kiovant.englishme.controller;
 
 import com.google.firebase.auth.FirebaseToken;
 import com.kiovant.englishme.dto.PronunciationAssessResponse;
+import com.kiovant.englishme.dto.PronunciationAssessTextRequest;
 import com.kiovant.englishme.dto.PronunciationAttemptHistoryItemResponse;
 import com.kiovant.englishme.entity.PronunciationExercise;
 import com.kiovant.englishme.repository.PronunciationExerciseRepository;
@@ -50,6 +51,17 @@ public class PronunciationApiController {
         UUID exId = exerciseId != null ? exerciseId : lessonItemId;
         FirebaseToken token = authHelper.verifyBearer(authorization);
         return pronunciationAssessmentService.assess(token.getUid(), audio, text, language, exId);
+    }
+
+    @PostMapping("/assess-text")
+    public PronunciationAssessResponse assessText(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody PronunciationAssessTextRequest request
+    ) {
+        UUID exId = request.exerciseId() != null ? request.exerciseId() : request.lessonItemId();
+        FirebaseToken token = authHelper.verifyBearer(authorization);
+        return pronunciationAssessmentService.assessText(
+                token.getUid(), request.referenceText(), request.spokenText(), exId);
     }
 
     @GetMapping("/history")

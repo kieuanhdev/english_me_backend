@@ -38,6 +38,7 @@ public class PronunciationAssessmentService {
     private final CloudPronunciationClient cloudPronunciationClient;
     private final PronunciationScoringMapper pronunciationScoringMapper;
     private final PronunciationRateLimiter pronunciationRateLimiter;
+    private final DeepSeekPronunciationScorer deepSeekPronunciationScorer;
 
     public PronunciationAssessmentService(
             UserRepository userRepository,
@@ -45,7 +46,8 @@ public class PronunciationAssessmentService {
             PronunciationWordFeedbackRepository wordFeedbackRepository,
             CloudPronunciationClient cloudPronunciationClient,
             PronunciationScoringMapper pronunciationScoringMapper,
-            PronunciationRateLimiter pronunciationRateLimiter
+            PronunciationRateLimiter pronunciationRateLimiter,
+            DeepSeekPronunciationScorer deepSeekPronunciationScorer
     ) {
         this.userRepository = userRepository;
         this.attemptRepository = attemptRepository;
@@ -53,6 +55,7 @@ public class PronunciationAssessmentService {
         this.cloudPronunciationClient = cloudPronunciationClient;
         this.pronunciationScoringMapper = pronunciationScoringMapper;
         this.pronunciationRateLimiter = pronunciationRateLimiter;
+        this.deepSeekPronunciationScorer = deepSeekPronunciationScorer;
     }
 
     @Transactional
@@ -128,6 +131,68 @@ public class PronunciationAssessmentService {
             item.setEndMs(endMs);
             item.setIssueType(issueType);
             item.setSuggestion(null);
+            feedbackEntities.add(item);
+        }
+        wordFeedbackRepository.saveAll(feedbackEntities);
+        return response;
+    }
+
+    /**
+     * Chấm phát âm dựa trên transcript (text người dùng nói được từ STT trên mobile)
+     * thay vì gửi audio. Dùng DeepSeek (fallback Levenshtein) để so với câu mẫu.
+     */
+    @Transactional
+    public PronunciationAssessResponse assessText(
+            String firebaseUid,
+            String referenceText,
+            String spokenText,
+            UUID exerciseId
+    ) {
+        if (referenceText == null || referenceText.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "referenceText is required");
+        }
+        if (spokenText == null || spokenText.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "spokenText is required");
+        }
+        String safeReference = referenceText.trim();
+        if (safeReference.length() > MAX_REFERENCE_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "referenceText is too long");
+        }
+        String safeSpoken = spokenText.trim();
+        if (safeSpoken.length() > MAX_REFERENCE_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "spokenText is too long");
+        }
+
+        pronunciationRateLimiter.checkOrThrow(firebaseUid);
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        PronunciationAssessResponse response = deepSeekPronunciationScorer.score(safeReference, safeSpoken);
+
+        PronunciationAttempt attempt = new PronunciationAttempt();
+        attempt.setUser(user);
+        attempt.setExerciseId(exerciseId);
+        attempt.setReferenceText(safeReference);
+        attempt.setProvider("deepseek");
+        attempt.setOverallScore((int) Math.round(response.score()));
+        attempt.setAccuracyScore((int) Math.round(response.accuracy()));
+        attempt.setFluencyScore((int) Math.round(response.fluency()));
+        attempt.setCompletenessScore((int) Math.round(response.completeness()));
+        attempt.setTranscription(response.transcription());
+        attempt = attemptRepository.save(attempt);
+        log.info("pronunciation_text_attempt_saved attemptId={} score={} accuracy={} completeness={}",
+                attempt.getId(), response.score(), response.accuracy(), response.completeness());
+
+        List<PronunciationWordFeedback> feedbackEntities = new ArrayList<>();
+        for (var err : response.errors()) {
+            PronunciationWordFeedback item = new PronunciationWordFeedback();
+            item.setAttempt(attempt);
+            item.setWord(err.word());
+            item.setScore(0);
+            item.setStartMs(0);
+            item.setEndMs(0);
+            item.setIssueType("critical");
+            item.setSuggestion(err.suggestion());
             feedbackEntities.add(item);
         }
         wordFeedbackRepository.saveAll(feedbackEntities);

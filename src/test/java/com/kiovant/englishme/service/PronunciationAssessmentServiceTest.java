@@ -22,6 +22,7 @@ class PronunciationAssessmentServiceTest {
     private CloudPronunciationClient client;
     private PronunciationScoringMapper mapper;
     private PronunciationRateLimiter limiter;
+    private DeepSeekPronunciationScorer deepSeekScorer;
     private PronunciationAssessmentService service;
 
     @BeforeEach
@@ -32,13 +33,15 @@ class PronunciationAssessmentServiceTest {
         client = mock(CloudPronunciationClient.class);
         mapper = new PronunciationScoringMapper();
         limiter = mock(PronunciationRateLimiter.class);
+        deepSeekScorer = mock(DeepSeekPronunciationScorer.class);
         service = new PronunciationAssessmentService(
                 userRepository,
                 attemptRepository,
                 feedbackRepository,
                 client,
                 mapper,
-                limiter
+                limiter,
+                deepSeekScorer
         );
     }
 
