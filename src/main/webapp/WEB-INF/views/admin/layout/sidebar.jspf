@@ -4,7 +4,6 @@
     String adminRoot = context + "/admin";
     boolean overviewActive = uri.equals(adminRoot) || uri.equals(adminRoot + "/");
     boolean desksActive = uri.startsWith(adminRoot + "/desks");
-    boolean vocabularyActive = uri.startsWith(adminRoot + "/vocabulary");
     boolean usersActive = uri.startsWith(adminRoot + "/users");
     boolean pronunciationActive = uri.startsWith(adminRoot + "/pronunciation");
     boolean grammarActive = uri.startsWith(adminRoot + "/grammar");
@@ -27,7 +26,6 @@
     <nav class="space-y-2 text-sm font-semibold">
         <a href="${pageContext.request.contextPath}/admin" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= overviewActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">dashboard</span>Overview</a>
         <a href="${pageContext.request.contextPath}/admin/desks" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= desksActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">menu_book</span>Desk / Flashcard</a>
-        <a href="${pageContext.request.contextPath}/admin/vocabulary" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= vocabularyActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">translate</span>Vocabulary</a>
         <a href="${pageContext.request.contextPath}/admin/users" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= usersActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">group</span>Users</a>
         <a href="${pageContext.request.contextPath}/admin/pronunciation" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= pronunciationActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">graphic_eq</span>Pronunciation</a>
         <a href="${pageContext.request.contextPath}/admin/grammar" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= grammarActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">auto_stories</span>Grammar</a>

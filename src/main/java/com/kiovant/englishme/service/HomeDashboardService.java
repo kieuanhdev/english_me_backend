@@ -1,14 +1,13 @@
 package com.kiovant.englishme.service;
 
 import com.kiovant.englishme.dto.HomeDashboardResponse;
+import com.kiovant.englishme.dto.VocabularyWordResponse;
 import com.kiovant.englishme.entity.GrammarTopic;
 import com.kiovant.englishme.entity.User;
-import com.kiovant.englishme.entity.VocabularyWord;
 import com.kiovant.englishme.entity.XpHistory;
 import com.kiovant.englishme.repository.GrammarTopicRepository;
 import com.kiovant.englishme.repository.UserDailyGoalRepository;
 import com.kiovant.englishme.repository.UserRepository;
-import com.kiovant.englishme.repository.VocabularyWordRepository;
 import com.kiovant.englishme.repository.XpHistoryRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -31,18 +30,18 @@ public class HomeDashboardService {
 
     private final UserRepository userRepository;
     private final XpHistoryRepository xpHistoryRepository;
-    private final VocabularyWordRepository vocabularyWordRepository;
+    private final WordOfDayService wordOfDayService;
     private final GrammarTopicRepository grammarTopicRepository;
     private final UserDailyGoalRepository userDailyGoalRepository;
 
     public HomeDashboardService(UserRepository userRepository,
                                 XpHistoryRepository xpHistoryRepository,
-                                VocabularyWordRepository vocabularyWordRepository,
+                                WordOfDayService wordOfDayService,
                                 GrammarTopicRepository grammarTopicRepository,
                                 UserDailyGoalRepository userDailyGoalRepository) {
         this.userRepository = userRepository;
         this.xpHistoryRepository = xpHistoryRepository;
-        this.vocabularyWordRepository = vocabularyWordRepository;
+        this.wordOfDayService = wordOfDayService;
         this.grammarTopicRepository = grammarTopicRepository;
         this.userDailyGoalRepository = userDailyGoalRepository;
     }
@@ -94,28 +93,23 @@ public class HomeDashboardService {
     }
 
     private HomeDashboardResponse.WordOfDay buildWordOfDay(User user, String level) {
-        List<VocabularyWord> pool = vocabularyWordRepository.findByLevelIgnoreCaseOrderByWordAsc(level);
-        if (pool.isEmpty()) {
-            pool = vocabularyWordRepository.findByLevelIgnoreCaseOrderByWordAsc(DEFAULT_LEVEL);
-        }
-        if (pool.isEmpty()) {
+        // Nguồn "từ vựng của ngày" lấy từ WordOfDayService (đọc Oxford 5000 JSON +
+        // cache theo ngày). Bảng vocabulary_word đã bị gỡ cùng tính năng "bộ từ vựng".
+        VocabularyWordResponse w = wordOfDayService.getWordOfDay(
+                (level == null || level.isBlank()) ? DEFAULT_LEVEL : level);
+        if (w == null || w.word() == null || w.word().isBlank() || "N/A".equals(w.word())) {
             return null;
         }
-
-        long seed = LocalDate.now().toEpochDay() + Math.abs(user.getId().getLeastSignificantBits());
-        int idx = (int) Math.floorMod(seed, pool.size());
-        VocabularyWord w = pool.get(idx);
-
         return new HomeDashboardResponse.WordOfDay(
-                w.getId(),
-                w.getWord(),
-                w.getPronunciation(),
-                w.getPartOfSpeech(),
-                w.getDefinitionVi(),
-                w.getDefinitionEn(),
-                w.getExampleSentence(),
-                w.getExampleTranslation(),
-                w.getLevel()
+                w.id(),
+                w.word(),
+                w.pronunciation(),
+                w.partOfSpeech(),
+                w.definitionVi(),
+                w.definitionEn(),
+                w.exampleSentence(),
+                w.exampleTranslation(),
+                w.level()
         );
     }
 
@@ -143,17 +137,17 @@ public class HomeDashboardService {
         String l = level.toUpperCase();
         return switch (l) {
             case "A1", "A2" -> List.of(
-                    new HomeDashboardResponse.Recommendation("vocabulary", "Học từ vựng cơ bản", "Bắt đầu với chủ đề Greetings và Family", "/api/vocabulary/topics"),
+                    new HomeDashboardResponse.Recommendation("vocabulary", "Học từ vựng cơ bản", "Ôn bộ thẻ Flashcard cấp A1–A2", "/api/desks"),
                     new HomeDashboardResponse.Recommendation("grammar", "Ngữ pháp căn bản", "Thì hiện tại đơn và động từ to be", "/api/grammar/topics"),
                     new HomeDashboardResponse.Recommendation("pronunciation", "Luyện phát âm", "Bắt đầu với các âm dễ", "/api/pronunciation/exercises")
             );
             case "B1", "B2" -> List.of(
-                    new HomeDashboardResponse.Recommendation("vocabulary", "Mở rộng từ vựng", "Học các chủ đề Travel và Business", "/api/vocabulary/topics"),
+                    new HomeDashboardResponse.Recommendation("vocabulary", "Mở rộng từ vựng", "Ôn bộ thẻ Flashcard cấp B1–B2", "/api/desks"),
                     new HomeDashboardResponse.Recommendation("grammar", "Ngữ pháp trung cấp", "Thì hoàn thành và câu điều kiện", "/api/grammar/topics"),
                     new HomeDashboardResponse.Recommendation("exercise", "Luyện bài tập", "Làm bài tập mức medium hàng ngày", "/api/exercises/sessions")
             );
             case "C1", "C2" -> List.of(
-                    new HomeDashboardResponse.Recommendation("vocabulary", "Từ vựng học thuật", "Mở rộng vốn từ chuyên ngành", "/api/vocabulary/topics"),
+                    new HomeDashboardResponse.Recommendation("vocabulary", "Từ vựng học thuật", "Ôn bộ thẻ Flashcard cấp C1–C2", "/api/desks"),
                     new HomeDashboardResponse.Recommendation("grammar", "Ngữ pháp nâng cao", "Inversion và mệnh đề phức tạp", "/api/grammar/topics"),
                     new HomeDashboardResponse.Recommendation("test", "Thử sức bài test", "Làm bài test có tính giờ để đo trình độ", "/api/tests/sessions")
             );
