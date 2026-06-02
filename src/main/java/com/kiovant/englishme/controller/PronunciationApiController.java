@@ -5,7 +5,9 @@ import com.kiovant.englishme.dto.PronunciationAssessResponse;
 import com.kiovant.englishme.dto.PronunciationAssessTextRequest;
 import com.kiovant.englishme.dto.PronunciationAttemptHistoryItemResponse;
 import com.kiovant.englishme.entity.PronunciationExercise;
+import com.kiovant.englishme.entity.User;
 import com.kiovant.englishme.repository.PronunciationExerciseRepository;
+import com.kiovant.englishme.repository.UserRepository;
 import com.kiovant.englishme.service.FirebaseAuthHelper;
 import com.kiovant.englishme.service.PronunciationAssessmentService;
 import org.springframework.web.bind.annotation.*;
@@ -18,23 +20,54 @@ import java.util.UUID;
 @RequestMapping("/api/pronunciation")
 public class PronunciationApiController {
 
+    private static final List<String> CEFR_ORDER = List.of("A1", "A2", "B1", "B2", "C1", "C2");
+
     private final PronunciationAssessmentService pronunciationAssessmentService;
     private final PronunciationExerciseRepository exerciseRepository;
+    private final UserRepository userRepository;
     private final FirebaseAuthHelper authHelper;
 
     public PronunciationApiController(
             PronunciationAssessmentService pronunciationAssessmentService,
             PronunciationExerciseRepository exerciseRepository,
+            UserRepository userRepository,
             FirebaseAuthHelper authHelper
     ) {
         this.pronunciationAssessmentService = pronunciationAssessmentService;
         this.exerciseRepository = exerciseRepository;
+        this.userRepository = userRepository;
         this.authHelper = authHelper;
     }
 
+    /**
+     * Bài luyện âm theo level người học: thấy tất cả bài có level <= level của mình.
+     * `level` (tùy chọn): lọc đúng một level cụ thể. `keyword`: tìm theo nội dung câu.
+     */
     @GetMapping("/exercises")
-    public List<PronunciationExercise> exercises() {
-        return exerciseRepository.findAllByOrderByDifficultyAsc();
+    public List<PronunciationExercise> exercises(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestParam(value = "level", required = false, defaultValue = "") String level,
+            @RequestParam(value = "keyword", required = false, defaultValue = "") String keyword
+    ) {
+        String userLevel = "C2";
+        try {
+            FirebaseToken token = authHelper.verifyBearer(authorization);
+            userLevel = userRepository.findByFirebaseUid(token.getUid())
+                    .map(User::getCefrLevel)
+                    .filter(l -> l != null && !l.isBlank())
+                    .map(String::toUpperCase)
+                    .orElse("A1");
+        } catch (Exception ignored) {
+            // Chưa đăng nhập / chưa có level -> mặc định hiển thị từ A1.
+            userLevel = "A1";
+        }
+
+        int idx = CEFR_ORDER.indexOf(userLevel);
+        List<String> allowedLevels = idx < 0
+                ? CEFR_ORDER
+                : CEFR_ORDER.subList(0, idx + 1);
+
+        return exerciseRepository.findForLearner(allowedLevels, level.trim(), keyword.trim());
     }
 
     @PostMapping("/assess")
