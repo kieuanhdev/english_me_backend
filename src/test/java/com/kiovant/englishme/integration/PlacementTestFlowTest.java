@@ -28,13 +28,13 @@ import static org.junit.jupiter.api.Assertions.*;
  * Chạy với:
  *  - H2 in-memory (profile "test"), tắt Flyway, Hibernate create-drop
  *  - ApplicationContext thật → JPA + transaction + service đầy đủ
- *  - Seed dữ liệu trực tiếp qua repository (4 A1 + 4 A2)
+ *  - Seed dữ liệu trực tiếp qua repository (4 câu/cấp A1–B2, skill_category lowercase)
  *
  * Kịch bản:
  *  1. Tạo user demo
- *  2. startTest -> nhận sessionId + 8 câu hỏi
- *  3. answerQuestion 8 lần — pha trộn đúng/sai để CEFR = A1
- *  4. completeTest -> resultLevel = A1, score chính xác
+ *  2. startTest -> nhận sessionId + 16 câu hỏi A1–B2 + notice
+ *  3. answerQuestion — đúng A1+A2, sai B1+B2 (weighted R = 12/40 = 0.30 -> A2)
+ *  4. completeTest -> resultLevel = A2 theo Weighted Difficulty Scoring (§A.1)
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -64,15 +64,13 @@ class PlacementTestFlowTest {
         user.setLongestStreak(0);
         userRepository.save(user);
 
-        // Seed 4 A1 + 4 A2 (mỗi level = 2 Grammar + 2 Vocabulary)
-        seedQuestion("A1", "Grammar", "A");
-        seedQuestion("A1", "Grammar", "B");
-        seedQuestion("A1", "Vocabulary", "A");
-        seedQuestion("A1", "Vocabulary", "B");
-        seedQuestion("A2", "Grammar", "A");
-        seedQuestion("A2", "Grammar", "B");
-        seedQuestion("A2", "Vocabulary", "A");
-        seedQuestion("A2", "Vocabulary", "B");
+        // Seed 4 câu/cấp A1–B2 (mỗi cấp = 2 grammar + 2 vocabulary), skill_category LOWERCASE.
+        for (String level : new String[]{"A1", "A2", "B1", "B2"}) {
+            seedQuestion(level, "grammar", "A");
+            seedQuestion(level, "grammar", "B");
+            seedQuestion(level, "vocabulary", "A");
+            seedQuestion(level, "vocabulary", "B");
+        }
     }
 
     private void seedQuestion(String level, String skill, String correct) {
@@ -92,25 +90,24 @@ class PlacementTestFlowTest {
     }
 
     @Test
-    @DisplayName("Full flow: start -> answer x N -> complete trả kết quả CEFR đúng")
-    void fullPlacementTestFlowReturnsCefrA1() {
-        // 1. Start
+    @DisplayName("Full flow: start -> answer x N -> complete trả CEFR theo weighted scoring")
+    void fullPlacementTestFlowReturnsWeightedCefr() {
+        // 1. Start — đề rút từ pool A1–B2 (16 câu nếu pool đủ) + notice cap B2.
         StartTestResponse start = placementTestService.startTest(user.getFirebaseUid());
         assertNotNull(start.sessionId());
         assertEquals(start.questions().size(), start.totalQuestions());
         assertTrue(start.totalQuestions() >= 4, "Phải có ít nhất 4 câu hỏi");
+        assertNotNull(start.notice());
+        assertTrue(start.notice().contains("B2"), "notice phải nêu rõ giới hạn B2");
 
-        // 2. Answer từng câu — đúng cho A1, sai cho A2 (để resultLevel = A1)
+        // 2. Answer — đúng A1+A2, sai B1+B2. Weighted: earned = w(A1)*nA1 + w(A2)*nA2.
         int answered = 0;
         for (var qDto : start.questions()) {
             Question q = questionRepository.findById(qDto.id()).orElseThrow();
-            String selected;
-            if ("A1".equals(q.getCefrLevel())) {
-                selected = q.getCorrectAnswer(); // đúng
-            } else {
-                // chọn 1 đáp án khác correct
-                selected = "A".equals(q.getCorrectAnswer()) ? "B" : "A";
-            }
+            boolean answerCorrect = "A1".equals(q.getCefrLevel()) || "A2".equals(q.getCefrLevel());
+            String selected = answerCorrect
+                    ? q.getCorrectAnswer()
+                    : ("A".equals(q.getCorrectAnswer()) ? "B" : "A");
             AnswerQuestionResponse ans = placementTestService.answerQuestion(
                     start.sessionId(),
                     new AnswerQuestionRequest(q.getId(), selected)
@@ -120,16 +117,17 @@ class PlacementTestFlowTest {
             assertEquals(start.totalQuestions(), ans.totalQuestions());
         }
 
-        // 3. Complete
+        // 3. Complete — pool đủ A1–B2 (4/cấp): R = (1*4 + 2*4)/40 = 0.30 -> A2 (cap B2 không kích hoạt).
         TestResultResponse result = placementTestService.completeTest(start.sessionId());
         assertNotNull(result);
         assertEquals(start.totalQuestions(), result.totalQuestions());
-        assertEquals("A1", result.resultLevel(),
-                "User đúng 100% A1, 0% A2 -> phải pass A1 và không pass A2");
+        assertEquals("A2", result.resultLevel(),
+                "Đúng A1+A2, sai B1+B2 -> R=0.30 -> band A2 theo weighted scoring");
+        assertFalse(result.canGoHigherThanB2());
 
         // 4. User được set cefrLevel + isOnboarded
         User reloaded = userRepository.findById(user.getId()).orElseThrow();
-        assertEquals("A1", reloaded.getCefrLevel());
+        assertEquals("A2", reloaded.getCefrLevel());
         assertEquals(Boolean.TRUE, reloaded.getIsOnboarded());
     }
 

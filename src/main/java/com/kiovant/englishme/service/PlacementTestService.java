@@ -13,9 +13,11 @@ import java.util.stream.Collectors;
 @Service
 public class PlacementTestService {
 
-    private static final int TOTAL_QUESTIONS = 20;
+    // Bài kiểm tra ĐẦU VÀO chấm tối đa B2 (cap cứng) → đề chỉ rút câu A1–B2.
+    // Xem HE_THONG_KIEM_TRA_TRINH_DO.md §A.4.
+    private static final int TOTAL_QUESTIONS = 16;
 
-    // Tổng 20 câu trải đều A1..C2 (theo LEARNING_PATH_BACKEND_SPEC mục 3.1).
+    // 16 câu: A1×4, A2×4, B1×4, B2×4 (mỗi cấp 2 grammar + 2 vocabulary). Bỏ C1/C2.
     private static final Map<String, Integer> LEVEL_DISTRIBUTION = new LinkedHashMap<>();
 
     static {
@@ -23,11 +25,35 @@ public class PlacementTestService {
         LEVEL_DISTRIBUTION.put("A2", 4);
         LEVEL_DISTRIBUTION.put("B1", 4);
         LEVEL_DISTRIBUTION.put("B2", 4);
-        LEVEL_DISTRIBUTION.put("C1", 2);
-        LEVEL_DISTRIBUTION.put("C2", 2);
     }
 
     private static final List<String> CEFR_ORDER = List.of("A1", "A2", "B1", "B2", "C1", "C2");
+
+    // Trọng số độ khó theo cấp — dùng cho Weighted Difficulty Scoring (§A.1).
+    private static final Map<String, Integer> WEIGHTS = Map.of("A1", 1, "A2", 2, "B1", 3, "B2", 4);
+
+    // Cutoff R → band CEFR (§A.1 Bước 3).
+    private static final double CUTOFF_A2 = 0.25;
+    private static final double CUTOFF_B1 = 0.45;
+    private static final double CUTOFF_B2 = 0.68;
+
+    // Ngưỡng phát hiện "có thể cao hơn B2" (§A.3).
+    private static final double GO_HIGHER_MIN_R = 0.90;
+    private static final double GO_HIGHER_B2_SMOOTHED = 0.83;
+
+    // Index của B2 trong CEFR_ORDER (cap cứng).
+    private static final int B2_INDEX = 3;
+
+    // Thông báo cho người dùng (§A.7).
+    private static final String NOTICE_INTRO =
+            "Bài kiểm tra đầu vào này gồm 16 câu (ngữ pháp + từ vựng) và chỉ xác định trình độ của bạn "
+            + "tối đa tới mức B2 theo chuẩn CEFR. Nếu trình độ của bạn cao hơn B2, hệ thống sẽ gợi ý bạn "
+            + "học và làm các bài kiểm tra lên cấp để xác định chính xác. Câu bỏ trống được tính là sai, "
+            + "nên hãy cố gắng trả lời tất cả các câu nhé!";
+    private static final String MESSAGE_ABOVE_B2 =
+            "Bạn đã đạt B2 — mức cao nhất của bài kiểm tra đầu vào! Trình độ thực tế của bạn có thể còn "
+            + "cao hơn B2. Hãy học và hoàn thành các bài kiểm tra lên cấp trong lộ trình để xác định chính "
+            + "xác trình độ C1/C2 của mình.";
 
     private final QuestionRepository questionRepository;
     private final TestSessionRepository testSessionRepository;
@@ -64,7 +90,7 @@ public class PlacementTestService {
         testSessionRepository.save(session);
 
         var questions = selected.stream().map(this::toDto).toList();
-        return new StartTestResponse(session.getId(), questions, questions.size());
+        return new StartTestResponse(session.getId(), questions, questions.size(), NOTICE_INTRO);
     }
 
     @Transactional
@@ -158,17 +184,15 @@ public class PlacementTestService {
         List<TestAnswer> answers = testAnswerRepository.findByTestSession(session);
         List<Question> questions = questionRepository.findAllById(session.getQuestionIds());
 
-        // Tính điểm và phân loại CEFR
-        Map<String, int[]> levelStats = new LinkedHashMap<>();
-        for (TestAnswer a : answers) {
-            String level = a.getQuestion().getCefrLevel();
-            levelStats.computeIfAbsent(level, k -> new int[]{0, 0});
-            levelStats.get(level)[1]++;
-            if (Boolean.TRUE.equals(a.getIsCorrect())) levelStats.get(level)[0]++;
-        }
+        // Map questionId -> đáp án, để tính điểm trên TOÀN BỘ đề (câu bỏ trống vẫn vào mẫu số).
+        Map<UUID, TestAnswer> answerByQid = answers.stream()
+                .collect(Collectors.toMap(a -> a.getQuestion().getId(), a -> a, (x, y) -> x));
+
+        // Weighted Difficulty Scoring (§A.1): R = earned / max, cap cứng B2.
+        ScoreResult sr = score(questions, answerByQid);
+        String resultLevel = sr.resultLevel();
 
         int totalCorrect = (int) answers.stream().filter(a -> Boolean.TRUE.equals(a.getIsCorrect())).count();
-        String resultLevel = calculateCefrLevel(levelStats);
 
         session.setCompletedAt(LocalDateTime.now());
         session.setStatus(TestSession.TestStatus.COMPLETED);
@@ -189,34 +213,64 @@ public class PlacementTestService {
             userRepository.save(user);
         }
 
-        return buildResult(session, questions, answers);
+        return buildResult(session, questions, answers, sr.canGoHigherThanB2());
+    }
+
+    /** Kết quả chấm: band CEFR (cap B2) + cờ có thể cao hơn B2. */
+    private record ScoreResult(String resultLevel, boolean canGoHigherThanB2) {}
+
+    /**
+     * Weighted Difficulty Scoring with CEFR Cutoffs (cap cứng B2).
+     * Xem HE_THONG_KIEM_TRA_TRINH_DO.md §A.1 + §A.3.
+     *
+     * <p>R = Σ w(câu đúng) / Σ w(MỌI câu trong đề). Mẫu số ĐỘNG lấy từ toàn bộ đề
+     * (câu bỏ trống không cộng earned nhưng vẫn vào max → tính là sai).
+     */
+    private ScoreResult score(List<Question> questions, Map<UUID, TestAnswer> answerByQid) {
+        int earned = 0, max = 0;
+        int b2Correct = 0, b2Total = 0;
+        for (Question q : questions) {
+            int w = WEIGHTS.getOrDefault(q.getCefrLevel(), 0);
+            if (w == 0) continue; // bỏ câu C1/C2 lỡ lọt vào (an toàn)
+            max += w;
+            boolean correct = isCorrect(answerByQid.get(q.getId()));
+            if (correct) earned += w;
+            if ("B2".equals(q.getCefrLevel())) {
+                b2Total++;
+                if (correct) b2Correct++;
+            }
+        }
+
+        if (max == 0) return new ScoreResult("A1", false); // chống chia 0
+
+        double r = (double) earned / max;
+        String band;
+        if (r < CUTOFF_A2) band = "A1";
+        else if (r < CUTOFF_B1) band = "A2";
+        else if (r < CUTOFF_B2) band = "B1";
+        else band = "B2";
+
+        // Cap cứng B2 (lưới an toàn tường minh).
+        String resultLevel = CEFR_ORDER.indexOf(band) > B2_INDEX ? "B2" : band;
+
+        boolean canGoHigher = detectAboveB2(resultLevel, r, b2Correct, b2Total);
+        return new ScoreResult(resultLevel, canGoHigher);
     }
 
     /**
-     * Spec mục 3.4:
-     *   resultLevel = level cao nhất mà user đạt ≥70% câu đúng ở level đó
-     *   VÀ ≥50% ở level kế tiếp. Không đạt mức nào → A1.
+     * Phát hiện "có thể cao hơn B2" — thỏa đồng thời cả 3 điều kiện (§A.3):
+     *   (1) resultLevel == B2, (2) Laplace-smoothed B2 accuracy ≥ 0.83, (3) R ≥ 0.90.
+     * Dùng Laplace add-1 (Beta(1,1) prior) cho B2 vì chỉ 4 câu B2 → accuracy thô rất nhiễu.
      */
-    private String calculateCefrLevel(Map<String, int[]> levelStats) {
-        String highestPassed = "A1";
-        for (int i = 0; i < CEFR_ORDER.size(); i++) {
-            String level = CEFR_ORDER.get(i);
-            double accuracy = accuracyOf(levelStats, level);
-            if (accuracy < 0.7) continue;
-            // Yêu cầu ≥50% ở level kế tiếp (nếu có); level cao nhất (C2) bỏ qua check kế tiếp.
-            if (i + 1 < CEFR_ORDER.size()) {
-                double nextAcc = accuracyOf(levelStats, CEFR_ORDER.get(i + 1));
-                if (nextAcc < 0.5) continue;
-            }
-            highestPassed = level;
-        }
-        return highestPassed;
+    private boolean detectAboveB2(String resultLevel, double r, int b2Correct, int b2Total) {
+        if (!"B2".equals(resultLevel)) return false;
+        if (r < GO_HIGHER_MIN_R) return false;
+        double b2Smoothed = (double) (b2Correct + 1) / (b2Total + 2);
+        return b2Smoothed >= GO_HIGHER_B2_SMOOTHED;
     }
 
-    private double accuracyOf(Map<String, int[]> levelStats, String level) {
-        int[] stats = levelStats.get(level);
-        if (stats == null || stats[1] == 0) return 0.0;
-        return (double) stats[0] / stats[1];
+    private boolean isCorrect(TestAnswer a) {
+        return a != null && Boolean.TRUE.equals(a.getIsCorrect());
     }
 
     private int compareCefr(String a, String b) {
@@ -266,9 +320,10 @@ public class PlacementTestService {
         );
     }
 
-    private TestResultResponse buildResult(TestSession session, List<Question> questions, List<TestAnswer> answers) {
+    private TestResultResponse buildResult(TestSession session, List<Question> questions,
+                                           List<TestAnswer> answers, boolean canGoHigherThanB2) {
         Map<UUID, TestAnswer> answerByQuestion = answers.stream()
-                .collect(Collectors.toMap(a -> a.getQuestion().getId(), a -> a));
+                .collect(Collectors.toMap(a -> a.getQuestion().getId(), a -> a, (x, y) -> x));
 
         List<TestResultResponse.AnswerReview> reviews = questions.stream().map(q -> {
             TestAnswer ans = answerByQuestion.get(q.getId());
@@ -287,6 +342,8 @@ public class PlacementTestService {
                 session.getResultLevel(),
                 session.getScore() != null ? session.getScore() : 0,
                 questions.size(),
+                canGoHigherThanB2,
+                canGoHigherThanB2 ? MESSAGE_ABOVE_B2 : "",
                 reviews
         );
     }
