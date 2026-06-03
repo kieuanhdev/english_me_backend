@@ -4,6 +4,8 @@ import com.kiovant.englishme.dto.CheckpointDtos.*;
 import com.kiovant.englishme.dto.CurriculumCompleteRequest;
 import com.kiovant.englishme.dto.CurriculumDtos.*;
 import com.kiovant.englishme.dto.CurriculumGradeDtos.*;
+import com.kiovant.englishme.dto.GeneratePracticeRequest;
+import com.kiovant.englishme.dto.GeneratePracticeResponse;
 import com.kiovant.englishme.service.CheckpointService;
 import com.kiovant.englishme.service.CurriculumService;
 import com.kiovant.englishme.service.FirebaseAuthHelper;
@@ -77,6 +79,15 @@ public class CurriculumController {
                                        @RequestBody CurriculumCompleteRequest request) {
         var decoded = authHelper.verifyBearer(token);
         return curriculumService.completeLesson(decoded.getUid(), lessonId, request);
+    }
+
+    /** Sinh thêm câu hỏi trắc nghiệm (AI) từ lý thuyết bài — luyện thêm, không tính điểm/XP. */
+    @PostMapping("/lessons/{lessonId}/practice/generate")
+    public GeneratePracticeResponse generatePractice(@RequestHeader("Authorization") String token,
+                                                     @PathVariable String lessonId,
+                                                     @RequestBody GeneratePracticeRequest request) {
+        var decoded = authHelper.verifyBearer(token);
+        return curriculumService.generateExtraPractice(decoded.getUid(), lessonId, request);
     }
 
     // ── Level Checkpoint Test (Pha 4 — lên cấp CEFR) ──

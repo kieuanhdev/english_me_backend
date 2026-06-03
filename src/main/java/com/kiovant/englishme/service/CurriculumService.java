@@ -3,6 +3,8 @@ package com.kiovant.englishme.service;
 import com.kiovant.englishme.dto.CurriculumCompleteRequest;
 import com.kiovant.englishme.dto.CurriculumDtos.*;
 import com.kiovant.englishme.dto.CurriculumGradeDtos.*;
+import com.kiovant.englishme.dto.GeneratePracticeRequest;
+import com.kiovant.englishme.dto.GeneratePracticeResponse;
 import com.kiovant.englishme.dto.XpGrantResult;
 import com.kiovant.englishme.entity.*;
 import com.kiovant.englishme.repository.*;
@@ -40,6 +42,7 @@ public class CurriculumService {
     private final UserLessonAttemptRepository lessonAttemptRepository;
     private final XpService xpService;
     private final CurriculumGradingService gradingService;
+    private final PracticeGenerationService practiceGenerationService;
 
     public CurriculumService(UserRepository userRepository,
                              UserLevelRepository userLevelRepository,
@@ -50,7 +53,8 @@ public class CurriculumService {
                              UserLessonProgressRepository lessonProgressRepository,
                              UserLessonAttemptRepository lessonAttemptRepository,
                              XpService xpService,
-                             CurriculumGradingService gradingService) {
+                             CurriculumGradingService gradingService,
+                             PracticeGenerationService practiceGenerationService) {
         this.userRepository = userRepository;
         this.userLevelRepository = userLevelRepository;
         this.unitRepository = unitRepository;
@@ -61,6 +65,25 @@ public class CurriculumService {
         this.lessonAttemptRepository = lessonAttemptRepository;
         this.xpService = xpService;
         this.gradingService = gradingService;
+        this.practiceGenerationService = practiceGenerationService;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // POST /curriculum/lessons/{lessonId}/practice/generate
+    // Sinh thêm câu hỏi trắc nghiệm (AI) từ lý thuyết bài học. KHÔNG ảnh
+    // hưởng XP/mastery — chỉ để người học luyện thêm. Chấm điểm ở client.
+    // ═══════════════════════════════════════════════════════════════════
+    @Transactional(readOnly = true)
+    public GeneratePracticeResponse generateExtraPractice(String firebaseUid, String lessonId,
+                                                          GeneratePracticeRequest request) {
+        loadUser(firebaseUid); // chỉ cần xác thực người dùng tồn tại
+        LearningLesson lesson = lessonRepository.findById(lessonId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lesson not found: " + lessonId));
+        List<String> existing = request != null && request.existingQuestions() != null
+                ? request.existingQuestions() : List.of();
+        int count = request != null ? request.count() : 5;
+        return new GeneratePracticeResponse(
+                practiceGenerationService.generate(lesson, existing, count));
     }
 
     // ═══════════════════════════════════════════════════════════════════
