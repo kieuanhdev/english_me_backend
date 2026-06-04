@@ -12,7 +12,8 @@ import java.util.UUID;
 
 public interface TestSessionRepository extends JpaRepository<TestSession, UUID> {
 
-    @Query("SELECT ts FROM TestSession ts JOIN FETCH ts.user ORDER BY ts.startedAt DESC")
+    @Query(value = "SELECT ts FROM TestSession ts JOIN FETCH ts.user ORDER BY ts.startedAt DESC",
+            countQuery = "SELECT count(ts) FROM TestSession ts")
     Page<TestSession> findAllWithUser(Pageable pageable);
 
     @Query("SELECT ts FROM TestSession ts JOIN FETCH ts.user WHERE ts.id = :id")

@@ -38,6 +38,16 @@ public interface FlashcardProgressRepository extends JpaRepository<FlashcardProg
     long countDueProgress(UUID userId, UUID deskId, LocalDateTime now);
 
     /**
+     * Tong so the den han on tren TAT CA desk cua user — cho thong bao REVIEW_DUE.
+     */
+    @Query("""
+            SELECT COUNT(p) FROM FlashcardProgress p
+            WHERE p.user.id = :userId
+              AND (p.nextReviewAt IS NULL OR p.nextReviewAt <= :now)
+            """)
+    long countAllDueProgress(UUID userId, LocalDateTime now);
+
+    /**
      * Flashcards in a desk that user has NOT started yet (no progress row).
      */
     @Query("""
