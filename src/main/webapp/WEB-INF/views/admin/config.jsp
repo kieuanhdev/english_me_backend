@@ -25,6 +25,20 @@
             <p class="max-w-2xl text-indigo-100">Quản lý API keys và các tham số vận hành của ứng dụng.</p>
         </section>
 
+        <%-- Khối LLM: cấu hình provider AI dùng chung (chat, sinh câu hỏi, chấm text) + test kết nối. --%>
+        <section class="bg-surface-container-lowest rounded-2xl p-6 border border-indigo-100">
+            <div class="flex items-center gap-2 mb-2">
+                <h2 class="text-xl font-bold text-on-surface">Mô hình AI (LLM)</h2>
+                <span class="text-[10px] font-bold uppercase tracking-widest bg-indigo-100 text-primary px-2 py-0.5 rounded-full">OpenAI-compatible</span>
+            </div>
+            <p class="text-sm text-slate-500 mb-4">Đổi model cho mọi chức năng AI bằng cách sửa 3 ô bên dưới ở danh sách (LLM_BASE_URL, LLM_MODEL, LLM_API_KEY) rồi bấm Lưu. Sau khi lưu, dùng nút dưới để kiểm tra key có hoạt động không.</p>
+            <button type="button" id="btn-test-llm"
+                    class="px-5 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:opacity-90">
+                Test kết nối LLM
+            </button>
+            <div id="llm-test-result" class="mt-3 text-sm hidden rounded-xl px-4 py-3"></div>
+        </section>
+
         <% if (successMessage != null) { %>
         <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl px-6 py-4"><%= successMessage %></div>
         <% } %>
@@ -75,5 +89,55 @@
         </div>
     </div>
 </main>
+
+<script>
+    (function () {
+        var btn = document.getElementById('btn-test-llm');
+        var box = document.getElementById('llm-test-result');
+        if (!btn) return;
+
+        // Lấy giá trị đang gõ trong các ô LLM (nếu admin chưa Lưu). Rỗng -> backend dùng giá trị DB.
+        function fieldValue(key) {
+            var input = document.querySelector('input[name="key"][value="' + key + '"]');
+            if (!input) return '';
+            var form = input.closest('form');
+            var valInput = form ? form.querySelector('input[name="value"]') : null;
+            return valInput ? valInput.value.trim() : '';
+        }
+
+        function show(success, message) {
+            box.classList.remove('hidden');
+            box.className = 'mt-3 text-sm rounded-xl px-4 py-3 '
+                + (success ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                           : 'bg-red-50 border border-red-200 text-red-800');
+            box.textContent = (success ? '✓ ' : '✗ ') + message;
+        }
+
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            var original = btn.textContent;
+            btn.textContent = 'Đang kiểm tra...';
+
+            var ctx = '${pageContext.request.contextPath}';
+            var params = new URLSearchParams();
+            params.append('baseUrl', fieldValue('LLM_BASE_URL'));
+            params.append('apiKey', fieldValue('LLM_API_KEY'));
+            params.append('model', fieldValue('LLM_MODEL'));
+
+            fetch(ctx + '/admin/config/test-llm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) { show(data.success, data.message || ''); })
+            .catch(function (e) { show(false, 'Lỗi gọi test: ' + e); })
+            .finally(function () {
+                btn.disabled = false;
+                btn.textContent = original;
+            });
+        });
+    })();
+</script>
 </body>
 </html>
