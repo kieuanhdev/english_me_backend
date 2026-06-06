@@ -24,11 +24,33 @@ public class DeepSeekPronunciationScorer {
 
     private static final Logger log = LoggerFactory.getLogger(DeepSeekPronunciationScorer.class);
 
+    private static final int DEFAULT_MAX_TOKENS = 800;
+
+    static final String DEFAULT_PROMPT = """
+            Bạn là giám khảo chấm phát âm tiếng Anh. Người học đọc một câu mẫu, hệ thống nhận dạng giọng nói
+            đã chuyển thành văn bản. Hãy so sánh văn bản người học nói được với câu mẫu và chấm điểm.
+            Chỉ trả về JSON hợp lệ, KHÔNG kèm giải thích, KHÔNG markdown. Cấu trúc bắt buộc:
+            {
+              "score": <0-100 điểm tổng>,
+              "accuracy": <0-100 độ chính xác từ ngữ>,
+              "fluency": <0-100 độ trôi chảy ước lượng>,
+              "completeness": <0-100 tỉ lệ đọc đủ câu>,
+              "overallComment": "<nhận xét tổng quát bằng tiếng Việt, 1-2 câu>",
+              "errors": [
+                { "word": "<từ sai trong câu mẫu>", "position": <chỉ số từ, bắt đầu 0>,
+                  "expected": "<từ mẫu>", "actual": "<từ người học nói, rỗng nếu thiếu>",
+                  "suggestion": "<gợi ý luyện bằng tiếng Việt>" }
+              ]
+            }
+            Quy tắc: nếu người học nói đúng hết thì errors là mảng rỗng. Điểm phản ánh mức khớp với câu mẫu.""";
+
     private final LlmClient llmClient;
+    private final AppConfigService appConfigService;
     private final ObjectMapper objectMapper;
 
-    public DeepSeekPronunciationScorer(LlmClient llmClient, ObjectMapper objectMapper) {
+    public DeepSeekPronunciationScorer(LlmClient llmClient, AppConfigService appConfigService, ObjectMapper objectMapper) {
         this.llmClient = llmClient;
+        this.appConfigService = appConfigService;
         this.objectMapper = objectMapper;
     }
 
@@ -48,33 +70,18 @@ public class DeepSeekPronunciationScorer {
     // ── LLM ────────────────────────────────────────────────────────────
 
     private PronunciationAssessResponse scoreWithLlm(String referenceText, String spokenText) {
-        String systemPrompt = """
-                Bạn là giám khảo chấm phát âm tiếng Anh. Người học đọc một câu mẫu, hệ thống nhận dạng giọng nói
-                đã chuyển thành văn bản. Hãy so sánh văn bản người học nói được với câu mẫu và chấm điểm.
-                Chỉ trả về JSON hợp lệ, KHÔNG kèm giải thích, KHÔNG markdown. Cấu trúc bắt buộc:
-                {
-                  "score": <0-100 điểm tổng>,
-                  "accuracy": <0-100 độ chính xác từ ngữ>,
-                  "fluency": <0-100 độ trôi chảy ước lượng>,
-                  "completeness": <0-100 tỉ lệ đọc đủ câu>,
-                  "overallComment": "<nhận xét tổng quát bằng tiếng Việt, 1-2 câu>",
-                  "errors": [
-                    { "word": "<từ sai trong câu mẫu>", "position": <chỉ số từ, bắt đầu 0>,
-                      "expected": "<từ mẫu>", "actual": "<từ người học nói, rỗng nếu thiếu>",
-                      "suggestion": "<gợi ý luyện bằng tiếng Việt>" }
-                  ]
-                }
-                Quy tắc: nếu người học nói đúng hết thì errors là mảng rỗng. Điểm phản ánh mức khớp với câu mẫu.""";
+        String systemPrompt = appConfigService.getOr(AiConfigKeys.PROMPT_PRONUN, DEFAULT_PROMPT);
 
         String userPrompt = "Câu mẫu: \"" + referenceText + "\"\n"
                 + "Người học nói được: \"" + spokenText + "\"";
 
+        int maxTokens = appConfigService.getIntOr(AiConfigKeys.PRONUN_MAX_TOKENS, DEFAULT_MAX_TOKENS);
         String content = llmClient.chatCompletion(
                 List.of(
                         Map.of("role", "system", "content", systemPrompt),
                         Map.of("role", "user", "content", userPrompt)
                 ),
-                0, 800, true);
+                0, maxTokens, true);
 
         return parseLlmResponse(content, referenceText, spokenText);
     }

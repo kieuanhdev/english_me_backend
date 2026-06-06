@@ -34,6 +34,6 @@
         <a href="${pageContext.request.contextPath}/admin/lessons" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= lessonsActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">school</span>Learning lessons</a>
         <a href="${pageContext.request.contextPath}/admin/placement-test" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= placementTestActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">quiz</span>Placement Test</a>
         <a href="${pageContext.request.contextPath}/admin/xp-rules" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= xpRulesActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">bolt</span>Cấu hình XP</a>
-        <a href="${pageContext.request.contextPath}/admin/config" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= configActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">settings</span>Cấu hình</a>
+        <a href="${pageContext.request.contextPath}/admin/config" class="flex items-center gap-3 px-4 py-3 rounded-xl <%= configActive ? "bg-indigo-50 text-primary" : "text-slate-600 hover:bg-slate-100" %>"><span class="material-symbols-outlined">smart_toy</span>Cấu hình AI</a>
     </nav>
 </aside>

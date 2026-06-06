@@ -27,12 +27,16 @@ public class PracticeGenerationService {
 
     private static final int MAX_COUNT = 10;
     private static final int MAX_EXISTING = 40;
+    private static final double DEFAULT_TEMPERATURE = 0.8;
+    private static final int DEFAULT_MAX_TOKENS = 1100;
 
     private final LlmClient llmClient;
+    private final AppConfigService appConfigService;
     private final ObjectMapper objectMapper;
 
-    public PracticeGenerationService(LlmClient llmClient, ObjectMapper objectMapper) {
+    public PracticeGenerationService(LlmClient llmClient, AppConfigService appConfigService, ObjectMapper objectMapper) {
         this.llmClient = llmClient;
+        this.appConfigService = appConfigService;
         this.objectMapper = objectMapper;
     }
 
@@ -51,12 +55,14 @@ public class PracticeGenerationService {
                     + "Các câu hỏi đã có (TRÁNH tạo trùng hoặc gần giống):\n" + existingList + "\n\n"
                     + "Hãy tạo " + n + " câu hỏi trắc nghiệm MỚI.";
 
+            double temp = appConfigService.getDoubleOr(AiConfigKeys.PRACTICE_TEMPERATURE, DEFAULT_TEMPERATURE);
+            int maxTokens = appConfigService.getIntOr(AiConfigKeys.PRACTICE_MAX_TOKENS, DEFAULT_MAX_TOKENS);
             String content = llmClient.chatCompletion(
                     List.of(
                             Map.of("role", "system", "content", systemPrompt(n)),
                             Map.of("role", "user", "content", userPrompt)
                     ),
-                    0.8, 1100, true);
+                    temp, maxTokens, true);
 
             return parse(content, n);
         } catch (Exception ex) {
@@ -138,33 +144,41 @@ public class PracticeGenerationService {
 
     // ── Prompt + context ─────────────────────────────────────────────────────────
 
-    private static String systemPrompt(int count) {
-        return """
-                Bạn là giáo viên tiếng Anh tạo câu hỏi trắc nghiệm ôn tập cho người học.
-                Dựa HOÀN TOÀN vào nội dung lý thuyết bài học được cung cấp, tạo %d câu hỏi trắc nghiệm MỚI.
-                Yêu cầu:
-                - Mỗi câu là trắc nghiệm 4 lựa chọn (id: a, b, c, d), CHỈ 1 đáp án đúng.
-                - Câu hỏi PHẢI khác với danh sách câu đã có (tránh lặp ý và cách hỏi).
-                - Bám sát từ vựng/ngữ pháp/ví dụ trong lý thuyết. Độ khó vừa phải.
-                - Câu hỏi có thể bằng tiếng Việt hoặc tiếng Anh; các lựa chọn dùng tiếng Anh khi hỏi về từ/ngữ pháp.
-                - explanationVi: giải thích ngắn bằng tiếng Việt vì sao đáp án đúng.
-                Chỉ trả về JSON hợp lệ, KHÔNG markdown, KHÔNG giải thích thừa. Cấu trúc bắt buộc:
+    static final String DEFAULT_PROMPT = """
+            Bạn là giáo viên tiếng Anh tạo câu hỏi trắc nghiệm ôn tập cho người học.
+            Dựa HOÀN TOÀN vào nội dung lý thuyết bài học được cung cấp, tạo %d câu hỏi trắc nghiệm MỚI.
+            Yêu cầu:
+            - Mỗi câu là trắc nghiệm 4 lựa chọn (id: a, b, c, d), CHỈ 1 đáp án đúng.
+            - Câu hỏi PHẢI khác với danh sách câu đã có (tránh lặp ý và cách hỏi).
+            - Bám sát từ vựng/ngữ pháp/ví dụ trong lý thuyết. Độ khó vừa phải.
+            - Câu hỏi có thể bằng tiếng Việt hoặc tiếng Anh; các lựa chọn dùng tiếng Anh khi hỏi về từ/ngữ pháp.
+            - explanationVi: giải thích ngắn bằng tiếng Việt vì sao đáp án đúng.
+            Chỉ trả về JSON hợp lệ, KHÔNG markdown, KHÔNG giải thích thừa. Cấu trúc bắt buộc:
+            {
+              "questions": [
                 {
-                  "questions": [
-                    {
-                      "question": "<nội dung câu hỏi>",
-                      "options": [
-                        {"id": "a", "text": "..."},
-                        {"id": "b", "text": "..."},
-                        {"id": "c", "text": "..."},
-                        {"id": "d", "text": "..."}
-                      ],
-                      "correctOptionId": "a",
-                      "explanationVi": "<giải thích tiếng Việt>",
-                      "difficulty": "easy|medium|hard"
-                    }
-                  ]
-                }""".formatted(count);
+                  "question": "<nội dung câu hỏi>",
+                  "options": [
+                    {"id": "a", "text": "..."},
+                    {"id": "b", "text": "..."},
+                    {"id": "c", "text": "..."},
+                    {"id": "d", "text": "..."}
+                  ],
+                  "correctOptionId": "a",
+                  "explanationVi": "<giải thích tiếng Việt>",
+                  "difficulty": "easy|medium|hard"
+                }
+              ]
+            }""";
+
+    private String systemPrompt(int count) {
+        String tpl = appConfigService.getOr(AiConfigKeys.PROMPT_PRACTICE, DEFAULT_PROMPT);
+        try {
+            return tpl.formatted(count);
+        } catch (Exception ex) {
+            log.warn("Prompt practice sai placeholder, dùng default: {}", ex.getMessage());
+            return DEFAULT_PROMPT.formatted(count);
+        }
     }
 
     @SuppressWarnings("unchecked")

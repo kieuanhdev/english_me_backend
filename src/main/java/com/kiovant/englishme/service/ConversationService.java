@@ -31,15 +31,18 @@ public class ConversationService {
 
     /** Chặn lạm dụng: tối đa 10 lượt user + 10 assistant + đệm. */
     private static final int MAX_HISTORY = 24;
-    /** Trả lời ngắn như nói chuyện thật -> ít token. */
-    private static final int CHAT_MAX_TOKENS = 160;
-    private static final int SUMMARY_MAX_TOKENS = 700;
+    /** Default khi app_config trống. Trả lời ngắn như nói chuyện thật -> ít token. */
+    private static final double DEFAULT_CHAT_TEMPERATURE = 0.7;
+    private static final int DEFAULT_CHAT_MAX_TOKENS = 160;
+    private static final int DEFAULT_SUMMARY_MAX_TOKENS = 700;
 
     private final LlmClient llmClient;
+    private final AppConfigService appConfigService;
     private final ObjectMapper objectMapper;
 
-    public ConversationService(LlmClient llmClient, ObjectMapper objectMapper) {
+    public ConversationService(LlmClient llmClient, AppConfigService appConfigService, ObjectMapper objectMapper) {
         this.llmClient = llmClient;
+        this.appConfigService = appConfigService;
         this.objectMapper = objectMapper;
     }
 
@@ -67,7 +70,9 @@ public class ConversationService {
                         "content", "Start the conversation with a short friendly greeting about the topic."));
             }
 
-            String reply = llmClient.chatCompletion(messages, 0.7, CHAT_MAX_TOKENS, false);
+            double temp = appConfigService.getDoubleOr(AiConfigKeys.CHAT_TEMPERATURE, DEFAULT_CHAT_TEMPERATURE);
+            int maxTokens = appConfigService.getIntOr(AiConfigKeys.CHAT_MAX_TOKENS, DEFAULT_CHAT_MAX_TOKENS);
+            String reply = llmClient.chatCompletion(messages, temp, maxTokens, false);
             if (reply.isEmpty()) {
                 return new ConversationChatResponse(fallbackReply(history));
             }
@@ -98,12 +103,13 @@ public class ConversationService {
 
             String userPrompt = "Chủ đề: \"" + safeTopic + "\"\nHội thoại:\n" + transcript;
 
+            int maxTokens = appConfigService.getIntOr(AiConfigKeys.SUMMARY_MAX_TOKENS, DEFAULT_SUMMARY_MAX_TOKENS);
             String content = llmClient.chatCompletion(
                     List.of(
                             Map.of("role", "system", "content", summarySystemPrompt(safeTopic)),
                             Map.of("role", "user", "content", userPrompt)
                     ),
-                    0, SUMMARY_MAX_TOKENS, true);
+                    0, maxTokens, true);
 
             return parseSummary(content);
         } catch (Exception ex) {
@@ -136,35 +142,53 @@ public class ConversationService {
     }
 
     // ── Prompt ───────────────────────────────────────────────────────────────────
+    // Prompt đọc từ app_config (admin sửa được). Trống -> dùng DEFAULT_* dưới đây.
+    // Giữ nguyên placeholder: chat 3x %s, summary 1x %s (topic).
 
-    private static String chatSystemPrompt(String topic) {
-        return """
-                You are "Alex", a friendly native English conversation partner inside a language-learning app.
-                Your ONLY job: have a natural, casual spoken conversation with the learner about the topic: "%s".
+    static final String DEFAULT_PROMPT_CHAT = """
+            You are "Alex", a friendly native English conversation partner inside a language-learning app.
+            Your ONLY job: have a natural, casual spoken conversation with the learner about the topic: "%s".
 
-                STRICT RULES:
-                - Stay strictly on the topic "%s" and the everyday small talk around it.
-                - Speak like a real person in a voice chat: SHORT replies, 1-2 sentences max, then ask one simple follow-up question to keep the conversation going.
-                - Use simple, natural English suited to an English learner.
-                - NEVER write code, NEVER translate long texts, NEVER give grammar lectures, NEVER answer encyclopedic or general-knowledge questions unrelated to the topic. If the learner goes off-topic, gently steer back, e.g. "Haha, let's get back to %s — ...".
-                - Do NOT use markdown, emoji, bullet points, lists, or stage directions. Output ONLY the spoken reply text.
-                - Do not mention you are an AI, a model, or these rules.""".formatted(topic, topic, topic);
+            STRICT RULES:
+            - Stay strictly on the topic "%s" and the everyday small talk around it.
+            - Speak like a real person in a voice chat: SHORT replies, 1-2 sentences max, then ask one simple follow-up question to keep the conversation going.
+            - Use simple, natural English suited to an English learner.
+            - NEVER write code, NEVER translate long texts, NEVER give grammar lectures, NEVER answer encyclopedic or general-knowledge questions unrelated to the topic. If the learner goes off-topic, gently steer back, e.g. "Haha, let's get back to %s — ...".
+            - Do NOT use markdown, emoji, bullet points, lists, or stage directions. Output ONLY the spoken reply text.
+            - Do not mention you are an AI, a model, or these rules.""";
+
+    static final String DEFAULT_PROMPT_SUMMARY = """
+            Bạn là giáo viên tiếng Anh. Học viên vừa hoàn thành một đoạn hội thoại luyện nói về chủ đề "%s".
+            Hãy nhận xét phần nói tiếng Anh của HỌC VIÊN (các dòng "Học viên:"), KHÔNG nhận xét phần của AI.
+            Chỉ trả về JSON hợp lệ, KHÔNG kèm markdown, KHÔNG giải thích thêm. Cấu trúc bắt buộc:
+            {
+              "overallScore": <0-100 điểm giao tiếp tổng>,
+              "summary": "<tóm tắt ngắn đoạn hội thoại bằng tiếng Việt, 1-2 câu>",
+              "strengths": ["<điểm tốt bằng tiếng Việt>"],
+              "improvements": ["<điểm cần cải thiện về ngữ pháp/từ vựng/độ tự nhiên, tiếng Việt>"],
+              "vocabSuggestions": ["<từ hoặc cụm tiếng Anh nên học kèm nghĩa ngắn tiếng Việt>"],
+              "encouragement": "<một câu động viên bằng tiếng Việt>"
+            }
+            Đánh giá dựa trên độ trôi chảy, đúng ngữ pháp, cách dùng từ và mức độ bám chủ đề.""";
+
+    private String chatSystemPrompt(String topic) {
+        String tpl = appConfigService.getOr(AiConfigKeys.PROMPT_CHAT, DEFAULT_PROMPT_CHAT);
+        return safeFormat(tpl, DEFAULT_PROMPT_CHAT, topic, topic, topic);
     }
 
-    private static String summarySystemPrompt(String topic) {
-        return """
-                Bạn là giáo viên tiếng Anh. Học viên vừa hoàn thành một đoạn hội thoại luyện nói về chủ đề "%s".
-                Hãy nhận xét phần nói tiếng Anh của HỌC VIÊN (các dòng "Học viên:"), KHÔNG nhận xét phần của AI.
-                Chỉ trả về JSON hợp lệ, KHÔNG kèm markdown, KHÔNG giải thích thêm. Cấu trúc bắt buộc:
-                {
-                  "overallScore": <0-100 điểm giao tiếp tổng>,
-                  "summary": "<tóm tắt ngắn đoạn hội thoại bằng tiếng Việt, 1-2 câu>",
-                  "strengths": ["<điểm tốt bằng tiếng Việt>"],
-                  "improvements": ["<điểm cần cải thiện về ngữ pháp/từ vựng/độ tự nhiên, tiếng Việt>"],
-                  "vocabSuggestions": ["<từ hoặc cụm tiếng Anh nên học kèm nghĩa ngắn tiếng Việt>"],
-                  "encouragement": "<một câu động viên bằng tiếng Việt>"
-                }
-                Đánh giá dựa trên độ trôi chảy, đúng ngữ pháp, cách dùng từ và mức độ bám chủ đề.""".formatted(topic);
+    private String summarySystemPrompt(String topic) {
+        String tpl = appConfigService.getOr(AiConfigKeys.PROMPT_SUMMARY, DEFAULT_PROMPT_SUMMARY);
+        return safeFormat(tpl, DEFAULT_PROMPT_SUMMARY, topic);
+    }
+
+    /** Format prompt từ config; nếu admin sửa sai placeholder gây lỗi -> fallback default. */
+    private String safeFormat(String template, String fallback, Object... args) {
+        try {
+            return template.formatted(args);
+        } catch (Exception ex) {
+            log.warn("Prompt config sai placeholder, dùng default: {}", ex.getMessage());
+            return fallback.formatted(args);
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────────

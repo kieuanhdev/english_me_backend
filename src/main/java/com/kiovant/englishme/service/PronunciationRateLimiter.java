@@ -1,6 +1,5 @@
 package com.kiovant.englishme.service;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
@@ -17,13 +16,20 @@ public class PronunciationRateLimiter {
     private final Map<String, Deque<Long>> userWindowMap = new ConcurrentHashMap<>();
     private static final int MAX_TRACKED_USERS = 10000;
 
-    @Value("${englishme.ai.pronunciation.rate-limit.max-requests:20}")
-    private int maxRequestsPerWindow;
+    /** Default khi app_config trống — giữ giá trị cũ. */
+    private static final int DEFAULT_MAX_REQUESTS = 20;
+    private static final int DEFAULT_WINDOW_SECONDS = 3600;
 
-    @Value("${englishme.ai.pronunciation.rate-limit.window-seconds:3600}")
-    private int windowSeconds;
+    private final AppConfigService appConfigService;
+
+    public PronunciationRateLimiter(AppConfigService appConfigService) {
+        this.appConfigService = appConfigService;
+    }
 
     public void checkOrThrow(String firebaseUid) {
+        int maxRequestsPerWindow = appConfigService.getIntOr(AiConfigKeys.RATELIMIT_MAX, DEFAULT_MAX_REQUESTS);
+        int windowSeconds = appConfigService.getIntOr(AiConfigKeys.RATELIMIT_WINDOW_SEC, DEFAULT_WINDOW_SECONDS);
+
         long now = Instant.now().getEpochSecond();
         long from = now - Math.max(windowSeconds, 60);
         if (userWindowMap.size() > MAX_TRACKED_USERS && !userWindowMap.containsKey(firebaseUid)) {
