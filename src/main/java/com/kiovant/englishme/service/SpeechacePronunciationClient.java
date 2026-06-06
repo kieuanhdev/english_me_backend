@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -16,8 +17,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Base64;
-import java.util.Map;
 
 /**
  * Speechace pronunciation provider. Kích hoạt khi
@@ -64,13 +63,16 @@ public class SpeechacePronunciationClient implements CloudPronunciationClient {
             return fallback.assess(audioBytes, referenceText, language);
         }
 
-        String base64Audio = Base64.getEncoder().encodeToString(audioBytes);
-        Map<String, Object> body = Map.of(
-                "text", referenceText,
-                "user_audio_file", "data:audio/webm;base64," + base64Audio,
-                "question_info", Map.of("question_type", "reading"),
-                "dialect", (language == null || language.isBlank()) ? "en-us" : language.toLowerCase()
-        );
+        // Speechace /scoring/text/v9/json yêu cầu multipart/form-data với file âm thanh thật
+        // (user_audio_file), KHÔNG phải JSON base64. Gửi sai sẽ luôn lỗi → rơi về mock.
+        String dialect = (language == null || language.isBlank()) ? "en-us" : language.toLowerCase();
+        String boundary = "----englishme" + Integer.toHexString(audioBytes.length) + referenceText.length();
+        byte[] multipartBody;
+        try {
+            multipartBody = buildMultipartBody(boundary, referenceText, dialect, audioBytes);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Cannot build pronunciation request body.");
+        }
 
         int attempts = Math.max(maxRetries, 0) + 1;
         for (int attempt = 1; attempt <= attempts; attempt++) {
@@ -79,8 +81,8 @@ public class SpeechacePronunciationClient implements CloudPronunciationClient {
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(uri)
                         .timeout(Duration.ofMillis(Math.max(timeoutMs, 3000)))
-                        .header("Content-Type", "application/json; charset=utf-8")
-                        .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body), StandardCharsets.UTF_8))
+                        .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                        .POST(HttpRequest.BodyPublishers.ofByteArray(multipartBody))
                         .build();
 
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
@@ -104,6 +106,36 @@ public class SpeechacePronunciationClient implements CloudPronunciationClient {
             }
         }
         throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Pronunciation provider retry exhausted.");
+    }
+
+    /** Dựng body multipart/form-data: text, dialect (field) + user_audio_file (file). */
+    private byte[] buildMultipartBody(String boundary, String text, String dialect, byte[] audioBytes) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        String dash = "--";
+        String crlf = "\r\n";
+
+        writeFormField(out, boundary, "text", text);
+        writeFormField(out, boundary, "dialect", dialect);
+
+        // Phần file: filename + content-type. Speechace nhận m4a/wav/mp3/webm.
+        out.write((dash + boundary + crlf).getBytes(StandardCharsets.UTF_8));
+        out.write(("Content-Disposition: form-data; name=\"user_audio_file\"; filename=\"recording.m4a\"" + crlf)
+                .getBytes(StandardCharsets.UTF_8));
+        out.write(("Content-Type: application/octet-stream" + crlf + crlf).getBytes(StandardCharsets.UTF_8));
+        out.write(audioBytes);
+        out.write(crlf.getBytes(StandardCharsets.UTF_8));
+
+        out.write((dash + boundary + dash + crlf).getBytes(StandardCharsets.UTF_8));
+        return out.toByteArray();
+    }
+
+    private void writeFormField(ByteArrayOutputStream out, String boundary, String name, String value) throws IOException {
+        String crlf = "\r\n";
+        out.write(("--" + boundary + crlf).getBytes(StandardCharsets.UTF_8));
+        out.write(("Content-Disposition: form-data; name=\"" + name + "\"" + crlf + crlf)
+                .getBytes(StandardCharsets.UTF_8));
+        out.write(value.getBytes(StandardCharsets.UTF_8));
+        out.write(crlf.getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
