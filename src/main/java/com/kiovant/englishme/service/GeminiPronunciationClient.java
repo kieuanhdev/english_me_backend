@@ -69,8 +69,13 @@ public class GeminiPronunciationClient implements CloudPronunciationClient {
             log.warn("GEMINI_API_KEY chưa cấu hình — fallback mock");
             return fallback.assess(audioBytes, referenceText, language);
         }
+        log.info("gemini_assess audioBytes={} refLen={}", audioBytes.length, referenceText.length());
         try {
             JsonNode geminiJson = callGemini(apiKey.trim(), audioBytes, referenceText);
+            log.info("gemini_result audible={} heard=\"{}\" overall={}",
+                    geminiJson.path("audible").asBoolean(true),
+                    geminiJson.path("heard").asText(""),
+                    geminiJson.path("overall").asInt(0));
             return toScoringShape(geminiJson, referenceText);
         } catch (Exception ex) {
             log.error("Gemini pronunciation lỗi, fallback mock: {}", ex.getMessage());
@@ -82,19 +87,27 @@ public class GeminiPronunciationClient implements CloudPronunciationClient {
         String base64Audio = Base64.getEncoder().encodeToString(audioBytes);
 
         String prompt = """
-                Bạn là giám khảo chấm phát âm tiếng Anh. Người học đọc to câu mẫu, file audio đính kèm là giọng họ.
-                Nghe audio và chấm phát âm SO VỚI câu mẫu. Chú ý âm sai, thiếu từ, trọng âm, độ trôi chảy.
+                Bạn là giám khảo chấm phát âm tiếng Anh. File audio đính kèm là giọng người học.
+
+                BƯỚC 1 — Nghe audio và CHÉP LẠI CHÍNH XÁC những gì NGHE được vào trường "heard".
+                  - Chỉ chép âm thanh THỰC SỰ nghe thấy trong audio. TUYỆT ĐỐI KHÔNG chép câu mẫu nếu không nghe thấy.
+                  - Nếu audio im lặng / không có giọng nói / không nghe rõ -> "heard" = "" (chuỗi rỗng) và "audible" = false.
+                BƯỚC 2 — Chỉ khi audible = true: so "heard" với câu mẫu rồi chấm điểm.
+                  - Nếu audible = false: overall, pronunciation, fluency đều = 0 và words là mảng rỗng [].
+                  - Đọc sai âm, thiếu từ, ngắc ngứ -> trừ điểm mạnh. ĐỪNG cho điểm cao chỉ vì câu mẫu đúng.
+
                 Chỉ trả JSON hợp lệ, KHÔNG markdown, KHÔNG giải thích. Cấu trúc bắt buộc:
                 {
-                  "overall": <0-100 điểm tổng>,
-                  "pronunciation": <0-100 độ chính xác âm>,
-                  "fluency": <0-100 độ trôi chảy>,
+                  "audible": <true nếu nghe thấy giọng nói, false nếu im lặng>,
+                  "heard": "<chính xác lời nghe được, rỗng nếu không nghe thấy>",
+                  "overall": <0-100>,
+                  "pronunciation": <0-100>,
+                  "fluency": <0-100>,
                   "words": [
-                    { "word": "<từ trong câu mẫu, viết thường>", "score": <0-100 điểm từ này> }
+                    { "word": "<từ trong câu mẫu, viết thường>", "score": <0-100> }
                   ]
                 }
-                Quy tắc: words liệt kê đúng thứ tự câu mẫu. Từ phát âm sai/thiếu cho điểm thấp.
-                Câu mẫu: "%s"
+                Câu mẫu (chỉ để so sánh ở BƯỚC 2, KHÔNG được dùng làm "heard"): "%s"
                 """.formatted(referenceText);
 
         Map<String, Object> body = Map.of(
@@ -138,6 +151,23 @@ public class GeminiPronunciationClient implements CloudPronunciationClient {
 
     /** Đổi JSON Gemini -> shape Speechace mà PronunciationScoringMapper đang parse. */
     private JsonNode toScoringShape(JsonNode gemini, String referenceText) {
+        // audible=false -> audio im lặng/không nghe thấy: ép điểm 0, không từ nào.
+        boolean audible = gemini.path("audible").asBoolean(true);
+        if (!audible) {
+            ObjectNode pron = objectMapper.createObjectNode();
+            pron.put("score", 0);
+            ObjectNode flu = objectMapper.createObjectNode();
+            flu.put("score", 0);
+            ObjectNode ts = objectMapper.createObjectNode();
+            ts.put("quality_score", 0);
+            ts.set("pronunciation", pron);
+            ts.set("fluency", flu);
+            ts.set("word_score_list", objectMapper.createArrayNode());
+            ObjectNode r = objectMapper.createObjectNode();
+            r.set("text_score", ts);
+            return r;
+        }
+
         int overall = clamp(gemini.path("overall").asInt(0));
         int pronScore = clamp(gemini.path("pronunciation").asInt(overall));
         int fluencyScore = clamp(gemini.path("fluency").asInt(overall));
