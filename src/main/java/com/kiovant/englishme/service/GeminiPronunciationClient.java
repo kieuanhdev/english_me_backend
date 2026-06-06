@@ -152,6 +152,8 @@ public class GeminiPronunciationClient implements CloudPronunciationClient {
     /** Đổi JSON Gemini -> shape Speechace mà PronunciationScoringMapper đang parse. */
     private JsonNode toScoringShape(JsonNode gemini, String referenceText) {
         // audible=false -> audio im lặng/không nghe thấy: ép điểm 0, không từ nào.
+        String heard = gemini.path("heard").asText("");
+
         boolean audible = gemini.path("audible").asBoolean(true);
         if (!audible) {
             ObjectNode pron = objectMapper.createObjectNode();
@@ -165,6 +167,7 @@ public class GeminiPronunciationClient implements CloudPronunciationClient {
             ts.set("word_score_list", objectMapper.createArrayNode());
             ObjectNode r = objectMapper.createObjectNode();
             r.set("text_score", ts);
+            r.put("transcription", ""); // không nghe thấy gì
             return r;
         }
 
@@ -201,6 +204,7 @@ public class GeminiPronunciationClient implements CloudPronunciationClient {
         textScore.set("word_score_list", wordList);
         ObjectNode root = objectMapper.createObjectNode();
         root.set("text_score", textScore);
+        root.put("transcription", heard); // lời thực Gemini nghe được
         return root;
     }
 

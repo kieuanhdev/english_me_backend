@@ -34,14 +34,22 @@ public class PronunciationScoringMapper {
         }
         wordResults.sort(Comparator.comparingDouble(WordResult::startSec));
 
-        StringBuilder sb = new StringBuilder();
-        for (WordResult wr : wordResults) {
-            if (!sb.isEmpty()) {
-                sb.append(' ');
+        // Nếu provider trả transcription thật (vd Gemini "heard" — lời thực nghe được),
+        // ưu tiên dùng. Speechace không có -> ghép từ word_score_list như cũ.
+        String heard = root.path("transcription").asText("");
+        String transcription;
+        if (!heard.isBlank()) {
+            transcription = heard.trim();
+        } else {
+            StringBuilder sb = new StringBuilder();
+            for (WordResult wr : wordResults) {
+                if (!sb.isEmpty()) {
+                    sb.append(' ');
+                }
+                sb.append(wr.word);
             }
-            sb.append(wr.word);
+            transcription = sb.toString();
         }
-        String transcription = sb.toString();
 
         String[] refWords = referenceText.toLowerCase().split("\\s+");
         double completeness = refWords.length == 0 ? 0
