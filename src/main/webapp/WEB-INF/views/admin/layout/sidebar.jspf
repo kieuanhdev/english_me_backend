@@ -1,3 +1,4 @@
+<%@ page pageEncoding="UTF-8" %>
 <%
     String uri = request.getRequestURI();
     String context = request.getContextPath();
