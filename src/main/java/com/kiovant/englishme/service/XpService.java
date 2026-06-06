@@ -9,6 +9,7 @@ import com.kiovant.englishme.entity.XpHistory;
 import com.kiovant.englishme.entity.XpLedger;
 import com.kiovant.englishme.repository.UserDailyGoalRepository;
 import com.kiovant.englishme.repository.UserRepository;
+import com.kiovant.englishme.repository.UserSkillXpRepository;
 import com.kiovant.englishme.repository.XpHistoryRepository;
 import com.kiovant.englishme.repository.XpLedgerRepository;
 import org.springframework.http.HttpStatus;
@@ -38,10 +39,22 @@ public class XpService {
     /** Fallback nếu xp_rules thiếu row 'daily_goal_bonus' (vd. trước khi V22 chạy). */
     private static final int DAILY_GOAL_BONUS_FALLBACK = 5;
 
+    /**
+     * Quy ước sourceType -> skill cho per-skill XP tracking (V47).
+     * test & daily_goal_bonus KHÔNG có trong map (đa kỹ năng / thưởng) -> không cộng skill.
+     */
+    private static final Map<String, String> SOURCE_TYPE_TO_SKILL = Map.of(
+            "sm2_review", "vocabulary",
+            "pronunciation", "pronunciation",
+            "lesson", "grammar",
+            "exercise", "grammar"
+    );
+
     private final UserRepository userRepository;
     private final XpLedgerRepository ledgerRepository;
     private final UserDailyGoalRepository dailyGoalRepository;
     private final XpHistoryRepository xpHistoryRepository;
+    private final UserSkillXpRepository skillXpRepository;
     private final XpRuleService xpRuleService;
     private final ObjectMapper objectMapper;
 
@@ -49,12 +62,14 @@ public class XpService {
                      XpLedgerRepository ledgerRepository,
                      UserDailyGoalRepository dailyGoalRepository,
                      XpHistoryRepository xpHistoryRepository,
+                     UserSkillXpRepository skillXpRepository,
                      XpRuleService xpRuleService,
                      ObjectMapper objectMapper) {
         this.userRepository = userRepository;
         this.ledgerRepository = ledgerRepository;
         this.dailyGoalRepository = dailyGoalRepository;
         this.xpHistoryRepository = xpHistoryRepository;
+        this.skillXpRepository = skillXpRepository;
         this.xpRuleService = xpRuleService;
         this.objectMapper = objectMapper;
     }
@@ -107,6 +122,13 @@ public class XpService {
                     true,
                     List.of()
             );
+        }
+
+        // Lần đầu cộng: cộng dồn per-skill XP (nếu sourceType map ra skill). Idempotency
+        // đã đảm bảo ở tầng ledger phía trên -> không double-count khi retry.
+        String skill = SOURCE_TYPE_TO_SKILL.get(sourceType);
+        if (skill != null) {
+            skillXpRepository.upsertAdd(userId, skill, amount);
         }
 
         // Lần đầu cộng: cập nhật total_xp + streak + daily goal + xp_history (cộng dồn ngày).

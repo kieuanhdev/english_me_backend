@@ -41,6 +41,12 @@ public interface PronunciationAttemptRepository extends JpaRepository<Pronunciat
     @Query("SELECT COUNT(p) FROM PronunciationAttempt p WHERE p.createdAt >= :since")
     long countSince(LocalDateTime since);
 
+    long countByUser_FirebaseUid(String firebaseUid);
+
+    /** Điểm tổng trung bình của user (null nếu chưa có lần thử nào). */
+    @Query("SELECT AVG(p.overallScore) FROM PronunciationAttempt p WHERE p.user.firebaseUid = :firebaseUid")
+    Double averageOverallScore(@Param("firebaseUid") String firebaseUid);
+
     long countByUser_Id(UUID userId);
 
     List<PronunciationAttempt> findTop50ByUser_IdOrderByCreatedAtDesc(UUID userId);

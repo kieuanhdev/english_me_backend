@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.kiovant.englishme.dto.PronunciationAssessResponse;
 import com.kiovant.englishme.dto.AdminPronunciationAttemptRow;
 import com.kiovant.englishme.dto.PronunciationAttemptHistoryItemResponse;
+import com.kiovant.englishme.dto.PronunciationInsightResponse;
 import com.kiovant.englishme.entity.PronunciationAttempt;
 import com.kiovant.englishme.entity.PronunciationWordFeedback;
 import com.kiovant.englishme.entity.User;
@@ -216,6 +217,62 @@ public class PronunciationAssessmentService {
                 item.getProvider(),
                 item.getCreatedAt()
         )).toList();
+    }
+
+    /**
+     * Insight cá nhân hóa: tổng hợp lịch sử phát âm của user thành điểm TB, các từ yếu nhất
+     * (xếp theo mức lỗi nặng rồi điểm thấp), và phân bố mức độ lỗi.
+     *
+     * @param limit số từ yếu trả về (clamp [1, 50]).
+     */
+    @Transactional(readOnly = true)
+    public PronunciationInsightResponse insights(String firebaseUid, int limit) {
+        int safeLimit = Math.min(Math.max(limit, 1), 50);
+
+        long totalAttempts = attemptRepository.countByUser_FirebaseUid(firebaseUid);
+        Double avg = attemptRepository.averageOverallScore(firebaseUid);
+        int averageScore = avg == null ? 0 : (int) Math.round(avg);
+
+        List<PronunciationInsightResponse.WeakWord> weakWords = new ArrayList<>();
+        for (Object[] row : wordFeedbackRepository.findWeakWords(firebaseUid, PageRequest.of(0, safeLimit))) {
+            String word = (String) row[0];
+            int avgScore = row[1] == null ? 0 : ((Number) row[1]).intValue();
+            long attempts = row[2] == null ? 0 : ((Number) row[2]).longValue();
+            int worstRank = row[3] == null ? 2 : ((Number) row[3]).intValue();
+            String suggestion = (String) row[4];
+            weakWords.add(new PronunciationInsightResponse.WeakWord(
+                    word, avgScore, attempts, rankToIssueType(worstRank), suggestion));
+        }
+
+        long good = 0;
+        long minor = 0;
+        long critical = 0;
+        for (Object[] row : wordFeedbackRepository.countByIssueType(firebaseUid)) {
+            String issueType = (String) row[0];
+            long count = row[1] == null ? 0 : ((Number) row[1]).longValue();
+            switch (issueType == null ? "" : issueType) {
+                case "good" -> good = count;
+                case "minor" -> minor = count;
+                case "critical" -> critical = count;
+                default -> { /* bỏ qua issue_type lạ */ }
+            }
+        }
+
+        return new PronunciationInsightResponse(
+                totalAttempts,
+                averageScore,
+                weakWords,
+                new PronunciationInsightResponse.IssueBreakdown(good, minor, critical)
+        );
+    }
+
+    /** Đảo rank severity (0/1/2) về chuỗi issue_type. */
+    private static String rankToIssueType(int rank) {
+        return switch (rank) {
+            case 0 -> "critical";
+            case 1 -> "minor";
+            default -> "good";
+        };
     }
 
     @Transactional(readOnly = true)

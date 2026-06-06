@@ -4,6 +4,7 @@ import com.google.firebase.auth.FirebaseToken;
 import com.kiovant.englishme.dto.PronunciationAssessResponse;
 import com.kiovant.englishme.dto.PronunciationAssessTextRequest;
 import com.kiovant.englishme.dto.PronunciationAttemptHistoryItemResponse;
+import com.kiovant.englishme.dto.PronunciationInsightResponse;
 import com.kiovant.englishme.entity.PronunciationExercise;
 import com.kiovant.englishme.entity.User;
 import com.kiovant.englishme.repository.PronunciationExerciseRepository;
@@ -107,5 +108,18 @@ public class PronunciationApiController {
         UUID exId = exerciseId != null ? exerciseId : lessonItemId;
         FirebaseToken token = authHelper.verifyBearer(authorization);
         return pronunciationAssessmentService.history(token.getUid(), exId, limit);
+    }
+
+    /**
+     * Insight cá nhân hóa phát âm: điểm TB, các từ phát âm yếu nhất, phân bố mức lỗi.
+     * Tổng hợp từ toàn bộ lịch sử assess của user.
+     */
+    @GetMapping("/insights")
+    public PronunciationInsightResponse insights(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestParam(value = "limit", required = false, defaultValue = "10") int limit
+    ) {
+        FirebaseToken token = authHelper.verifyBearer(authorization);
+        return pronunciationAssessmentService.insights(token.getUid(), limit);
     }
 }

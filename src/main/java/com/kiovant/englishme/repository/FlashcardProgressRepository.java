@@ -1,5 +1,6 @@
 package com.kiovant.englishme.repository;
 
+import com.kiovant.englishme.entity.Flashcard;
 import com.kiovant.englishme.entity.FlashcardProgress;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -73,6 +74,19 @@ public interface FlashcardProgressRepository extends JpaRepository<FlashcardProg
               )
             """)
     long countUnseenFlashcards(UUID userId, UUID deskId);
+
+    /**
+     * Thẻ "yếu nhất / cần ôn nhất" của user trên TẤT CẢ desk — cho Word of Day cá nhân hóa.
+     * Ưu tiên thẻ đã tới hạn ôn (next_review_at <= now), khó nhất (easiness thấp) lên trước.
+     * Chỉ lấy thẻ user ĐÃ học (có progress row) để đảm bảo là "gap" thật của user.
+     */
+    @Query("""
+            SELECT p.flashcard FROM FlashcardProgress p
+            WHERE p.user.id = :userId
+              AND (p.nextReviewAt IS NULL OR p.nextReviewAt <= :now)
+            ORDER BY p.easinessFactor ASC, p.nextReviewAt ASC NULLS FIRST
+            """)
+    List<Flashcard> findWeakestDueFlashcards(UUID userId, LocalDateTime now, Pageable pageable);
 
     void deleteByUser_Id(UUID userId);
 }

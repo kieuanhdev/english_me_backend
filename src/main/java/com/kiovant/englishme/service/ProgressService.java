@@ -12,12 +12,14 @@ import com.kiovant.englishme.entity.Badge;
 import com.kiovant.englishme.entity.User;
 import com.kiovant.englishme.entity.UserBadge;
 import com.kiovant.englishme.entity.UserDailyGoal;
+import com.kiovant.englishme.entity.UserSkillXp;
 import com.kiovant.englishme.entity.XpHistory;
 import com.kiovant.englishme.entity.XpLedger;
 import com.kiovant.englishme.repository.BadgeRepository;
 import com.kiovant.englishme.repository.UserBadgeRepository;
 import com.kiovant.englishme.repository.UserDailyGoalRepository;
 import com.kiovant.englishme.repository.UserRepository;
+import com.kiovant.englishme.repository.UserSkillXpRepository;
 import com.kiovant.englishme.repository.XpHistoryRepository;
 import com.kiovant.englishme.repository.XpLedgerRepository;
 import org.springframework.data.domain.PageRequest;
@@ -53,19 +55,22 @@ public class ProgressService {
     private final UserBadgeRepository userBadgeRepository;
     private final XpLedgerRepository xpLedgerRepository;
     private final UserDailyGoalRepository userDailyGoalRepository;
+    private final UserSkillXpRepository userSkillXpRepository;
 
     public ProgressService(UserRepository userRepository,
                            XpHistoryRepository xpHistoryRepository,
                            BadgeRepository badgeRepository,
                            UserBadgeRepository userBadgeRepository,
                            XpLedgerRepository xpLedgerRepository,
-                           UserDailyGoalRepository userDailyGoalRepository) {
+                           UserDailyGoalRepository userDailyGoalRepository,
+                           UserSkillXpRepository userSkillXpRepository) {
         this.userRepository = userRepository;
         this.xpHistoryRepository = xpHistoryRepository;
         this.badgeRepository = badgeRepository;
         this.userBadgeRepository = userBadgeRepository;
         this.xpLedgerRepository = xpLedgerRepository;
         this.userDailyGoalRepository = userDailyGoalRepository;
+        this.userSkillXpRepository = userSkillXpRepository;
     }
 
     @Transactional(readOnly = true)
@@ -78,14 +83,17 @@ public class ProgressService {
         int weekXp = xpHistoryRepository.sumXpBetween(user.getId(), weekStart, today);
         int activeDays = xpHistoryRepository.countActiveDaysBetween(user.getId(), weekStart, today);
 
-        // MVP: skill scores derive from totalXp split — placeholder values
-        // Tracking per-skill XP is not in scope yet; expose flat distribution
-        int total = user.getTotalXp() != null ? user.getTotalXp() : 0;
+        // Per-skill XP thật từ user_skill_xp (V47). XpService.grant cộng dồn theo skill
+        // mỗi lần grant. Skill chưa có nguồn XP (vd listening) -> không có row -> 0.
+        Map<String, Integer> skillXp = new HashMap<>();
+        for (UserSkillXp row : userSkillXpRepository.findByUserId(user.getId())) {
+            skillXp.put(row.getSkill(), row.getXp() == null ? 0 : row.getXp());
+        }
         List<SkillScore> skills = List.of(
-                new SkillScore("vocabulary", total),
-                new SkillScore("grammar", total),
-                new SkillScore("pronunciation", total),
-                new SkillScore("listening", 0)
+                new SkillScore("vocabulary", skillXp.getOrDefault("vocabulary", 0)),
+                new SkillScore("grammar", skillXp.getOrDefault("grammar", 0)),
+                new SkillScore("pronunciation", skillXp.getOrDefault("pronunciation", 0)),
+                new SkillScore("listening", skillXp.getOrDefault("listening", 0))
         );
 
         WeekSummary week = new WeekSummary(weekXp, activeDays, 0);
