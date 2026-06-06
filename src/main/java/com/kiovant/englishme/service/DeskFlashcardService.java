@@ -96,12 +96,10 @@ public class DeskFlashcardService {
     @Transactional
     public DeskResponse createDesk(String firebaseUid, CreateDeskRequest req) {
         User owner = getUserByFirebaseUidOrThrow(firebaseUid);
-        requireCefrLevel(req);
         requireNonNegativeSortOrder(req);
-        String cefr = req.cefrLevel().trim().toUpperCase();
-        if (deskRepository.findByOwner_IdAndCefrLevel(owner.getId(), cefr).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Desk already exists for CEFR " + cefr + " on your account");
-        }
+        // Desk cá nhân không còn ràng buộc theo CEFR (V45 drop uq_desk_owner_cefr).
+        // Cột cefr_level vẫn NOT NULL → gán mặc định khi client không gửi.
+        String cefr = normalizeCefrOrDefault(req.cefrLevel());
         int defaultOrder = deskRepository.findMaxSortOrderByOwnerId(owner.getId()) + 1;
         return buildAndSaveDesk(req, owner, cefr, defaultOrder);
     }
@@ -132,14 +130,9 @@ public class DeskFlashcardService {
         User owner = getUserByFirebaseUidOrThrow(firebaseUid);
         Desk desk = getDeskOrThrow(deskId, owner.getId());
 
+        // CEFR cá nhân không còn ràng buộc duy nhất (V45) → chỉ cập nhật nếu client gửi.
         if (req.cefrLevel() != null && !req.cefrLevel().isBlank()) {
-            String cefr = req.cefrLevel().trim().toUpperCase();
-            deskRepository.findByOwner_IdAndCefrLevel(owner.getId(), cefr)
-                    .filter(existing -> !existing.getId().equals(deskId))
-                    .ifPresent(existing -> {
-                        throw new ResponseStatusException(HttpStatus.CONFLICT, "Desk already exists for CEFR " + cefr + " on your account");
-                    });
-            desk.setCefrLevel(cefr);
+            desk.setCefrLevel(req.cefrLevel().trim().toUpperCase());
         }
 
         if (req.title() != null) {
@@ -306,6 +299,14 @@ public class DeskFlashcardService {
         if (req.cefrLevel() == null || req.cefrLevel().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "cefrLevel is required");
         }
+    }
+
+    /// Chuẩn hoá CEFR client gửi; rỗng/null -> mặc định "A1" (chỉ để thoả cột NOT NULL).
+    private static String normalizeCefrOrDefault(String cefrLevel) {
+        if (cefrLevel == null || cefrLevel.isBlank()) {
+            return "A1";
+        }
+        return cefrLevel.trim().toUpperCase();
     }
 
     private static void requireNonNegativeSortOrder(CreateDeskRequest req) {
