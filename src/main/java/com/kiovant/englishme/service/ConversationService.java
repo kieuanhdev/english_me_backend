@@ -7,13 +7,8 @@ import com.kiovant.englishme.dto.ConversationMessageDto;
 import com.kiovant.englishme.dto.ConversationSummaryResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
-import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,38 +29,26 @@ public class ConversationService {
 
     private static final Logger log = LoggerFactory.getLogger(ConversationService.class);
 
-    private static final String DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
-    private static final String MODEL = "deepseek-chat";
-    private static final String CONFIG_KEY = "DEEPSEEK_API_KEY";
-
     /** Chặn lạm dụng: tối đa 10 lượt user + 10 assistant + đệm. */
     private static final int MAX_HISTORY = 24;
     /** Trả lời ngắn như nói chuyện thật -> ít token. */
     private static final int CHAT_MAX_TOKENS = 160;
     private static final int SUMMARY_MAX_TOKENS = 700;
 
-    private final AppConfigService appConfigService;
+    private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
-    private final RestClient restClient;
 
-    public ConversationService(AppConfigService appConfigService, ObjectMapper objectMapper) {
-        this.appConfigService = appConfigService;
+    public ConversationService(LlmClient llmClient, ObjectMapper objectMapper) {
+        this.llmClient = llmClient;
         this.objectMapper = objectMapper;
-        ClientHttpRequestFactorySettings settings = ClientHttpRequestFactorySettings.defaults()
-                .withConnectTimeout(Duration.ofSeconds(5))
-                .withReadTimeout(Duration.ofSeconds(30));
-        this.restClient = RestClient.builder()
-                .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings))
-                .build();
     }
 
     // ── Chat ──────────────────────────────────────────────────────────────────
 
     public ConversationChatResponse chat(String topic, List<ConversationMessageDto> history) {
         String safeTopic = normalizeTopic(topic);
-        String apiKey = appConfigService.getValue(CONFIG_KEY);
-        if (apiKey == null || apiKey.isBlank()) {
-            log.warn("DEEPSEEK_API_KEY chưa cấu hình — fallback chat tĩnh");
+        if (!llmClient.isConfigured()) {
+            log.warn("LLM chưa cấu hình — fallback chat tĩnh");
             return new ConversationChatResponse(fallbackReply(history));
         }
         try {
@@ -84,30 +67,13 @@ public class ConversationService {
                         "content", "Start the conversation with a short friendly greeting about the topic."));
             }
 
-            Map<String, Object> body = Map.of(
-                    "model", MODEL,
-                    "messages", messages,
-                    "temperature", 0.7,
-                    "max_tokens", CHAT_MAX_TOKENS,
-                    "stream", false
-            );
-
-            String raw = restClient.post()
-                    .uri(DEEPSEEK_URL)
-                    .header("Authorization", "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
-
-            JsonNode root = objectMapper.readTree(raw);
-            String reply = root.path("choices").path(0).path("message").path("content").asText("").trim();
+            String reply = llmClient.chatCompletion(messages, 0.7, CHAT_MAX_TOKENS, false);
             if (reply.isEmpty()) {
                 return new ConversationChatResponse(fallbackReply(history));
             }
             return new ConversationChatResponse(reply);
         } catch (Exception ex) {
-            log.error("DeepSeek chat lỗi, fallback: {}", ex.getMessage());
+            log.error("LLM chat lỗi, fallback: {}", ex.getMessage());
             return new ConversationChatResponse(fallbackReply(history));
         }
     }
@@ -116,9 +82,8 @@ public class ConversationService {
 
     public ConversationSummaryResponse summarize(String topic, List<ConversationMessageDto> history) {
         String safeTopic = normalizeTopic(topic);
-        String apiKey = appConfigService.getValue(CONFIG_KEY);
-        if (apiKey == null || apiKey.isBlank()) {
-            log.warn("DEEPSEEK_API_KEY chưa cấu hình — fallback summary tĩnh");
+        if (!llmClient.isConfigured()) {
+            log.warn("LLM chưa cấu hình — fallback summary tĩnh");
             return fallbackSummary();
         }
         try {
@@ -133,39 +98,24 @@ public class ConversationService {
 
             String userPrompt = "Chủ đề: \"" + safeTopic + "\"\nHội thoại:\n" + transcript;
 
-            Map<String, Object> body = Map.of(
-                    "model", MODEL,
-                    "messages", List.of(
+            String content = llmClient.chatCompletion(
+                    List.of(
                             Map.of("role", "system", "content", summarySystemPrompt(safeTopic)),
                             Map.of("role", "user", "content", userPrompt)
                     ),
-                    "temperature", 0,
-                    "max_tokens", SUMMARY_MAX_TOKENS,
-                    "response_format", Map.of("type", "json_object"),
-                    "stream", false
-            );
+                    0, SUMMARY_MAX_TOKENS, true);
 
-            String raw = restClient.post()
-                    .uri(DEEPSEEK_URL)
-                    .header("Authorization", "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
-
-            return parseSummary(raw);
+            return parseSummary(content);
         } catch (Exception ex) {
-            log.error("DeepSeek summary lỗi, fallback: {}", ex.getMessage());
+            log.error("LLM summary lỗi, fallback: {}", ex.getMessage());
             return fallbackSummary();
         }
     }
 
-    private ConversationSummaryResponse parseSummary(String raw) {
+    private ConversationSummaryResponse parseSummary(String content) {
         try {
-            JsonNode root = objectMapper.readTree(raw);
-            String content = root.path("choices").path(0).path("message").path("content").asText("");
-            if (content.isBlank()) {
-                throw new IllegalStateException("DeepSeek trả nội dung rỗng");
+            if (content == null || content.isBlank()) {
+                throw new IllegalStateException("LLM trả nội dung rỗng");
             }
             JsonNode p = objectMapper.readTree(content);
             int score = Math.min(Math.max(p.path("overallScore").asInt(0), 0), 100);

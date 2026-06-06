@@ -6,13 +6,8 @@ import com.kiovant.englishme.dto.PronunciationAssessResponse;
 import com.kiovant.englishme.dto.PronunciationErrorDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
-import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,42 +24,30 @@ public class DeepSeekPronunciationScorer {
 
     private static final Logger log = LoggerFactory.getLogger(DeepSeekPronunciationScorer.class);
 
-    private static final String DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
-    private static final String MODEL = "deepseek-chat";
-    private static final String CONFIG_KEY = "DEEPSEEK_API_KEY";
-
-    private final AppConfigService appConfigService;
+    private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
-    private final RestClient restClient;
 
-    public DeepSeekPronunciationScorer(AppConfigService appConfigService, ObjectMapper objectMapper) {
-        this.appConfigService = appConfigService;
+    public DeepSeekPronunciationScorer(LlmClient llmClient, ObjectMapper objectMapper) {
+        this.llmClient = llmClient;
         this.objectMapper = objectMapper;
-        ClientHttpRequestFactorySettings settings = ClientHttpRequestFactorySettings.defaults()
-                .withConnectTimeout(Duration.ofSeconds(5))
-                .withReadTimeout(Duration.ofSeconds(20));
-        this.restClient = RestClient.builder()
-                .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings))
-                .build();
     }
 
     public PronunciationAssessResponse score(String referenceText, String spokenText) {
-        String apiKey = appConfigService.getValue(CONFIG_KEY);
-        if (apiKey == null || apiKey.isBlank()) {
-            log.warn("DEEPSEEK_API_KEY chưa cấu hình — fallback Levenshtein");
+        if (!llmClient.isConfigured()) {
+            log.warn("LLM chưa cấu hình — fallback Levenshtein");
             return fallbackScore(referenceText, spokenText);
         }
         try {
-            return scoreWithDeepSeek(apiKey, referenceText, spokenText);
+            return scoreWithLlm(referenceText, spokenText);
         } catch (Exception ex) {
-            log.error("DeepSeek scoring lỗi, fallback Levenshtein: {}", ex.getMessage());
+            log.error("LLM scoring lỗi, fallback Levenshtein: {}", ex.getMessage());
             return fallbackScore(referenceText, spokenText);
         }
     }
 
-    // ── DeepSeek ────────────────────────────────────────────────────────────
+    // ── LLM ────────────────────────────────────────────────────────────
 
-    private PronunciationAssessResponse scoreWithDeepSeek(String apiKey, String referenceText, String spokenText) {
+    private PronunciationAssessResponse scoreWithLlm(String referenceText, String spokenText) {
         String systemPrompt = """
                 Bạn là giám khảo chấm phát âm tiếng Anh. Người học đọc một câu mẫu, hệ thống nhận dạng giọng nói
                 đã chuyển thành văn bản. Hãy so sánh văn bản người học nói được với câu mẫu và chấm điểm.
@@ -86,34 +69,20 @@ public class DeepSeekPronunciationScorer {
         String userPrompt = "Câu mẫu: \"" + referenceText + "\"\n"
                 + "Người học nói được: \"" + spokenText + "\"";
 
-        Map<String, Object> body = Map.of(
-                "model", MODEL,
-                "messages", List.of(
+        String content = llmClient.chatCompletion(
+                List.of(
                         Map.of("role", "system", "content", systemPrompt),
                         Map.of("role", "user", "content", userPrompt)
                 ),
-                "temperature", 0,
-                "response_format", Map.of("type", "json_object"),
-                "stream", false
-        );
+                0, 800, true);
 
-        String raw = restClient.post()
-                .uri(DEEPSEEK_URL)
-                .header("Authorization", "Bearer " + apiKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .body(String.class);
-
-        return parseDeepSeekResponse(raw, referenceText, spokenText);
+        return parseLlmResponse(content, referenceText, spokenText);
     }
 
-    private PronunciationAssessResponse parseDeepSeekResponse(String raw, String referenceText, String spokenText) {
+    private PronunciationAssessResponse parseLlmResponse(String content, String referenceText, String spokenText) {
         try {
-            JsonNode root = objectMapper.readTree(raw);
-            String content = root.path("choices").path(0).path("message").path("content").asText("");
-            if (content.isBlank()) {
-                throw new IllegalStateException("DeepSeek trả nội dung rỗng");
+            if (content == null || content.isBlank()) {
+                throw new IllegalStateException("LLM trả nội dung rỗng");
             }
             JsonNode parsed = objectMapper.readTree(content);
 

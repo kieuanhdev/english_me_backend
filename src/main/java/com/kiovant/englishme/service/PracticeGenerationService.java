@@ -6,13 +6,8 @@ import com.kiovant.englishme.dto.GeneratedQuestion;
 import com.kiovant.englishme.entity.LearningLesson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
-import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -30,33 +25,21 @@ public class PracticeGenerationService {
 
     private static final Logger log = LoggerFactory.getLogger(PracticeGenerationService.class);
 
-    private static final String DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
-    private static final String MODEL = "deepseek-chat";
-    private static final String CONFIG_KEY = "DEEPSEEK_API_KEY";
-
     private static final int MAX_COUNT = 10;
     private static final int MAX_EXISTING = 40;
 
-    private final AppConfigService appConfigService;
+    private final LlmClient llmClient;
     private final ObjectMapper objectMapper;
-    private final RestClient restClient;
 
-    public PracticeGenerationService(AppConfigService appConfigService, ObjectMapper objectMapper) {
-        this.appConfigService = appConfigService;
+    public PracticeGenerationService(LlmClient llmClient, ObjectMapper objectMapper) {
+        this.llmClient = llmClient;
         this.objectMapper = objectMapper;
-        ClientHttpRequestFactorySettings settings = ClientHttpRequestFactorySettings.defaults()
-                .withConnectTimeout(Duration.ofSeconds(5))
-                .withReadTimeout(Duration.ofSeconds(30));
-        this.restClient = RestClient.builder()
-                .requestFactory(ClientHttpRequestFactoryBuilder.detect().build(settings))
-                .build();
     }
 
     public List<GeneratedQuestion> generate(LearningLesson lesson, List<String> existingQuestions, int count) {
         int n = (count <= 0 || count > MAX_COUNT) ? 5 : count;
-        String apiKey = appConfigService.getValue(CONFIG_KEY);
-        if (apiKey == null || apiKey.isBlank()) {
-            log.warn("DEEPSEEK_API_KEY chưa cấu hình — không gen được câu luyện tập");
+        if (!llmClient.isConfigured()) {
+            log.warn("LLM chưa cấu hình — không gen được câu luyện tập");
             return List.of();
         }
         try {
@@ -68,27 +51,14 @@ public class PracticeGenerationService {
                     + "Các câu hỏi đã có (TRÁNH tạo trùng hoặc gần giống):\n" + existingList + "\n\n"
                     + "Hãy tạo " + n + " câu hỏi trắc nghiệm MỚI.";
 
-            Map<String, Object> body = Map.of(
-                    "model", MODEL,
-                    "messages", List.of(
+            String content = llmClient.chatCompletion(
+                    List.of(
                             Map.of("role", "system", "content", systemPrompt(n)),
                             Map.of("role", "user", "content", userPrompt)
                     ),
-                    "temperature", 0.8,
-                    "max_tokens", 1100,
-                    "response_format", Map.of("type", "json_object"),
-                    "stream", false
-            );
+                    0.8, 1100, true);
 
-            String raw = restClient.post()
-                    .uri(DEEPSEEK_URL)
-                    .header("Authorization", "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(String.class);
-
-            return parse(raw, n);
+            return parse(content, n);
         } catch (Exception ex) {
             log.error("Gen câu luyện tập lỗi: {}", ex.getMessage());
             return List.of();
@@ -97,12 +67,10 @@ public class PracticeGenerationService {
 
     // ── Parse ──────────────────────────────────────────────────────────────────
 
-    private List<GeneratedQuestion> parse(String raw, int wanted) {
+    private List<GeneratedQuestion> parse(String content, int wanted) {
         List<GeneratedQuestion> out = new ArrayList<>();
         try {
-            JsonNode root = objectMapper.readTree(raw);
-            String content = root.path("choices").path(0).path("message").path("content").asText("");
-            if (content.isBlank()) {
+            if (content == null || content.isBlank()) {
                 return out;
             }
             JsonNode parsed = objectMapper.readTree(content);
