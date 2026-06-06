@@ -5,7 +5,8 @@
 <%
     @SuppressWarnings("unchecked")
     Page<TestSession> sessionsPage = (Page<TestSession>) request.getAttribute("sessionsPage");
-    var sessions = sessionsPage == null ? java.util.List.of() : sessionsPage.getContent();
+    java.util.List<TestSession> sessions = sessionsPage == null
+            ? java.util.Collections.<TestSession>emptyList() : sessionsPage.getContent();
     Integer currentPage = (Integer) request.getAttribute("currentPage");
     Integer pageSize = (Integer) request.getAttribute("pageSize");
     if (currentPage == null) currentPage = 0;
