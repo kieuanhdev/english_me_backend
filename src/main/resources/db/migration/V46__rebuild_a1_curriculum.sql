@@ -1230,3 +1230,258 @@ UPDATE learning_units SET review_lesson_id = 'a1-u07-l5' WHERE id = 'a1-u07';
 UPDATE learning_units SET review_lesson_id = 'a1-u08-l5' WHERE id = 'a1-u08';
 UPDATE learning_units SET review_lesson_id = 'a1-u09-l5' WHERE id = 'a1-u09';
 UPDATE learning_units SET review_lesson_id = 'a1-u10-l5' WHERE id = 'a1-u10';
+
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║ BƯỚC 3 — LÀM DÀY 40 lesson nội dung → mỗi lesson 6 practice + 6 quiz       ║
+-- ║ (chuẩn Busuu/Babbel ~12 câu/lesson). display_order bắt đầu từ 20 (cao hơn  ║
+-- ║  mọi display_order hiện có ≤9) để không đụng UNIQUE(lesson_id,display_order)║
+-- ║  Unit Review (l5) giữ nguyên 10 quiz, KHÔNG thêm.                           ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
+
+-- ── UNIT 1 ───────────────────────────────────────────────────────────────────
+INSERT INTO learning_lesson_activities (id, lesson_id, activity_type, display_order, phase, difficulty, counts_toward_mastery, payload) VALUES
+ -- u01-l1 (need +3 prac, +1 quiz)
+ ('a1-u01-l1-p4','a1-u01-l1','multiple_choice',20,'practice','easy',false,'{"question":"Gặp ai buổi tối, bạn nói:","options":[{"id":"a","text":"Good evening"},{"id":"b","text":"Good morning"},{"id":"c","text":"Goodbye"}],"correctOptionId":"a","explanationVi":"Good evening = chào buổi tối."}'::jsonb),
+ ('a1-u01-l1-p5','a1-u01-l1','vocabulary_match',21,'practice','medium',false,'{"question":"Nối lời chào/tạm biệt:","pairs":[{"left":"Hi","right":"Chào (thân mật)"},{"left":"See you","right":"Hẹn gặp lại"},{"left":"Goodbye","right":"Tạm biệt"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u01-l1-p6','a1-u01-l1','grammar_fill_blank',22,'practice','medium',false,'{"question":"Tạm biệt: \"___, see you tomorrow.\"","acceptedAnswers":["Goodbye","Bye"],"explanationVi":"Goodbye = tạm biệt."}'::jsonb),
+ ('a1-u01-l1-q6','a1-u01-l1','multiple_choice',23,'quiz','medium',true,'{"question":"Lời chào buổi tối:","options":[{"id":"a","text":"Good evening"},{"id":"b","text":"Good morning"},{"id":"c","text":"Good afternoon"}],"correctOptionId":"a","explanationVi":"Good evening = chào buổi tối."}'::jsonb),
+ -- u01-l2 (need +2 prac, +1 quiz)
+ ('a1-u01-l2-p5','a1-u01-l2','multiple_choice',20,'practice','easy',false,'{"question":"Đại từ cho \"a book\" (đồ vật):","options":[{"id":"a","text":"it"},{"id":"b","text":"he"},{"id":"c","text":"she"}],"correctOptionId":"a","explanationVi":"Đồ vật → it."}'::jsonb),
+ ('a1-u01-l2-p6','a1-u01-l2','grammar_fill_blank',21,'practice','medium',false,'{"question":"Nam and I → ___ are friends. (đại từ)","acceptedAnswers":["We","we"],"explanationVi":"Nam and I = We."}'::jsonb),
+ ('a1-u01-l2-q6','a1-u01-l2','multiple_choice',22,'quiz','medium',true,'{"question":"Đại từ cho \"Mai and Lan\":","options":[{"id":"a","text":"they"},{"id":"b","text":"we"},{"id":"c","text":"she"}],"correctOptionId":"a","explanationVi":"hai người khác → they."}'::jsonb),
+ -- u01-l3 (need +3 prac, +1 quiz)
+ ('a1-u01-l3-p4','a1-u01-l3','multiple_choice',20,'practice','easy',false,'{"question":"We ___ students.","options":[{"id":"a","text":"are"},{"id":"b","text":"is"},{"id":"c","text":"am"}],"correctOptionId":"a","explanationVi":"We + are."}'::jsonb),
+ ('a1-u01-l3-p5','a1-u01-l3','grammar_fill_blank',21,'practice','medium',false,'{"question":"\"It ___ a dog.\" (to be)","acceptedAnswers":["is"],"explanationVi":"It + is."}'::jsonb),
+ ('a1-u01-l3-p6','a1-u01-l3','vocabulary_match',22,'practice','medium',false,'{"question":"Nối chủ ngữ với to be:","pairs":[{"left":"I","right":"am"},{"left":"She","right":"is"},{"left":"They","right":"are"}],"explanationVi":"I-am, She-is, They-are."}'::jsonb),
+ ('a1-u01-l3-q6','a1-u01-l3','grammar_fill_blank',23,'quiz','hard',true,'{"question":"\"My friends ___ kind.\" (to be)","acceptedAnswers":["are"],"explanationVi":"số nhiều → are."}'::jsonb),
+ -- u01-l4 (need +3 prac, +1 quiz)
+ ('a1-u01-l4-p4','a1-u01-l4','multiple_choice',20,'practice','easy',false,'{"question":"Giới thiệu nhóm: \"___ are my friends.\"","options":[{"id":"a","text":"These"},{"id":"b","text":"This"},{"id":"c","text":"That"}],"correctOptionId":"a","explanationVi":"số nhiều → These."}'::jsonb),
+ ('a1-u01-l4-p5','a1-u01-l4','vocabulary_match',21,'practice','medium',false,'{"question":"Nối từ:","pairs":[{"left":"student","right":"sinh viên"},{"left":"from","right":"đến từ"},{"left":"name","right":"tên"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u01-l4-p6','a1-u01-l4','grammar_fill_blank',22,'practice','medium',false,'{"question":"\"___ is my friend, Nam.\" (giới thiệu 1 người)","acceptedAnswers":["This"],"explanationVi":"This is..."}'::jsonb),
+ ('a1-u01-l4-q6','a1-u01-l4','multiple_choice',23,'quiz','medium',true,'{"question":"\"Where are you from?\" hỏi điều gì?","options":[{"id":"a","text":"quê quán"},{"id":"b","text":"tên"},{"id":"c","text":"tuổi"}],"correctOptionId":"a","explanationVi":"Where from = hỏi quê quán."}'::jsonb);
+
+-- ── UNIT 2 ───────────────────────────────────────────────────────────────────
+INSERT INTO learning_lesson_activities (id, lesson_id, activity_type, display_order, phase, difficulty, counts_toward_mastery, payload) VALUES
+ -- u02-l1 (+3 prac, +1 quiz)
+ ('a1-u02-l1-p4','a1-u02-l1','multiple_choice',20,'practice','easy',false,'{"question":"Chị/em gái là:","options":[{"id":"a","text":"sister"},{"id":"b","text":"brother"},{"id":"c","text":"mother"}],"correctOptionId":"a","explanationVi":"sister = chị/em gái."}'::jsonb),
+ ('a1-u02-l1-p5','a1-u02-l1','grammar_fill_blank',21,'practice','medium',false,'{"question":"My ___ and mother are teachers. (bố)","acceptedAnswers":["father"],"explanationVi":"father = bố."}'::jsonb),
+ ('a1-u02-l1-p6','a1-u02-l1','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"parents","right":"bố mẹ"},{"left":"brother","right":"anh/em trai"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u02-l1-q6','a1-u02-l1','multiple_choice',23,'quiz','hard',true,'{"question":"\"father\" và \"mother\" gọi chung:","options":[{"id":"a","text":"parents"},{"id":"b","text":"sisters"},{"id":"c","text":"children"}],"correctOptionId":"a","explanationVi":"parents = bố mẹ."}'::jsonb),
+ -- u02-l2 (+3 prac, +1 quiz)
+ ('a1-u02-l2-p4','a1-u02-l2','multiple_choice',20,'practice','easy',false,'{"question":"\"___ name is Nam.\" (của tôi)","options":[{"id":"a","text":"My"},{"id":"b","text":"Me"},{"id":"c","text":"I"}],"correctOptionId":"a","explanationVi":"My name = tên của tôi."}'::jsonb),
+ ('a1-u02-l2-p5','a1-u02-l2','grammar_fill_blank',21,'practice','medium',false,'{"question":"They love ___ school. (của họ)","acceptedAnswers":["their"],"explanationVi":"their = của họ."}'::jsonb),
+ ('a1-u02-l2-p6','a1-u02-l2','vocabulary_match',22,'practice','medium',false,'{"question":"Nối sở hữu:","pairs":[{"left":"his","right":"của anh ấy"},{"left":"her","right":"của cô ấy"},{"left":"our","right":"của chúng tôi"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u02-l2-q6','a1-u02-l2','multiple_choice',23,'quiz','hard',true,'{"question":"\"It is the dog. ___ name is Rex.\" (của nó)","options":[{"id":"a","text":"Its"},{"id":"b","text":"It''s"},{"id":"c","text":"His"}],"correctOptionId":"a","explanationVi":"Its = của nó (không có dấu '')."}'::jsonb),
+ -- u02-l3 (+3 prac, +1 quiz)
+ ('a1-u02-l3-p4','a1-u02-l3','multiple_choice',20,'practice','easy',false,'{"question":"\"thấp\" là:","options":[{"id":"a","text":"short"},{"id":"b","text":"tall"},{"id":"c","text":"young"}],"correctOptionId":"a","explanationVi":"short = thấp."}'::jsonb),
+ ('a1-u02-l3-p5','a1-u02-l3','grammar_fill_blank',21,'practice','medium',false,'{"question":"My grandfather is ___. (già)","acceptedAnswers":["old"],"explanationVi":"old = già."}'::jsonb),
+ ('a1-u02-l3-p6','a1-u02-l3','vocabulary_match',22,'practice','medium',false,'{"question":"Nối tính từ:","pairs":[{"left":"tall","right":"cao"},{"left":"young","right":"trẻ"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u02-l3-q6','a1-u02-l3','multiple_choice',23,'quiz','hard',true,'{"question":"Câu ĐÚNG (số nhiều):","options":[{"id":"a","text":"They are tall."},{"id":"b","text":"They is tall."},{"id":"c","text":"They are a tall."}],"correctOptionId":"a","explanationVi":"They are + adj."}'::jsonb),
+ -- u02-l4 (+3 prac, +1 quiz)
+ ('a1-u02-l4-p4','a1-u02-l4','multiple_choice',20,'practice','easy',false,'{"question":"\"túi của Lan\" =","options":[{"id":"a","text":"Lan''s bag"},{"id":"b","text":"Lan bag"},{"id":"c","text":"bag Lan"}],"correctOptionId":"a","explanationVi":"Lan''s bag."}'::jsonb),
+ ('a1-u02-l4-p5','a1-u02-l4','grammar_fill_blank',21,'practice','medium',false,'{"question":"\"Mẹ của Tom\": Tom___ mother. (thêm ''s)","acceptedAnswers":["''s","s"],"explanationVi":"Tom''s mother."}'::jsonb),
+ ('a1-u02-l4-p6','a1-u02-l4','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"Nam''s book","right":"sách của Nam"},{"left":"my book","right":"sách của tôi"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u02-l4-q6','a1-u02-l4','multiple_choice',24,'quiz','hard',true,'{"question":"''s dùng để:","options":[{"id":"a","text":"chỉ sở hữu"},{"id":"b","text":"chỉ số nhiều"},{"id":"c","text":"chỉ quá khứ"}],"correctOptionId":"a","explanationVi":"''s = sở hữu."}'::jsonb);
+
+-- ── UNIT 3 ───────────────────────────────────────────────────────────────────
+INSERT INTO learning_lesson_activities (id, lesson_id, activity_type, display_order, phase, difficulty, counts_toward_mastery, payload) VALUES
+ -- u03-l1 (+3 prac, +1 quiz)
+ ('a1-u03-l1-p3b','a1-u03-l1','multiple_choice',20,'practice','easy',false,'{"question":"Buổi sáng đầu tiên làm gì?","options":[{"id":"a","text":"wake up"},{"id":"b","text":"go to bed"},{"id":"c","text":"have dinner"}],"correctOptionId":"a","explanationVi":"wake up = thức dậy."}'::jsonb),
+ ('a1-u03-l1-p4','a1-u03-l1','grammar_fill_blank',21,'practice','medium',false,'{"question":"I ___ to school at 7. (đi)","acceptedAnswers":["go"],"explanationVi":"go to school = đi học."}'::jsonb),
+ ('a1-u03-l1-p5','a1-u03-l1','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"eat breakfast","right":"ăn sáng"},{"left":"go to school","right":"đi học"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u03-l1-q5','a1-u03-l1','multiple_choice',23,'quiz','hard',true,'{"question":"Hành động buổi tối trước khi ngủ:","options":[{"id":"a","text":"go to bed"},{"id":"b","text":"wake up"},{"id":"c","text":"eat breakfast"}],"correctOptionId":"a","explanationVi":"go to bed = đi ngủ."}'::jsonb),
+ ('a1-u03-l1-q6','a1-u03-l1','vocabulary_match',24,'quiz','hard',true,'{"question":"Nối hành động hằng ngày:","pairs":[{"left":"wake up","right":"thức dậy"},{"left":"go to school","right":"đi học"},{"left":"go to bed","right":"đi ngủ"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ -- u03-l2 (+3 prac, +1 quiz)
+ ('a1-u03-l2-p4','a1-u03-l2','multiple_choice',20,'practice','easy',false,'{"question":"She ___ to school. (đi)","options":[{"id":"a","text":"goes"},{"id":"b","text":"go"},{"id":"c","text":"going"}],"correctOptionId":"a","explanationVi":"She + goes."}'::jsonb),
+ ('a1-u03-l2-p5','a1-u03-l2','grammar_fill_blank',21,'practice','medium',false,'{"question":"They ___ football. (chơi — không thêm s)","acceptedAnswers":["play"],"explanationVi":"They + play."}'::jsonb),
+ ('a1-u03-l2-p6','a1-u03-l2','multiple_choice',22,'practice','hard',false,'{"question":"Câu hỏi ĐÚNG:","options":[{"id":"a","text":"Do you like tea?"},{"id":"b","text":"Does you like tea?"},{"id":"c","text":"You do like tea?"}],"correctOptionId":"a","explanationVi":"Do + you + V?"}'::jsonb),
+ ('a1-u03-l2-q6','a1-u03-l2','grammar_fill_blank',23,'quiz','hard',true,'{"question":"\"___ she like coffee?\" (Do/Does)","acceptedAnswers":["Does"],"explanationVi":"ngôi 3 số ít → Does."}'::jsonb),
+ -- u03-l3 (+3 prac, +1 quiz)
+ ('a1-u03-l3-p4','a1-u03-l3','multiple_choice',20,'practice','easy',false,'{"question":"I have lunch ___ 12. (giới từ giờ)","options":[{"id":"a","text":"at"},{"id":"b","text":"in"},{"id":"c","text":"on"}],"correctOptionId":"a","explanationVi":"at + giờ."}'::jsonb),
+ ('a1-u03-l3-p5','a1-u03-l3','vocabulary_match',21,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"have lunch","right":"ăn trưa"},{"left":"go home","right":"về nhà"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u03-l3-p6','a1-u03-l3','grammar_fill_blank',22,'practice','medium',false,'{"question":"I go home ___ 5 o''clock. (giới từ)","acceptedAnswers":["at"],"explanationVi":"at + giờ."}'::jsonb),
+ ('a1-u03-l3-q6','a1-u03-l3','sentence_ordering',23,'quiz','hard',true,'{"question":"Sắp xếp câu:","tokens":["lunch","I","at","have","twelve"],"correctOrder":[1,3,0,2,4],"explanationVi":"I have lunch at twelve."}'::jsonb),
+ -- u03-l4 (+4 prac, +2 quiz)
+ ('a1-u03-l4-p3','a1-u03-l4','grammar_fill_blank',20,'practice','easy',false,'{"question":"\"She ___ up at six.\" (get, ngôi 3 số ít)","acceptedAnswers":["gets"],"explanationVi":"She + gets up."}'::jsonb),
+ ('a1-u03-l4-p4','a1-u03-l4','multiple_choice',21,'practice','medium',false,'{"question":"\"every day\" nghĩa là:","options":[{"id":"a","text":"mỗi ngày"},{"id":"b","text":"hôm qua"},{"id":"c","text":"ngày mai"}],"correctOptionId":"a","explanationVi":"every day = mỗi ngày."}'::jsonb),
+ ('a1-u03-l4-p5','a1-u03-l4','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"get up","right":"thức dậy"},{"left":"breakfast","right":"bữa sáng"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u03-l4-p6','a1-u03-l4','sentence_ordering',23,'practice','hard',false,'{"question":"Sắp xếp câu:","tokens":["at","She","up","gets","six"],"correctOrder":[1,3,2,0,4],"explanationVi":"She gets up at six."}'::jsonb),
+ ('a1-u03-l4-q5','a1-u03-l4','multiple_choice',24,'quiz','medium',true,'{"question":"Lan dậy lúc mấy giờ (đoạn: gets up at six)?","options":[{"id":"a","text":"6 giờ"},{"id":"b","text":"7 giờ"},{"id":"c","text":"5 giờ"}],"correctOptionId":"a","explanationVi":"gets up at six = 6 giờ."}'::jsonb),
+ ('a1-u03-l4-q6','a1-u03-l4','grammar_fill_blank',25,'quiz','hard',true,'{"question":"\"He ___ breakfast at seven.\" (have → ngôi 3 số ít)","acceptedAnswers":["has"],"explanationVi":"He + has breakfast."}'::jsonb);
+
+-- ── UNIT 4 ───────────────────────────────────────────────────────────────────
+INSERT INTO learning_lesson_activities (id, lesson_id, activity_type, display_order, phase, difficulty, counts_toward_mastery, payload) VALUES
+ -- u04-l1 (+3 prac, +2 quiz)
+ ('a1-u04-l1-p4','a1-u04-l1','multiple_choice',20,'practice','easy',false,'{"question":"\"fish\" nghĩa là:","options":[{"id":"a","text":"cá"},{"id":"b","text":"cơm"},{"id":"c","text":"sữa"}],"correctOptionId":"a","explanationVi":"fish = cá."}'::jsonb),
+ ('a1-u04-l1-p5','a1-u04-l1','grammar_fill_blank',21,'practice','medium',false,'{"question":"I drink ___ for breakfast. (sữa)","acceptedAnswers":["milk"],"explanationVi":"milk = sữa."}'::jsonb),
+ ('a1-u04-l1-p6','a1-u04-l1','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"bread","right":"bánh mì"},{"left":"apple","right":"táo"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u04-l1-q5','a1-u04-l1','multiple_choice',23,'quiz','medium',true,'{"question":"\"milk\" nghĩa là:","options":[{"id":"a","text":"sữa"},{"id":"b","text":"nước"},{"id":"c","text":"cơm"}],"correctOptionId":"a","explanationVi":"milk = sữa."}'::jsonb),
+ ('a1-u04-l1-q6','a1-u04-l1','grammar_fill_blank',24,'quiz','hard',true,'{"question":"I eat ___ for breakfast. (bánh mì)","acceptedAnswers":["bread"],"explanationVi":"bread = bánh mì."}'::jsonb),
+ -- u04-l2 (+3 prac, +1 quiz)
+ ('a1-u04-l2-p4','a1-u04-l2','multiple_choice',20,'practice','easy',false,'{"question":"I ___ rice. (thích)","options":[{"id":"a","text":"like"},{"id":"b","text":"likes"},{"id":"c","text":"liking"}],"correctOptionId":"a","explanationVi":"I + like."}'::jsonb),
+ ('a1-u04-l2-p5','a1-u04-l2','grammar_fill_blank',21,'practice','medium',false,'{"question":"He ___ coffee. (không thích — doesn''t like)","acceptedAnswers":["doesn''t like","does not like","doesnt like"],"explanationVi":"He doesn''t like."}'::jsonb),
+ ('a1-u04-l2-p6','a1-u04-l2','multiple_choice',22,'practice','hard',false,'{"question":"Câu ĐÚNG (ngôi 3 số ít):","options":[{"id":"a","text":"She likes tea."},{"id":"b","text":"She like tea."},{"id":"c","text":"She liking tea."}],"correctOptionId":"a","explanationVi":"She + likes."}'::jsonb),
+ ('a1-u04-l2-q6','a1-u04-l2','grammar_fill_blank',23,'quiz','hard',true,'{"question":"\"___ you like fish?\" (Do/Does)","acceptedAnswers":["Do"],"explanationVi":"Do you like...?"}'::jsonb),
+ -- u04-l3 (+3 prac, +1 quiz)
+ ('a1-u04-l3-p4','a1-u04-l3','multiple_choice',20,'practice','easy',false,'{"question":"___ orange (a/an)","options":[{"id":"a","text":"an"},{"id":"b","text":"a"},{"id":"c","text":"some"}],"correctOptionId":"a","explanationVi":"orange bắt đầu nguyên âm → an."}'::jsonb),
+ ('a1-u04-l3-p5','a1-u04-l3','grammar_fill_blank',21,'practice','medium',false,'{"question":"I want ___ milk. (không đếm được)","acceptedAnswers":["some"],"explanationVi":"some milk."}'::jsonb),
+ ('a1-u04-l3-p6','a1-u04-l3','multiple_choice',22,'practice','hard',false,'{"question":"Câu ĐÚNG:","options":[{"id":"a","text":"I have an egg."},{"id":"b","text":"I have a egg."},{"id":"c","text":"I have some egg."}],"correctOptionId":"a","explanationVi":"an egg (nguyên âm)."}'::jsonb),
+ ('a1-u04-l3-q6','a1-u04-l3','grammar_fill_blank',23,'quiz','hard',true,'{"question":"She wants ___ water. (không đếm được)","acceptedAnswers":["some"],"explanationVi":"some water."}'::jsonb),
+ -- u04-l4 (+3 prac, +1 quiz)
+ ('a1-u04-l4-p4','a1-u04-l4','multiple_choice',20,'practice','easy',false,'{"question":"\"coffee\" nghĩa là:","options":[{"id":"a","text":"cà phê"},{"id":"b","text":"trà"},{"id":"c","text":"nước"}],"correctOptionId":"a","explanationVi":"coffee = cà phê."}'::jsonb),
+ ('a1-u04-l4-p5','a1-u04-l4','grammar_fill_blank',21,'practice','medium',false,'{"question":"\"___ much is it?\" (hỏi giá)","acceptedAnswers":["How"],"explanationVi":"How much is it?"}'::jsonb),
+ ('a1-u04-l4-p6','a1-u04-l4','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"I''d like","right":"tôi muốn"},{"left":"How much","right":"bao nhiêu tiền"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u04-l4-q6','a1-u04-l4','sentence_ordering',23,'quiz','hard',true,'{"question":"Sắp xếp câu gọi món:","tokens":["a","I''d","tea","like"],"correctOrder":[1,3,0,2],"explanationVi":"I''d like a tea."}'::jsonb);
+
+-- ── UNIT 5 ───────────────────────────────────────────────────────────────────
+INSERT INTO learning_lesson_activities (id, lesson_id, activity_type, display_order, phase, difficulty, counts_toward_mastery, payload) VALUES
+ -- u05-l1 (+3 prac, +2 quiz)
+ ('a1-u05-l1-p4','a1-u05-l1','multiple_choice',20,'practice','easy',false,'{"question":"\"five\" là số mấy?","options":[{"id":"a","text":"5"},{"id":"b","text":"4"},{"id":"c","text":"15"}],"correctOptionId":"a","explanationVi":"five = 5."}'::jsonb),
+ ('a1-u05-l1-p5','a1-u05-l1','grammar_fill_blank',21,'practice','medium',false,'{"question":"Số 20 viết chữ là ___.","acceptedAnswers":["twenty"],"explanationVi":"20 = twenty."}'::jsonb),
+ ('a1-u05-l1-p6','a1-u05-l1','multiple_choice',22,'practice','hard',false,'{"question":"\"40\" viết là:","options":[{"id":"a","text":"forty"},{"id":"b","text":"fourteen"},{"id":"c","text":"four"}],"correctOptionId":"a","explanationVi":"40 = forty."}'::jsonb),
+ ('a1-u05-l1-q5','a1-u05-l1','multiple_choice',23,'quiz','medium',true,'{"question":"\"twenty\" là số mấy?","options":[{"id":"a","text":"20"},{"id":"b","text":"12"},{"id":"c","text":"2"}],"correctOptionId":"a","explanationVi":"twenty = 20."}'::jsonb),
+ ('a1-u05-l1-q6','a1-u05-l1','grammar_fill_blank',24,'quiz','hard',true,'{"question":"Số 100 viết chữ là ___.","acceptedAnswers":["hundred","one hundred","a hundred"],"explanationVi":"100 = (one) hundred."}'::jsonb),
+ -- u05-l2 (+3 prac, +2 quiz)
+ ('a1-u05-l2-p4','a1-u05-l2','multiple_choice',20,'practice','easy',false,'{"question":"Hỏi giờ:","options":[{"id":"a","text":"What time is it?"},{"id":"b","text":"What time it is?"},{"id":"c","text":"How time is it?"}],"correctOptionId":"a","explanationVi":"What time is it?"}'::jsonb),
+ ('a1-u05-l2-p5','a1-u05-l2','grammar_fill_blank',21,'practice','medium',false,'{"question":"\"It''s seven ___.\" (giờ chẵn)","acceptedAnswers":["o''clock","oclock"],"explanationVi":"seven o''clock."}'::jsonb),
+ ('a1-u05-l2-p6','a1-u05-l2','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"o''clock","right":"giờ chẵn"},{"left":"half past","right":"giờ rưỡi"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u05-l2-q5','a1-u05-l2','multiple_choice',23,'quiz','medium',true,'{"question":"\"It''s half past eight\" =","options":[{"id":"a","text":"8:30"},{"id":"b","text":"8:00"},{"id":"c","text":"7:30"}],"correctOptionId":"a","explanationVi":"half past eight = 8 giờ 30."}'::jsonb),
+ ('a1-u05-l2-q6','a1-u05-l2','grammar_fill_blank',24,'quiz','hard',true,'{"question":"\"What ___ is it?\" (hỏi giờ)","acceptedAnswers":["time"],"explanationVi":"What time is it?"}'::jsonb),
+ -- u05-l3 (+3 prac, +2 quiz)
+ ('a1-u05-l3-p4','a1-u05-l3','multiple_choice',20,'practice','easy',false,'{"question":"Hỏi số lượng (đếm được):","options":[{"id":"a","text":"How many"},{"id":"b","text":"How much"},{"id":"c","text":"How old"}],"correctOptionId":"a","explanationVi":"How many + đếm được."}'::jsonb),
+ ('a1-u05-l3-p5','a1-u05-l3','grammar_fill_blank',21,'practice','medium',false,'{"question":"How many ___ are there? (book → số nhiều)","acceptedAnswers":["books"],"explanationVi":"How many books."}'::jsonb),
+ ('a1-u05-l3-p6','a1-u05-l3','multiple_choice',22,'practice','hard',false,'{"question":"Câu ĐÚNG:","options":[{"id":"a","text":"How many pens are there?"},{"id":"b","text":"How many pen are there?"},{"id":"c","text":"How much pens are there?"}],"correctOptionId":"a","explanationVi":"How many + số nhiều."}'::jsonb),
+ ('a1-u05-l3-q5','a1-u05-l3','multiple_choice',23,'quiz','medium',true,'{"question":"\"How many\" đi với:","options":[{"id":"a","text":"danh từ đếm được số nhiều"},{"id":"b","text":"danh từ không đếm được"},{"id":"c","text":"động từ"}],"correctOptionId":"a","explanationVi":"How many + đếm được số nhiều."}'::jsonb),
+ ('a1-u05-l3-q6','a1-u05-l3','grammar_fill_blank',24,'quiz','hard',true,'{"question":"How many ___ are there? (table → số nhiều)","acceptedAnswers":["tables"],"explanationVi":"How many tables."}'::jsonb),
+ -- u05-l4 (+3 prac, +2 quiz)
+ ('a1-u05-l4-p4','a1-u05-l4','multiple_choice',20,'practice','easy',false,'{"question":"\"Monday\" là thứ mấy?","options":[{"id":"a","text":"thứ Hai"},{"id":"b","text":"thứ Ba"},{"id":"c","text":"Chủ nhật"}],"correctOptionId":"a","explanationVi":"Monday = thứ Hai."}'::jsonb),
+ ('a1-u05-l4-p5','a1-u05-l4','grammar_fill_blank',21,'practice','medium',false,'{"question":"I rest ___ Sunday. (giới từ)","acceptedAnswers":["on"],"explanationVi":"on Sunday."}'::jsonb),
+ ('a1-u05-l4-p6','a1-u05-l4','listening_choice',22,'practice','medium',false,'{"question":"Nghe và chọn số:","audioText":"sixty","options":[{"id":"a","text":"60"},{"id":"b","text":"16"},{"id":"c","text":"6"}],"correctOptionId":"a","explanationVi":"sixty = 60."}'::jsonb),
+ ('a1-u05-l4-q5','a1-u05-l4','multiple_choice',23,'quiz','medium',true,'{"question":"\"Sunday\" là:","options":[{"id":"a","text":"Chủ nhật"},{"id":"b","text":"thứ Bảy"},{"id":"c","text":"thứ Hai"}],"correctOptionId":"a","explanationVi":"Sunday = Chủ nhật."}'::jsonb),
+ ('a1-u05-l4-q6','a1-u05-l4','listening_choice',24,'quiz','hard',true,'{"question":"Nghe và chọn giờ:","audioText":"It is half past nine.","options":[{"id":"a","text":"9:30"},{"id":"b","text":"9:00"},{"id":"c","text":"8:30"}],"correctOptionId":"a","explanationVi":"half past nine = 9:30."}'::jsonb);
+
+-- ── UNIT 6 ───────────────────────────────────────────────────────────────────
+INSERT INTO learning_lesson_activities (id, lesson_id, activity_type, display_order, phase, difficulty, counts_toward_mastery, payload) VALUES
+ -- u06-l1 (+3 prac, +1 quiz)
+ ('a1-u06-l1-p4','a1-u06-l1','multiple_choice',20,'practice','easy',false,'{"question":"Vật GẦN, số nhiều: \"___ are books.\"","options":[{"id":"a","text":"These"},{"id":"b","text":"This"},{"id":"c","text":"That"}],"correctOptionId":"a","explanationVi":"these = gần, số nhiều."}'::jsonb),
+ ('a1-u06-l1-p5','a1-u06-l1','grammar_fill_blank',21,'practice','medium',false,'{"question":"\"___ is a pen.\" (xa, số ít)","acceptedAnswers":["That","that"],"explanationVi":"that = xa, số ít."}'::jsonb),
+ ('a1-u06-l1-p6','a1-u06-l1','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"this","right":"gần-ít"},{"left":"these","right":"gần-nhiều"},{"left":"that","right":"xa-ít"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u06-l1-q6','a1-u06-l1','multiple_choice',23,'quiz','hard',true,'{"question":"Câu ĐÚNG:","options":[{"id":"a","text":"These are pens."},{"id":"b","text":"This are pens."},{"id":"c","text":"These is pens."}],"correctOptionId":"a","explanationVi":"These are + số nhiều."}'::jsonb),
+ -- u06-l2 (+2 prac, +1 quiz)
+ ('a1-u06-l2-p5','a1-u06-l2','grammar_fill_blank',20,'practice','easy',false,'{"question":"Số nhiều của \"chair\":","acceptedAnswers":["chairs"],"explanationVi":"chair → chairs."}'::jsonb),
+ ('a1-u06-l2-p6','a1-u06-l2','multiple_choice',21,'practice','medium',false,'{"question":"Số nhiều của \"woman\":","options":[{"id":"a","text":"women"},{"id":"b","text":"womans"},{"id":"c","text":"womens"}],"correctOptionId":"a","explanationVi":"woman → women."}'::jsonb),
+ ('a1-u06-l2-q6','a1-u06-l2','grammar_fill_blank',22,'quiz','hard',true,'{"question":"Số nhiều của \"box\":","acceptedAnswers":["boxes"],"explanationVi":"box → boxes."}'::jsonb),
+ -- u06-l3 (+3 prac, +2 quiz)
+ ('a1-u06-l3-p4','a1-u06-l3','multiple_choice',20,'practice','easy',false,'{"question":"\"yellow\" là màu:","options":[{"id":"a","text":"vàng"},{"id":"b","text":"đỏ"},{"id":"c","text":"xanh"}],"correctOptionId":"a","explanationVi":"yellow = vàng."}'::jsonb),
+ ('a1-u06-l3-p5','a1-u06-l3','grammar_fill_blank',21,'practice','medium',false,'{"question":"a ___ apple (màu đỏ)","acceptedAnswers":["red"],"explanationVi":"a red apple."}'::jsonb),
+ ('a1-u06-l3-p6','a1-u06-l3','vocabulary_match',22,'practice','medium',false,'{"question":"Nối màu:","pairs":[{"left":"red","right":"đỏ"},{"left":"green","right":"xanh lá"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u06-l3-q5','a1-u06-l3','multiple_choice',23,'quiz','medium',true,'{"question":"\"blue\" là màu:","options":[{"id":"a","text":"xanh dương"},{"id":"b","text":"đen"},{"id":"c","text":"vàng"}],"correctOptionId":"a","explanationVi":"blue = xanh dương."}'::jsonb),
+ ('a1-u06-l3-q6','a1-u06-l3','multiple_choice',24,'quiz','hard',true,'{"question":"Cụm ĐÚNG:","options":[{"id":"a","text":"a green book"},{"id":"b","text":"a book green"},{"id":"c","text":"green a book"}],"correctOptionId":"a","explanationVi":"a + màu + danh từ."}'::jsonb),
+ -- u06-l4 (+3 prac, +2 quiz)
+ ('a1-u06-l4-p4','a1-u06-l4','multiple_choice',20,'practice','easy',false,'{"question":"___ hour (a/an)","options":[{"id":"a","text":"an"},{"id":"b","text":"a"},{"id":"c","text":"the"}],"correctOptionId":"a","explanationVi":"hour đọc âm nguyên âm → an hour."}'::jsonb),
+ ('a1-u06-l4-p5','a1-u06-l4','grammar_fill_blank',21,'practice','medium',false,'{"question":"I have a cat. ___ cat is white. (a/the)","acceptedAnswers":["The","the"],"explanationVi":"nhắc lại → The cat."}'::jsonb),
+ ('a1-u06-l4-p6','a1-u06-l4','multiple_choice',22,'practice','hard',false,'{"question":"Câu ĐÚNG:","options":[{"id":"a","text":"She is an engineer."},{"id":"b","text":"She is a engineer."},{"id":"c","text":"She is engineer."}],"correctOptionId":"a","explanationVi":"an engineer (nguyên âm)."}'::jsonb),
+ ('a1-u06-l4-q5','a1-u06-l4','grammar_fill_blank',23,'quiz','medium',true,'{"question":"___ apple (a/an)","acceptedAnswers":["an"],"explanationVi":"an apple."}'::jsonb),
+ ('a1-u06-l4-q6','a1-u06-l4','multiple_choice',24,'quiz','hard',true,'{"question":"Lần ĐẦU nhắc tới vật, dùng:","options":[{"id":"a","text":"a/an"},{"id":"b","text":"the"},{"id":"c","text":"không cần mạo từ"}],"correctOptionId":"a","explanationVi":"Lần đầu → a/an."}'::jsonb);
+
+-- ── UNIT 7 ───────────────────────────────────────────────────────────────────
+INSERT INTO learning_lesson_activities (id, lesson_id, activity_type, display_order, phase, difficulty, counts_toward_mastery, payload) VALUES
+ -- u07-l1 (+2 prac, +1 quiz)
+ ('a1-u07-l1-p5','a1-u07-l1','multiple_choice',20,'practice','easy',false,'{"question":"\"dance\" nghĩa là:","options":[{"id":"a","text":"nhảy/múa"},{"id":"b","text":"hát"},{"id":"c","text":"bơi"}],"correctOptionId":"a","explanationVi":"dance = nhảy."}'::jsonb),
+ ('a1-u07-l1-p6','a1-u07-l1','grammar_fill_blank',21,'practice','medium',false,'{"question":"She ___ swim. (có thể)","acceptedAnswers":["can"],"explanationVi":"can + V."}'::jsonb),
+ ('a1-u07-l1-q6','a1-u07-l1','multiple_choice',22,'quiz','hard',true,'{"question":"Phủ định ĐÚNG:","options":[{"id":"a","text":"I can''t cook."},{"id":"b","text":"I don''t can cook."},{"id":"c","text":"I not can cook."}],"correctOptionId":"a","explanationVi":"can''t = cannot."}'::jsonb),
+ -- u07-l2 (+2 prac, +1 quiz)
+ ('a1-u07-l2-p5','a1-u07-l2','multiple_choice',20,'practice','easy',false,'{"question":"Trả lời \"Can you sing?\" (có):","options":[{"id":"a","text":"Yes, I can."},{"id":"b","text":"Yes, I do."},{"id":"c","text":"Yes, I am."}],"correctOptionId":"a","explanationVi":"Yes, I can."}'::jsonb),
+ ('a1-u07-l2-p6','a1-u07-l2','sentence_ordering',21,'practice','medium',false,'{"question":"Sắp xếp câu hỏi:","tokens":["she","Can","dance"],"correctOrder":[1,0,2],"explanationVi":"Can she dance?"}'::jsonb),
+ ('a1-u07-l2-q6','a1-u07-l2','multiple_choice',22,'quiz','hard',true,'{"question":"Câu hỏi khả năng ĐÚNG:","options":[{"id":"a","text":"Can they swim?"},{"id":"b","text":"Do they can swim?"},{"id":"c","text":"They can swim?"}],"correctOptionId":"a","explanationVi":"Can + S + V?"}'::jsonb),
+ -- u07-l3 (+3 prac, +2 quiz)
+ ('a1-u07-l3-p4','a1-u07-l3','multiple_choice',20,'practice','easy',false,'{"question":"\"watch TV\" nghĩa là:","options":[{"id":"a","text":"xem TV"},{"id":"b","text":"đọc sách"},{"id":"c","text":"chơi bóng"}],"correctOptionId":"a","explanationVi":"watch TV = xem TV."}'::jsonb),
+ ('a1-u07-l3-p5','a1-u07-l3','grammar_fill_blank',21,'practice','medium',false,'{"question":"I like ___ books. (read → V-ing)","acceptedAnswers":["reading"],"explanationVi":"like reading books."}'::jsonb),
+ ('a1-u07-l3-p6','a1-u07-l3','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"listen to music","right":"nghe nhạc"},{"left":"read books","right":"đọc sách"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u07-l3-q5','a1-u07-l3','multiple_choice',23,'quiz','medium',true,'{"question":"\"play football\" nghĩa là:","options":[{"id":"a","text":"chơi bóng đá"},{"id":"b","text":"xem TV"},{"id":"c","text":"nghe nhạc"}],"correctOptionId":"a","explanationVi":"play football = chơi bóng đá."}'::jsonb),
+ ('a1-u07-l3-q6','a1-u07-l3','multiple_choice',24,'quiz','hard',true,'{"question":"Câu ĐÚNG:","options":[{"id":"a","text":"She likes listening to music."},{"id":"b","text":"She like listening to music."},{"id":"c","text":"She likes listen to music."}],"correctOptionId":"a","explanationVi":"She likes + V-ing."}'::jsonb),
+ -- u07-l4 (+3 prac, +2 quiz)
+ ('a1-u07-l4-p4','a1-u07-l4','multiple_choice',20,'practice','easy',false,'{"question":"\"đứng lên\" =","options":[{"id":"a","text":"Stand up"},{"id":"b","text":"Sit down"},{"id":"c","text":"Open"}],"correctOptionId":"a","explanationVi":"stand up = đứng lên."}'::jsonb),
+ ('a1-u07-l4-p5','a1-u07-l4','grammar_fill_blank',21,'practice','medium',false,'{"question":"\"___ the door.\" (Đóng)","acceptedAnswers":["Close"],"explanationVi":"Close the door."}'::jsonb),
+ ('a1-u07-l4-p6','a1-u07-l4','sentence_ordering',22,'practice','hard',false,'{"question":"Sắp xếp mệnh lệnh:","tokens":["down","Sit","please"],"correctOrder":[1,0,2],"explanationVi":"Sit down, please."}'::jsonb),
+ ('a1-u07-l4-q5','a1-u07-l4','multiple_choice',23,'quiz','medium',true,'{"question":"\"open\" nghĩa là:","options":[{"id":"a","text":"mở"},{"id":"b","text":"đóng"},{"id":"c","text":"ngồi"}],"correctOptionId":"a","explanationVi":"open = mở."}'::jsonb),
+ ('a1-u07-l4-q6','a1-u07-l4','multiple_choice',24,'quiz','hard',true,'{"question":"Mệnh lệnh phủ định ĐÚNG:","options":[{"id":"a","text":"Don''t run!"},{"id":"b","text":"No run!"},{"id":"c","text":"Not run!"}],"correctOptionId":"a","explanationVi":"Don''t + V."}'::jsonb);
+
+-- ── UNIT 8 ───────────────────────────────────────────────────────────────────
+INSERT INTO learning_lesson_activities (id, lesson_id, activity_type, display_order, phase, difficulty, counts_toward_mastery, payload) VALUES
+ -- u08-l1 (+2 prac, +2 quiz)
+ ('a1-u08-l1-p5','a1-u08-l1','multiple_choice',20,'practice','easy',false,'{"question":"\"park\" nghĩa là:","options":[{"id":"a","text":"công viên"},{"id":"b","text":"chợ"},{"id":"c","text":"bệnh viện"}],"correctOptionId":"a","explanationVi":"park = công viên."}'::jsonb),
+ ('a1-u08-l1-p6','a1-u08-l1','grammar_fill_blank',21,'practice','medium',false,'{"question":"There ___ a market here. (to be số ít)","acceptedAnswers":["is"],"explanationVi":"There is + số ít."}'::jsonb),
+ ('a1-u08-l1-q5','a1-u08-l1','multiple_choice',22,'quiz','medium',true,'{"question":"\"school\" nghĩa là:","options":[{"id":"a","text":"trường học"},{"id":"b","text":"chợ"},{"id":"c","text":"công viên"}],"correctOptionId":"a","explanationVi":"school = trường học."}'::jsonb),
+ ('a1-u08-l1-q6','a1-u08-l1','vocabulary_match',23,'quiz','hard',true,'{"question":"Nối địa điểm:","pairs":[{"left":"hospital","right":"bệnh viện"},{"left":"bank","right":"ngân hàng"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ -- u08-l2 (+2 prac, +1 quiz)
+ ('a1-u08-l2-p5','a1-u08-l2','multiple_choice',20,'practice','easy',false,'{"question":"\"under\" nghĩa là:","options":[{"id":"a","text":"dưới"},{"id":"b","text":"trên"},{"id":"c","text":"trong"}],"correctOptionId":"a","explanationVi":"under = dưới."}'::jsonb),
+ ('a1-u08-l2-p6','a1-u08-l2','grammar_fill_blank',21,'practice','medium',false,'{"question":"The cat is ___ the chair. (cạnh)","acceptedAnswers":["next to"],"explanationVi":"next to = cạnh."}'::jsonb),
+ ('a1-u08-l2-q6','a1-u08-l2','multiple_choice',22,'quiz','hard',true,'{"question":"Bút BÊN TRONG hộp — câu ĐÚNG:","options":[{"id":"a","text":"The pen is in the box."},{"id":"b","text":"The pen is on the box."},{"id":"c","text":"The pen is under the box."}],"correctOptionId":"a","explanationVi":"in = bên trong."}'::jsonb),
+ -- u08-l3 (+3 prac, +2 quiz)
+ ('a1-u08-l3-p4','a1-u08-l3','multiple_choice',20,'practice','easy',false,'{"question":"\"rẽ phải\" =","options":[{"id":"a","text":"turn right"},{"id":"b","text":"turn left"},{"id":"c","text":"go straight"}],"correctOptionId":"a","explanationVi":"turn right = rẽ phải."}'::jsonb),
+ ('a1-u08-l3-p5','a1-u08-l3','grammar_fill_blank',21,'practice','medium',false,'{"question":"___ is the post office? (hỏi nơi)","acceptedAnswers":["Where"],"explanationVi":"Where is...?"}'::jsonb),
+ ('a1-u08-l3-p6','a1-u08-l3','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"turn left","right":"rẽ trái"},{"left":"go straight","right":"đi thẳng"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u08-l3-q5','a1-u08-l3','multiple_choice',23,'quiz','medium',true,'{"question":"\"turn left\" nghĩa là:","options":[{"id":"a","text":"rẽ trái"},{"id":"b","text":"rẽ phải"},{"id":"c","text":"đi thẳng"}],"correctOptionId":"a","explanationVi":"turn left = rẽ trái."}'::jsonb),
+ ('a1-u08-l3-q6','a1-u08-l3','sentence_ordering',24,'quiz','hard',true,'{"question":"Sắp xếp chỉ dẫn:","tokens":["straight","Go","ahead"],"correctOrder":[1,0,2],"explanationVi":"Go straight ahead."}'::jsonb),
+ -- u08-l4 (+4 prac, +2 quiz)
+ ('a1-u08-l4-p3','a1-u08-l4','multiple_choice',20,'practice','easy',false,'{"question":"\"near\" nghĩa là:","options":[{"id":"a","text":"gần"},{"id":"b","text":"xa"},{"id":"c","text":"trên"}],"correctOptionId":"a","explanationVi":"near = gần."}'::jsonb),
+ ('a1-u08-l4-p4','a1-u08-l4','grammar_fill_blank',21,'practice','medium',false,'{"question":"There ___ two shops. (to be số nhiều)","acceptedAnswers":["are"],"explanationVi":"There are + số nhiều."}'::jsonb),
+ ('a1-u08-l4-p5','a1-u08-l4','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"near","right":"gần"},{"left":"in front of","right":"phía trước"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u08-l4-p6','a1-u08-l4','multiple_choice',23,'practice','hard',false,'{"question":"\"next to\" nghĩa là:","options":[{"id":"a","text":"cạnh"},{"id":"b","text":"trước"},{"id":"c","text":"sau"}],"correctOptionId":"a","explanationVi":"next to = cạnh."}'::jsonb),
+ ('a1-u08-l4-q5','a1-u08-l4','multiple_choice',24,'quiz','medium',true,'{"question":"\"in front of\" nghĩa là:","options":[{"id":"a","text":"phía trước"},{"id":"b","text":"phía sau"},{"id":"c","text":"bên cạnh"}],"correctOptionId":"a","explanationVi":"in front of = phía trước."}'::jsonb),
+ ('a1-u08-l4-q6','a1-u08-l4','grammar_fill_blank',25,'quiz','hard',true,'{"question":"There ___ a park near my house. (to be số ít)","acceptedAnswers":["is"],"explanationVi":"There is + số ít."}'::jsonb);
+
+-- ── UNIT 9 ───────────────────────────────────────────────────────────────────
+INSERT INTO learning_lesson_activities (id, lesson_id, activity_type, display_order, phase, difficulty, counts_toward_mastery, payload) VALUES
+ -- u09-l1 (+3 prac, +2 quiz)
+ ('a1-u09-l1-p4','a1-u09-l1','multiple_choice',20,'practice','easy',false,'{"question":"\"bathroom\" nghĩa là:","options":[{"id":"a","text":"phòng tắm"},{"id":"b","text":"nhà bếp"},{"id":"c","text":"phòng ngủ"}],"correctOptionId":"a","explanationVi":"bathroom = phòng tắm."}'::jsonb),
+ ('a1-u09-l1-p5','a1-u09-l1','grammar_fill_blank',21,'practice','medium',false,'{"question":"We watch TV in the ___. (phòng khách)","acceptedAnswers":["living room"],"explanationVi":"living room = phòng khách."}'::jsonb),
+ ('a1-u09-l1-p6','a1-u09-l1','vocabulary_match',22,'practice','medium',false,'{"question":"Nối phòng:","pairs":[{"left":"kitchen","right":"nhà bếp"},{"left":"bedroom","right":"phòng ngủ"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u09-l1-q5','a1-u09-l1','multiple_choice',23,'quiz','medium',true,'{"question":"Ngủ ở phòng nào?","options":[{"id":"a","text":"bedroom"},{"id":"b","text":"kitchen"},{"id":"c","text":"bathroom"}],"correctOptionId":"a","explanationVi":"bedroom = phòng ngủ."}'::jsonb),
+ ('a1-u09-l1-q6','a1-u09-l1','grammar_fill_blank',24,'quiz','hard',true,'{"question":"I cook in the ___. (nhà bếp)","acceptedAnswers":["kitchen"],"explanationVi":"kitchen = nhà bếp."}'::jsonb),
+ -- u09-l2 (+3 prac, +2 quiz)
+ ('a1-u09-l2-p4','a1-u09-l2','multiple_choice',20,'practice','easy',false,'{"question":"\"table\" nghĩa là:","options":[{"id":"a","text":"cái bàn"},{"id":"b","text":"giường"},{"id":"c","text":"ghế sofa"}],"correctOptionId":"a","explanationVi":"table = cái bàn."}'::jsonb),
+ ('a1-u09-l2-p5','a1-u09-l2','grammar_fill_blank',21,'practice','medium',false,'{"question":"The food is in the ___. (tủ lạnh)","acceptedAnswers":["fridge"],"explanationVi":"fridge = tủ lạnh."}'::jsonb),
+ ('a1-u09-l2-p6','a1-u09-l2','vocabulary_match',22,'practice','medium',false,'{"question":"Nối đồ đạc:","pairs":[{"left":"sofa","right":"ghế sofa"},{"left":"bed","right":"giường"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u09-l2-q5','a1-u09-l2','multiple_choice',23,'quiz','medium',true,'{"question":"\"TV\" để xem ở:","options":[{"id":"a","text":"living room"},{"id":"b","text":"bathroom"},{"id":"c","text":"kitchen"}],"correctOptionId":"a","explanationVi":"TV thường ở living room."}'::jsonb),
+ ('a1-u09-l2-q6','a1-u09-l2','vocabulary_match',24,'quiz','hard',true,'{"question":"Nối đồ đạc:","pairs":[{"left":"fridge","right":"tủ lạnh"},{"left":"table","right":"cái bàn"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ -- u09-l3 (+3 prac, +1 quiz)
+ ('a1-u09-l3-p4','a1-u09-l3','multiple_choice',20,'practice','easy',false,'{"question":"There ___ a bed. (số ít)","options":[{"id":"a","text":"is"},{"id":"b","text":"are"},{"id":"c","text":"be"}],"correctOptionId":"a","explanationVi":"There is + số ít."}'::jsonb),
+ ('a1-u09-l3-p5','a1-u09-l3','grammar_fill_blank',21,'practice','medium',false,'{"question":"There ___ two sofas. (số nhiều)","acceptedAnswers":["are"],"explanationVi":"There are + số nhiều."}'::jsonb),
+ ('a1-u09-l3-p6','a1-u09-l3','multiple_choice',22,'practice','hard',false,'{"question":"Phủ định (không có ghế):","options":[{"id":"a","text":"There isn''t a chair."},{"id":"b","text":"There aren''t a chair."},{"id":"c","text":"There no chair."}],"correctOptionId":"a","explanationVi":"số ít → There isn''t."}'::jsonb),
+ ('a1-u09-l3-q6','a1-u09-l3','grammar_fill_blank',23,'quiz','hard',true,'{"question":"There ___ five chairs. (số nhiều)","acceptedAnswers":["are"],"explanationVi":"There are + số nhiều."}'::jsonb),
+ -- u09-l4 (+4 prac, +2 quiz)
+ ('a1-u09-l4-p3','a1-u09-l4','multiple_choice',20,'practice','easy',false,'{"question":"\"small\" nghĩa là:","options":[{"id":"a","text":"nhỏ"},{"id":"b","text":"to"},{"id":"c","text":"cũ"}],"correctOptionId":"a","explanationVi":"small = nhỏ."}'::jsonb),
+ ('a1-u09-l4-p4','a1-u09-l4','grammar_fill_blank',21,'practice','medium',false,'{"question":"There ___ three rooms. (số nhiều)","acceptedAnswers":["are"],"explanationVi":"There are + số nhiều."}'::jsonb),
+ ('a1-u09-l4-p5','a1-u09-l4','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"big","right":"to"},{"left":"small","right":"nhỏ"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u09-l4-p6','a1-u09-l4','multiple_choice',23,'practice','hard',false,'{"question":"\"living room\" là:","options":[{"id":"a","text":"phòng khách"},{"id":"b","text":"nhà bếp"},{"id":"c","text":"phòng ngủ"}],"correctOptionId":"a","explanationVi":"living room = phòng khách."}'::jsonb),
+ ('a1-u09-l4-q5','a1-u09-l4','multiple_choice',24,'quiz','medium',true,'{"question":"\"big\" nghĩa là:","options":[{"id":"a","text":"to"},{"id":"b","text":"nhỏ"},{"id":"c","text":"cũ"}],"correctOptionId":"a","explanationVi":"big = to."}'::jsonb),
+ ('a1-u09-l4-q6','a1-u09-l4','grammar_fill_blank',25,'quiz','hard',true,'{"question":"There ___ a sofa in the living room. (số ít)","acceptedAnswers":["is"],"explanationVi":"There is + số ít."}'::jsonb);
+
+-- ── UNIT 10 ──────────────────────────────────────────────────────────────────
+INSERT INTO learning_lesson_activities (id, lesson_id, activity_type, display_order, phase, difficulty, counts_toward_mastery, payload) VALUES
+ -- u10-l1 (+3 prac, +2 quiz)
+ ('a1-u10-l1-p4','a1-u10-l1','multiple_choice',20,'practice','easy',false,'{"question":"\"cold\" nghĩa là:","options":[{"id":"a","text":"lạnh"},{"id":"b","text":"nóng"},{"id":"c","text":"nắng"}],"correctOptionId":"a","explanationVi":"cold = lạnh."}'::jsonb),
+ ('a1-u10-l1-p5','a1-u10-l1','grammar_fill_blank',21,'practice','medium',false,'{"question":"___ rainy today. (điền It''s)","acceptedAnswers":["It''s","Its","It is"],"explanationVi":"It''s rainy."}'::jsonb),
+ ('a1-u10-l1-p6','a1-u10-l1','vocabulary_match',22,'practice','medium',false,'{"question":"Nối thời tiết:","pairs":[{"left":"sunny","right":"nắng"},{"left":"rainy","right":"mưa"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u10-l1-q5','a1-u10-l1','multiple_choice',23,'quiz','medium',true,'{"question":"\"sunny\" nghĩa là:","options":[{"id":"a","text":"nắng"},{"id":"b","text":"mưa"},{"id":"c","text":"lạnh"}],"correctOptionId":"a","explanationVi":"sunny = nắng."}'::jsonb),
+ ('a1-u10-l1-q6','a1-u10-l1','grammar_fill_blank',24,'quiz','hard',true,'{"question":"\"It''s ___ cold today.\" (rất)","acceptedAnswers":["very"],"explanationVi":"very + adj."}'::jsonb),
+ -- u10-l2 (+3 prac, +2 quiz)
+ ('a1-u10-l2-p4','a1-u10-l2','multiple_choice',20,'practice','easy',false,'{"question":"\"dress\" nghĩa là:","options":[{"id":"a","text":"váy/đầm"},{"id":"b","text":"giày"},{"id":"c","text":"mũ"}],"correctOptionId":"a","explanationVi":"dress = váy."}'::jsonb),
+ ('a1-u10-l2-p5','a1-u10-l2','grammar_fill_blank',21,'practice','medium',false,'{"question":"I wear a blue ___. (áo sơ mi)","acceptedAnswers":["shirt"],"explanationVi":"shirt = áo sơ mi."}'::jsonb),
+ ('a1-u10-l2-p6','a1-u10-l2','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"shoes","right":"giày"},{"left":"dress","right":"váy"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u10-l2-q5','a1-u10-l2','multiple_choice',23,'quiz','medium',true,'{"question":"\"hat\" nghĩa là:","options":[{"id":"a","text":"mũ"},{"id":"b","text":"giày"},{"id":"c","text":"váy"}],"correctOptionId":"a","explanationVi":"hat = mũ."}'::jsonb),
+ ('a1-u10-l2-q6','a1-u10-l2','multiple_choice',24,'quiz','hard',true,'{"question":"Cụm ĐÚNG:","options":[{"id":"a","text":"a blue shirt"},{"id":"b","text":"a shirt blue"},{"id":"c","text":"blue a shirt"}],"correctOptionId":"a","explanationVi":"a + màu + danh từ."}'::jsonb),
+ -- u10-l3 (+3 prac, +2 quiz)
+ ('a1-u10-l3-p4','a1-u10-l3','multiple_choice',20,'practice','easy',false,'{"question":"\"buy\" nghĩa là:","options":[{"id":"a","text":"mua"},{"id":"b","text":"bán"},{"id":"c","text":"giá"}],"correctOptionId":"a","explanationVi":"buy = mua."}'::jsonb),
+ ('a1-u10-l3-p5','a1-u10-l3','grammar_fill_blank',21,'practice','medium',false,'{"question":"How much ___ it? (to be)","acceptedAnswers":["is"],"explanationVi":"How much is it?"}'::jsonb),
+ ('a1-u10-l3-p6','a1-u10-l3','vocabulary_match',22,'practice','medium',false,'{"question":"Nối:","pairs":[{"left":"expensive","right":"đắt"},{"left":"cheap","right":"rẻ"}],"explanationVi":"Ghép đúng."}'::jsonb),
+ ('a1-u10-l3-q5','a1-u10-l3','multiple_choice',23,'quiz','medium',true,'{"question":"\"price\" nghĩa là:","options":[{"id":"a","text":"giá"},{"id":"b","text":"mua"},{"id":"c","text":"rẻ"}],"correctOptionId":"a","explanationVi":"price = giá."}'::jsonb),
+ ('a1-u10-l3-q6','a1-u10-l3','grammar_fill_blank',24,'quiz','hard',true,'{"question":"\"It''s ten ___.\" (đơn vị tiền)","acceptedAnswers":["dollars","dollar"],"explanationVi":"ten dollars."}'::jsonb),
+ -- u10-l4 (+3 prac, +2 quiz)
+ ('a1-u10-l4-p4','a1-u10-l4','multiple_choice',20,'practice','easy',false,'{"question":"\"tomorrow\" nghĩa là:","options":[{"id":"a","text":"ngày mai"},{"id":"b","text":"hôm qua"},{"id":"c","text":"hôm nay"}],"correctOptionId":"a","explanationVi":"tomorrow = ngày mai."}'::jsonb),
+ ('a1-u10-l4-p5','a1-u10-l4','grammar_fill_blank',21,'practice','medium',false,'{"question":"She ___ going to study. (to be)","acceptedAnswers":["is"],"explanationVi":"She is going to."}'::jsonb),
+ ('a1-u10-l4-p6','a1-u10-l4','listening_choice',22,'practice','hard',false,'{"question":"Nghe và chọn kế hoạch:","audioText":"I am going to read a book.","options":[{"id":"a","text":"đọc sách"},{"id":"b","text":"chơi bóng"},{"id":"c","text":"nấu ăn"}],"correctOptionId":"a","explanationVi":"going to read a book = sẽ đọc sách."}'::jsonb),
+ ('a1-u10-l4-q5','a1-u10-l4','multiple_choice',23,'quiz','medium',true,'{"question":"Câu kế hoạch ĐÚNG:","options":[{"id":"a","text":"We are going to travel."},{"id":"b","text":"We going to travel."},{"id":"c","text":"We are go to travel."}],"correctOptionId":"a","explanationVi":"to be + going to + V."}'::jsonb),
+ ('a1-u10-l4-q6','a1-u10-l4','listening_choice',24,'quiz','hard',true,'{"question":"Nghe và chọn thời tiết:","audioText":"It is going to be sunny.","options":[{"id":"a","text":"sắp nắng"},{"id":"b","text":"sắp mưa"},{"id":"c","text":"sắp lạnh"}],"correctOptionId":"a","explanationVi":"going to be sunny = sắp nắng."}'::jsonb);
