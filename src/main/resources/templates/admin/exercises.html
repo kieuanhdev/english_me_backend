@@ -1,51 +1,29 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ page import="com.kiovant.englishme.dto.AdminExerciseQuestionRow" %>
-<%@ page import="java.util.List" %>
 <!DOCTYPE html>
-<html lang="vi">
-<head>
-    <%@ include file="layout/head.jspf" %>
-</head>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout/fragments :: head}"></head>
 <body class="bg-surface text-on-surface">
-<%@ include file="layout/sidebar.jspf" %>
+<aside th:replace="~{admin/layout/fragments :: sidebar('exercises')}"></aside>
 <main class="ml-64 min-h-screen">
-    <%@ include file="layout/topbar.jspf" %>
+    <div th:replace="~{admin/layout/fragments :: topbar}"></div>
 
-    <%
-        @SuppressWarnings("unchecked")
-        List<AdminExerciseQuestionRow> questions = (List<AdminExerciseQuestionRow>) request.getAttribute("questions");
-        int total = questions == null ? 0 : questions.size();
-        String selectedCategory = (String) request.getAttribute("selectedCategory");
-        String selectedDifficulty = (String) request.getAttribute("selectedDifficulty");
-        String selectedLevel = (String) request.getAttribute("selectedLevel");
-        String selectedKeyword = (String) request.getAttribute("selectedKeyword");
-        if (selectedCategory == null) selectedCategory = "";
-        if (selectedDifficulty == null) selectedDifficulty = "";
-        if (selectedLevel == null) selectedLevel = "";
-        if (selectedKeyword == null) selectedKeyword = "";
-        String successMessage = (String) request.getAttribute("successMessage");
-        String errorMessage = (String) request.getAttribute("errorMessage");
-    %>
-
-    <div class="p-8 space-y-8">
-        <% if (successMessage != null) { %>
-        <div class="rounded-2xl bg-emerald-50 text-emerald-800 px-5 py-3 text-sm font-semibold border border-emerald-100">
-            <%= successMessage %>
-        </div>
-        <% } %>
-        <% if (errorMessage != null) { %>
-        <div class="rounded-2xl bg-rose-50 text-rose-800 px-5 py-3 text-sm font-semibold border border-rose-100">
-            <%= errorMessage %>
-        </div>
-        <% } %>
+    <div class="p-8 space-y-8"
+         th:with="total=${questions != null ? questions.size() : 0},
+                  selCategory=${selectedCategory != null ? selectedCategory : ''},
+                  selDifficulty=${selectedDifficulty != null ? selectedDifficulty : ''},
+                  selLevel=${selectedLevel != null ? selectedLevel : ''},
+                  selKeyword=${selectedKeyword != null ? selectedKeyword : ''}">
+        <div th:if="${successMessage != null}"
+             class="rounded-2xl bg-emerald-50 text-emerald-800 px-5 py-3 text-sm font-semibold border border-emerald-100" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage != null}"
+             class="rounded-2xl bg-rose-50 text-rose-800 px-5 py-3 text-sm font-semibold border border-rose-100" th:text="${errorMessage}"></div>
 
         <div class="flex justify-between items-end flex-wrap gap-4">
             <div class="space-y-1">
                 <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline">Exercise Bank</h1>
-                <p class="text-slate-500 font-medium">Ngân hàng câu hỏi exercise (multiple choice) — <%= total %> câu hỏi.</p>
+                <p class="text-slate-500 font-medium">Ngân hàng câu hỏi exercise (multiple choice) — <span th:text="${total}">0</span> câu hỏi.</p>
             </div>
             <div class="flex gap-2">
-                <a href="${pageContext.request.contextPath}/admin/exercises/sessions"
+                <a th:href="@{/admin/exercises/sessions}"
                    class="bg-slate-100 text-slate-700 px-5 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200">
                     <span class="material-symbols-outlined text-lg">history</span>
                     Sessions
@@ -55,7 +33,7 @@
                     <span class="material-symbols-outlined text-lg">upload_file</span>
                     Import JSON
                 </button>
-                <a href="${pageContext.request.contextPath}/admin/exercises/export?category=<%= selectedCategory %>&difficulty=<%= selectedDifficulty %>&level=<%= selectedLevel %>&q=<%= selectedKeyword %>"
+                <a th:href="@{/admin/exercises/export(category=${selCategory},difficulty=${selDifficulty},level=${selLevel},q=${selKeyword})}"
                    class="bg-slate-100 text-slate-700 px-5 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200">
                     <span class="material-symbols-outlined text-lg">download</span>
                     Export CSV
@@ -68,37 +46,37 @@
             </div>
         </div>
 
-        <form method="get" action="${pageContext.request.contextPath}/admin/exercises"
+        <form method="get" th:action="@{/admin/exercises}"
               class="bg-surface-container-lowest rounded-2xl p-4 flex flex-wrap items-end gap-3">
             <div class="space-y-1">
                 <label class="text-xs font-bold text-slate-500 uppercase">Category</label>
                 <select name="category" class="bg-surface-container-low border-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700">
-                    <option value="" <%= selectedCategory.isBlank() ? "selected" : "" %>>Tất cả</option>
-                    <option value="vocabulary" <%= "vocabulary".equals(selectedCategory) ? "selected" : "" %>>Vocabulary</option>
-                    <option value="grammar" <%= "grammar".equals(selectedCategory) ? "selected" : "" %>>Grammar</option>
+                    <option value="" th:selected="${#strings.isEmpty(selCategory)}">Tất cả</option>
+                    <option value="vocabulary" th:selected="${selCategory == 'vocabulary'}">Vocabulary</option>
+                    <option value="grammar" th:selected="${selCategory == 'grammar'}">Grammar</option>
                 </select>
             </div>
             <div class="space-y-1">
                 <label class="text-xs font-bold text-slate-500 uppercase">Difficulty</label>
                 <select name="difficulty" class="bg-surface-container-low border-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700">
-                    <option value="" <%= selectedDifficulty.isBlank() ? "selected" : "" %>>Tất cả</option>
-                    <option value="easy"   <%= "easy".equals(selectedDifficulty)   ? "selected" : "" %>>Easy</option>
-                    <option value="medium" <%= "medium".equals(selectedDifficulty) ? "selected" : "" %>>Medium</option>
-                    <option value="hard"   <%= "hard".equals(selectedDifficulty)   ? "selected" : "" %>>Hard</option>
+                    <option value="" th:selected="${#strings.isEmpty(selDifficulty)}">Tất cả</option>
+                    <option value="easy" th:selected="${selDifficulty == 'easy'}">Easy</option>
+                    <option value="medium" th:selected="${selDifficulty == 'medium'}">Medium</option>
+                    <option value="hard" th:selected="${selDifficulty == 'hard'}">Hard</option>
                 </select>
             </div>
             <div class="space-y-1">
                 <label class="text-xs font-bold text-slate-500 uppercase">CEFR</label>
                 <select name="level" class="bg-surface-container-low border-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700">
-                    <option value="" <%= selectedLevel.isBlank() ? "selected" : "" %>>Tất cả</option>
-                    <% for (String lv : new String[]{"A1","A2","B1","B2","C1","C2"}) { %>
-                        <option value="<%= lv %>" <%= lv.equalsIgnoreCase(selectedLevel) ? "selected" : "" %>><%= lv %></option>
-                    <% } %>
+                    <option value="" th:selected="${#strings.isEmpty(selLevel)}">Tất cả</option>
+                    <option th:each="lv : ${ {'A1','A2','B1','B2','C1','C2'} }"
+                            th:value="${lv}" th:text="${lv}"
+                            th:selected="${#strings.equalsIgnoreCase(lv,selLevel)}"></option>
                 </select>
             </div>
             <div class="space-y-1 flex-1 min-w-[220px]">
                 <label class="text-xs font-bold text-slate-500 uppercase">Tìm theo nội dung câu hỏi</label>
-                <input type="text" name="q" value="<%= selectedKeyword %>"
+                <input type="text" name="q" th:value="${selKeyword}"
                        placeholder="VD: She ___ to school..."
                        class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700">
             </div>
@@ -125,63 +103,47 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <%
-                        if (questions == null || questions.isEmpty()) {
-                    %>
-                    <tr>
+                    <tr th:if="${questions == null or questions.isEmpty()}">
                         <td colspan="8" class="px-8 py-12 text-center text-slate-500 font-semibold">
                             Chưa có câu hỏi nào. Thêm câu hỏi hoặc điều chỉnh bộ lọc.
                         </td>
                     </tr>
-                    <%
-                        } else {
-                            for (AdminExerciseQuestionRow q : questions) {
-                                String updateUrl = request.getContextPath() + "/admin/exercises/" + q.id() + "/update";
-                                String deleteUrl = request.getContextPath() + "/admin/exercises/" + q.id() + "/delete";
-                                String accuracy = q.avgAccuracy() == null ? "—" : (q.avgAccuracy() + "%");
-                                String accuracyClass = "bg-slate-100 text-slate-700";
-                                if (q.avgAccuracy() != null) {
-                                    if (q.avgAccuracy() < 30) accuracyClass = "bg-rose-50 text-rose-700";
-                                    else if (q.avgAccuracy() > 95) accuracyClass = "bg-amber-50 text-amber-700";
-                                    else accuracyClass = "bg-emerald-50 text-emerald-700";
-                                }
-                                String difficultyClass;
-                                switch (q.difficulty() == null ? "" : q.difficulty()) {
-                                    case "easy":   difficultyClass = "bg-emerald-50 text-emerald-700"; break;
-                                    case "medium": difficultyClass = "bg-amber-50 text-amber-700"; break;
-                                    case "hard":   difficultyClass = "bg-rose-50 text-rose-700"; break;
-                                    default:       difficultyClass = "bg-slate-100 text-slate-700";
-                                }
-                    %>
-                    <tr class="group hover:bg-white transition-all duration-300">
-                        <td class="px-6 py-5 text-sm font-bold text-indigo-950"><%= q.category() %></td>
+                    <tr th:each="q : ${questions}" class="group hover:bg-white transition-all duration-300"
+                        th:with="accuracyClass=${q.avgAccuracy == null ? 'bg-slate-100 text-slate-700'
+                                     : (q.avgAccuracy < 30 ? 'bg-rose-50 text-rose-700'
+                                        : (q.avgAccuracy > 95 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'))},
+                                 difficultyClass=${q.difficulty == 'easy' ? 'bg-emerald-50 text-emerald-700'
+                                     : (q.difficulty == 'medium' ? 'bg-amber-50 text-amber-700'
+                                        : (q.difficulty == 'hard' ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-700'))}">
+                        <td class="px-6 py-5 text-sm font-bold text-indigo-950" th:text="${q.category}"></td>
                         <td class="px-6 py-5">
-                            <span class="inline-flex items-center px-2.5 py-1 text-xs font-black rounded-lg <%= difficultyClass %>"><%= q.difficulty() %></span>
+                            <span class="inline-flex items-center px-2.5 py-1 text-xs font-black rounded-lg" th:classappend="${difficultyClass}" th:text="${q.difficulty}"></span>
                         </td>
                         <td class="px-6 py-5 text-center">
-                            <span class="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-800 text-xs font-black rounded-xl"><%= q.level() == null ? "—" : q.level() %></span>
+                            <span class="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-800 text-xs font-black rounded-xl" th:text="${q.level == null ? '—' : q.level}"></span>
                         </td>
-                        <td class="px-6 py-5 text-sm text-slate-700 max-w-md truncate"><%= q.question() %></td>
-                        <td class="px-6 py-5 text-sm font-semibold text-emerald-700"><%= q.correctAnswer() %></td>
-                        <td class="px-6 py-5 text-center text-sm font-bold text-slate-600"><%= q.attemptCount() %></td>
+                        <td class="px-6 py-5 text-sm text-slate-700 max-w-md truncate" th:text="${q.question}"></td>
+                        <td class="px-6 py-5 text-sm font-semibold text-emerald-700" th:text="${q.correctAnswer}"></td>
+                        <td class="px-6 py-5 text-center text-sm font-bold text-slate-600" th:text="${q.attemptCount}"></td>
                         <td class="px-6 py-5 text-center">
-                            <span class="inline-flex items-center px-3 py-1 text-xs font-black rounded-xl <%= accuracyClass %>"><%= accuracy %></span>
+                            <span class="inline-flex items-center px-3 py-1 text-xs font-black rounded-xl" th:classappend="${accuracyClass}"
+                                  th:text="${q.avgAccuracy == null ? '—' : q.avgAccuracy + '%'}"></span>
                         </td>
                         <td class="px-6 py-5 text-right whitespace-nowrap">
                             <button type="button"
                                     class="question-edit-btn inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200"
-                                    data-id="<%= q.id() %>"
-                                    data-category="<%= q.category() %>"
-                                    data-difficulty="<%= q.difficulty() %>"
-                                    data-level="<%= q.level() == null ? "" : q.level() %>"
-                                    data-question='<%= q.question().replace("'", "&#39;").replace("<", "&lt;") %>'
-                                    data-options='<%= q.optionsJson() == null ? "" : q.optionsJson().replace("'", "&#39;") %>'
-                                    data-correct='<%= q.correctAnswer().replace("'", "&#39;") %>'
-                                    data-update-url="<%= updateUrl %>">
+                                    th:attr="data-id=${q.id},
+                                             data-category=${q.category},
+                                             data-difficulty=${q.difficulty},
+                                             data-level=${q.level == null ? '' : q.level},
+                                             data-question=${q.question},
+                                             data-options=${q.optionsJson == null ? '' : q.optionsJson},
+                                             data-correct=${q.correctAnswer},
+                                             data-update-url=@{/admin/exercises/{id}/update(id=${q.id})}">
                                 <span class="material-symbols-outlined text-base">edit</span>
                                 Sửa
                             </button>
-                            <form method="post" action="<%= deleteUrl %>" class="inline"
+                            <form method="post" th:action="@{/admin/exercises/{id}/delete(id=${q.id})}" class="inline"
                                   onsubmit="return confirm('Xóa câu hỏi này?')">
                                 <button type="submit"
                                         class="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100">
@@ -191,10 +153,6 @@
                             </form>
                         </td>
                     </tr>
-                    <%
-                            }
-                        }
-                    %>
                     </tbody>
                 </table>
             </div>
@@ -212,8 +170,8 @@
                 </div>
                 <button type="button" class="material-symbols-outlined text-slate-400 hover:text-on-surface create-modal-close">close</button>
             </div>
-            <form class="p-8 pt-2 space-y-4" method="post" action="${pageContext.request.contextPath}/admin/exercises">
-                <%@ include file="exercise-form-fields.jspf" %>
+            <form class="p-8 pt-2 space-y-4" method="post" th:action="@{/admin/exercises}">
+                <th:block th:replace="~{admin/fragments/form-fields :: exerciseFields}"></th:block>
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" class="text-slate-500 font-bold text-sm px-6 py-3 hover:bg-slate-100 rounded-xl create-modal-close">Hủy</button>
                     <button type="submit" class="primary-gradient text-white px-8 py-3 rounded-2xl font-bold text-sm shadow-lg shadow-primary/20">
@@ -315,7 +273,7 @@
                 </div>
                 <button type="button" class="material-symbols-outlined text-slate-400 hover:text-on-surface import-modal-close">close</button>
             </div>
-            <form class="p-8 pt-2 space-y-4" method="post" action="${pageContext.request.contextPath}/admin/exercises/import">
+            <form class="p-8 pt-2 space-y-4" method="post" th:action="@{/admin/exercises/import}">
                 <div class="space-y-2">
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">JSON payload</label>
                     <textarea name="jsonPayload" rows="12" required
@@ -332,7 +290,7 @@
         </div>
     </div>
 
-    <%@ include file="layout/footer.jspf" %>
+    <div th:replace="~{admin/layout/fragments :: footer}"></div>
 </main>
 <script>
     (function () {

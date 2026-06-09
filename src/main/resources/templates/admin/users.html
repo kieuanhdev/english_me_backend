@@ -1,53 +1,31 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ page import="com.kiovant.englishme.entity.User" %>
-<%@ page import="java.util.List" %>
-<%@ page import="java.time.format.DateTimeFormatter" %>
 <!DOCTYPE html>
-<html lang="vi">
-<head>
-    <%@ include file="layout/head.jspf" %>
-</head>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout/fragments :: head}"></head>
 <body class="bg-surface text-on-surface">
-<%@ include file="layout/sidebar.jspf" %>
+<aside th:replace="~{admin/layout/fragments :: sidebar('users')}"></aside>
 <main class="ml-64 min-h-screen">
-    <%@ include file="layout/topbar.jspf" %>
+    <div th:replace="~{admin/layout/fragments :: topbar}"></div>
 
-    <%
-        List<User> users = (List<User>) request.getAttribute("users");
-        int totalUsers = users == null ? 0 : users.size();
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-        String selectedCefr = (String) request.getAttribute("selectedCefr");
-        String selectedStatus = (String) request.getAttribute("selectedStatus");
-        String selectedKeyword = (String) request.getAttribute("selectedKeyword");
-        if (selectedCefr == null) selectedCefr = "";
-        if (selectedStatus == null || selectedStatus.isBlank()) selectedStatus = "all";
-        if (selectedKeyword == null) selectedKeyword = "";
-    %>
+    <div class="p-8 space-y-8"
+         th:with="selCefr=${selectedCefr != null ? selectedCefr : ''},
+                  selStatus=${selectedStatus == null or #strings.isEmpty(selectedStatus) ? 'all' : selectedStatus},
+                  selKeyword=${selectedKeyword != null ? selectedKeyword : ''},
+                  totalUsers=${users != null ? users.size() : 0}">
 
-    <%
-        String successMessage = (String) request.getAttribute("successMessage");
-        String errorMessage = (String) request.getAttribute("errorMessage");
-    %>
-
-    <div class="p-8 space-y-8">
-        <% if (successMessage != null) { %>
-        <div class="rounded-2xl bg-emerald-50 text-emerald-800 px-5 py-3 text-sm font-semibold border border-emerald-100">
-            <%= successMessage %>
-        </div>
-        <% } %>
-        <% if (errorMessage != null) { %>
-        <div class="rounded-2xl bg-rose-50 text-rose-800 px-5 py-3 text-sm font-semibold border border-rose-100">
-            <%= errorMessage %>
-        </div>
-        <% } %>
+        <div th:if="${successMessage != null}"
+             class="rounded-2xl bg-emerald-50 text-emerald-800 px-5 py-3 text-sm font-semibold border border-emerald-100"
+             th:text="${successMessage}"></div>
+        <div th:if="${errorMessage != null}"
+             class="rounded-2xl bg-rose-50 text-rose-800 px-5 py-3 text-sm font-semibold border border-rose-100"
+             th:text="${errorMessage}"></div>
 
         <div class="flex justify-between items-end flex-wrap gap-4">
             <div class="space-y-1">
                 <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline">Quản lý người dùng</h1>
-                <p class="text-slate-500 font-medium">Theo dõi và quản lý <%= totalUsers %> học viên trong hệ thống.</p>
+                <p class="text-slate-500 font-medium">Theo dõi và quản lý <span th:text="${totalUsers}">0</span> học viên trong hệ thống.</p>
             </div>
             <div class="flex gap-2">
-                <a href="${pageContext.request.contextPath}/admin/users/export?cefr=<%= selectedCefr %>&status=<%= selectedStatus %>&q=<%= selectedKeyword %>"
+                <a th:href="@{/admin/users/export(cefr=${selCefr},status=${selStatus},q=${selKeyword})}"
                    class="bg-slate-100 text-slate-700 px-5 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200">
                     <span class="material-symbols-outlined text-lg">download</span>
                     Export CSV
@@ -61,36 +39,36 @@
         </div>
 
         <section class="bg-surface-container-low p-6 rounded-[2rem] space-y-6">
-            <form method="get" action="${pageContext.request.contextPath}/admin/users" class="flex flex-wrap items-end gap-4">
+            <form method="get" th:action="@{/admin/users}" class="flex flex-wrap items-end gap-4">
                 <div class="flex-1 min-w-[220px]">
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">Trình độ CEFR</label>
                     <select name="cefr" class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
-                        <option value="" <%= selectedCefr.isEmpty() ? "selected" : "" %>>Tất cả trình độ</option>
-                        <option value="A1" <%= "A1".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>A1 - Beginner</option>
-                        <option value="A2" <%= "A2".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>A2 - Elementary</option>
-                        <option value="B1" <%= "B1".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>B1 - Intermediate</option>
-                        <option value="B2" <%= "B2".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>B2 - Upper Intermediate</option>
-                        <option value="C1" <%= "C1".equalsIgnoreCase(selectedCefr) ? "selected" : "" %>>C1 - Advanced</option>
+                        <option value="" th:selected="${#strings.isEmpty(selCefr)}">Tất cả trình độ</option>
+                        <option value="A1" th:selected="${#strings.equalsIgnoreCase(selCefr,'A1')}">A1 - Beginner</option>
+                        <option value="A2" th:selected="${#strings.equalsIgnoreCase(selCefr,'A2')}">A2 - Elementary</option>
+                        <option value="B1" th:selected="${#strings.equalsIgnoreCase(selCefr,'B1')}">B1 - Intermediate</option>
+                        <option value="B2" th:selected="${#strings.equalsIgnoreCase(selCefr,'B2')}">B2 - Upper Intermediate</option>
+                        <option value="C1" th:selected="${#strings.equalsIgnoreCase(selCefr,'C1')}">C1 - Advanced</option>
                     </select>
                 </div>
                 <div class="flex-1 min-w-[220px]">
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">Trạng thái</label>
                     <select name="status" class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
-                        <option value="all" <%= "all".equalsIgnoreCase(selectedStatus) ? "selected" : "" %>>Tất cả</option>
-                        <option value="active" <%= "active".equalsIgnoreCase(selectedStatus) ? "selected" : "" %>>Hoạt động</option>
-                        <option value="locked" <%= "locked".equalsIgnoreCase(selectedStatus) ? "selected" : "" %>>Đã khóa</option>
+                        <option value="all" th:selected="${#strings.equalsIgnoreCase(selStatus,'all')}">Tất cả</option>
+                        <option value="active" th:selected="${#strings.equalsIgnoreCase(selStatus,'active')}">Hoạt động</option>
+                        <option value="locked" th:selected="${#strings.equalsIgnoreCase(selStatus,'locked')}">Đã khóa</option>
                     </select>
                 </div>
                 <div class="flex-1 min-w-[240px]">
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">Tìm kiếm</label>
-                    <input type="text" name="q" value="<%= selectedKeyword %>" placeholder="Ten, email, UID..."
+                    <input type="text" name="q" th:value="${selKeyword}" placeholder="Ten, email, UID..."
                            class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
                 </div>
                 <div class="flex items-center gap-2">
                     <button type="submit" class="primary-gradient text-white px-5 py-3 rounded-xl text-sm font-bold">
                         Lọc
                     </button>
-                    <a href="${pageContext.request.contextPath}/admin/users"
+                    <a th:href="@{/admin/users}"
                        class="bg-white text-slate-600 px-5 py-3 rounded-xl text-sm font-bold">
                         Reset
                     </a>
@@ -114,92 +92,73 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <%
-                        if (users == null || users.isEmpty()) {
-                    %>
-                    <tr>
+                    <tr th:if="${users == null or users.isEmpty()}">
                         <td colspan="8" class="px-8 py-10 text-center text-slate-500 font-semibold">
                             Chưa có người dùng nào trong hệ thống.
                         </td>
                     </tr>
-                    <%
-                        } else {
-                            for (User user : users) {
-                                String displayName = user.getFullName() != null && !user.getFullName().isBlank()
-                                        ? user.getFullName() : "Người dùng chưa cập nhật";
-                                String level = user.getCefrLevel() != null ? user.getCefrLevel() : "Chưa xếp lớp";
-                                boolean accountActive = !Boolean.TRUE.equals(user.getAccountLocked());
-                                String statusText = accountActive ? "Hoạt động" : "Đã khóa";
-                                String statusClass = accountActive
-                                        ? "bg-green-50 text-green-700"
-                                        : "bg-red-50 text-red-700";
-                                String createdAt = user.getCreatedAt() != null ? user.getCreatedAt().format(dateFormatter) : "--/--/----";
-                    %>
-                    <tr class="group hover:bg-white transition-all duration-300">
+                    <tr th:each="user : ${users}" class="group hover:bg-white transition-all duration-300"
+                        th:with="displayName=${user.fullName != null and !#strings.isEmpty(user.fullName) ? user.fullName : 'Người dùng chưa cập nhật'},
+                                 accountActive=${!(user.accountLocked == true)}">
                         <td class="px-8 py-5">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-primary font-bold flex items-center justify-center">
-                                    <%= displayName.substring(0, 1).toUpperCase() %>
-                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-indigo-100 text-primary font-bold flex items-center justify-center"
+                                     th:text="${#strings.toUpperCase(#strings.substring(displayName,0,1))}">A</div>
                                 <div class="flex flex-col">
-                                    <span class="text-sm font-bold text-indigo-950"><%= displayName %></span>
-                                    <span class="text-[10px] text-slate-400 font-medium">UID: <%= user.getFirebaseUid() %></span>
+                                    <span class="text-sm font-bold text-indigo-950" th:text="${displayName}">Tên</span>
+                                    <span class="text-[10px] text-slate-400 font-medium">UID: <span th:text="${user.firebaseUid}"></span></span>
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-5"><span class="text-sm font-medium text-slate-600"><%= user.getEmail() %></span></td>
+                        <td class="px-6 py-5"><span class="text-sm font-medium text-slate-600" th:text="${user.email}"></span></td>
                         <td class="px-6 py-5">
-                            <span class="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg"><%= level %></span>
+                            <span class="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg"
+                                  th:text="${user.cefrLevel != null ? user.cefrLevel : 'Chưa xếp lớp'}"></span>
                         </td>
-                        <td class="px-6 py-5 text-center text-sm font-bold text-indigo-950"><%= user.getTotalXp() == null ? 0 : user.getTotalXp() %></td>
-                        <td class="px-6 py-5 text-center text-sm font-bold text-slate-600"><%= user.getCurrentStreak() == null ? 0 : user.getCurrentStreak() %></td>
-                        <td class="px-6 py-5 text-center"><span class="text-xs font-medium text-slate-500 italic"><%= createdAt %></span></td>
+                        <td class="px-6 py-5 text-center text-sm font-bold text-indigo-950" th:text="${user.totalXp == null ? 0 : user.totalXp}">0</td>
+                        <td class="px-6 py-5 text-center text-sm font-bold text-slate-600" th:text="${user.currentStreak == null ? 0 : user.currentStreak}">0</td>
+                        <td class="px-6 py-5 text-center"><span class="text-xs font-medium text-slate-500 italic"
+                                  th:text="${user.createdAt != null ? #temporals.format(user.createdAt,'dd/MM/yyyy') : '--/--/----'}"></span></td>
                         <td class="px-6 py-5">
-                            <span class="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full <%= statusClass %>">
-                                <span class="w-1 h-1 rounded-full bg-current"></span><%= statusText %>
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full"
+                                  th:classappend="${accountActive ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}">
+                                <span class="w-1 h-1 rounded-full bg-current"></span><span th:text="${accountActive ? 'Hoạt động' : 'Đã khóa'}"></span>
                             </span>
                         </td>
                         <td class="px-6 py-5 text-right">
                             <div class="inline-flex flex-wrap items-center justify-end gap-2">
-                            <a href="${pageContext.request.contextPath}/admin/users/<%= user.getId() %>"
+                            <a th:href="@{/admin/users/{id}(id=${user.id})}"
                                class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
                                 <span class="material-symbols-outlined text-base">visibility</span>
                                 Chi tiết
                             </a>
-                            <% if (accountActive) { %>
-                            <form method="post"
-                                  action="${pageContext.request.contextPath}/admin/users/<%= user.getId() %>/lock"
+                            <form th:if="${accountActive}" method="post"
+                                  th:action="@{/admin/users/{id}/lock(id=${user.id})}"
                                   class="inline">
-                                <input type="hidden" name="cefr" value="<%= selectedCefr %>"/>
-                                <input type="hidden" name="status" value="<%= selectedStatus %>"/>
-                                <input type="hidden" name="q" value="<%= selectedKeyword %>"/>
+                                <input type="hidden" name="cefr" th:value="${selCefr}"/>
+                                <input type="hidden" name="status" th:value="${selStatus}"/>
+                                <input type="hidden" name="q" th:value="${selKeyword}"/>
                                 <button type="submit"
                                         class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors">
                                     <span class="material-symbols-outlined text-base">lock</span>
                                     Khóa
                                 </button>
                             </form>
-                            <% } else { %>
-                            <form method="post"
-                                  action="${pageContext.request.contextPath}/admin/users/<%= user.getId() %>/unlock"
+                            <form th:unless="${accountActive}" method="post"
+                                  th:action="@{/admin/users/{id}/unlock(id=${user.id})}"
                                   class="inline">
-                                <input type="hidden" name="cefr" value="<%= selectedCefr %>"/>
-                                <input type="hidden" name="status" value="<%= selectedStatus %>"/>
-                                <input type="hidden" name="q" value="<%= selectedKeyword %>"/>
+                                <input type="hidden" name="cefr" th:value="${selCefr}"/>
+                                <input type="hidden" name="status" th:value="${selStatus}"/>
+                                <input type="hidden" name="q" th:value="${selKeyword}"/>
                                 <button type="submit"
                                         class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">
                                     <span class="material-symbols-outlined text-base">lock_open</span>
                                     Mở khóa
                                 </button>
                             </form>
-                            <% } %>
                             </div>
                         </td>
                     </tr>
-                    <%
-                            }
-                        }
-                    %>
                     </tbody>
                 </table>
             </div>
@@ -281,7 +240,7 @@
         </div>
     </div>
 
-    <%@ include file="layout/footer.jspf" %>
+    <div th:replace="~{admin/layout/fragments :: footer}"></div>
 </main>
 <script>
     (function () {

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout/fragments :: head}"></head>
+<body class="bg-surface text-on-surface">
+<aside th:replace="~{admin/layout/fragments :: sidebar('pronunciation')}"></aside>
+<main class="ml-64 min-h-screen">
+    <div th:replace="~{admin/layout/fragments :: topbar}"></div>
+
+    <div class="p-8 space-y-8"
+         th:with="selProvider=${selectedProvider != null ? selectedProvider : ''},
+                  selKeyword=${selectedKeyword != null ? selectedKeyword : ''},
+                  selMinScore=${selectedMinScore != null ? selectedMinScore : 0},
+                  pgSize=${pageSize != null ? pageSize : 20},
+                  attempts=${attemptsPage != null ? attemptsPage.content : null}">
+        <div class="space-y-1">
+            <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline">Quản lý luyện phát âm</h1>
+            <p class="text-slate-500 font-medium">Theo dõi lịch sử chấm điểm phát âm AI của học viên.</p>
+        </div>
+
+        <section class="bg-surface-container-low p-6 rounded-[2rem] space-y-6">
+            <form method="get" th:action="@{/admin/pronunciation}" class="flex flex-wrap items-end gap-4">
+                <div class="flex-1 min-w-[200px]">
+                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Provider</label>
+                    <select name="provider" class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+                        <option value="" th:selected="${#strings.isEmpty(selProvider)}">Tất cả</option>
+                        <option value="speechace" th:selected="${#strings.equalsIgnoreCase(selProvider,'speechace')}">Speechace</option>
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[180px]">
+                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Điểm tối thiểu</label>
+                    <input type="number" name="minScore" min="0" max="100" th:value="${selMinScore}"
+                           class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"/>
+                </div>
+                <div class="flex-[2] min-w-[240px]">
+                    <label class="text-xs font-bold text-slate-500 uppercase px-1">Tìm user</label>
+                    <input type="text" name="q" th:value="${selKeyword}" placeholder="Ho ten, email, firebase UID..."
+                           class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"/>
+                </div>
+                <input type="hidden" name="size" th:value="${pgSize}"/>
+                <div class="flex items-center gap-2">
+                    <button type="submit" class="primary-gradient text-white px-5 py-3 rounded-xl text-sm font-bold">Lọc</button>
+                    <a th:href="@{/admin/pronunciation}" class="bg-white text-slate-600 px-5 py-3 rounded-xl text-sm font-bold">Reset</a>
+                </div>
+            </form>
+        </section>
+
+        <div class="bg-surface-container-low rounded-[2rem] overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-separate border-spacing-0">
+                    <thead>
+                    <tr class="bg-slate-100/50">
+                        <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">User</th>
+                        <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Reference text</th>
+                        <th class="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Overall</th>
+                        <th class="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Accuracy</th>
+                        <th class="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Fluency</th>
+                        <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Provider</th>
+                        <th class="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Created at</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${attempts == null or attempts.isEmpty()}">
+                        <td colspan="7" class="px-8 py-10 text-center text-slate-500 font-semibold">
+                            Chưa có dữ liệu luyện phát âm theo bộ lọc hiện tại.
+                        </td>
+                    </tr>
+                    <tr th:each="row : ${attempts}" class="group hover:bg-white transition-all duration-300"
+                        th:with="refText=${row.referenceText == null ? '' : (#strings.length(row.referenceText) > 120 ? #strings.substring(row.referenceText,0,120) + '...' : row.referenceText)}">
+                        <td class="px-6 py-5">
+                            <div class="flex flex-col">
+                                <span class="text-sm font-bold text-indigo-950"
+                                      th:text="${row.userFullName == null or #strings.isEmpty(row.userFullName) ? 'Người dùng chưa cập nhật' : row.userFullName}"></span>
+                                <span class="text-xs text-slate-500" th:text="${row.userEmail}"></span>
+                                <span class="text-[10px] text-slate-400">UID: <span th:text="${row.firebaseUid}"></span></span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-5">
+                            <span class="text-sm font-medium text-slate-600" th:text="${refText}"></span>
+                        </td>
+                        <td class="px-4 py-5 text-center"><span class="inline-flex px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold" th:text="${row.overallScore}"></span></td>
+                        <td class="px-4 py-5 text-center"><span class="text-sm font-semibold text-slate-700" th:text="${row.accuracyScore}"></span></td>
+                        <td class="px-4 py-5 text-center"><span class="text-sm font-semibold text-slate-700" th:text="${row.fluencyScore}"></span></td>
+                        <td class="px-6 py-5"><span class="text-xs font-bold uppercase text-slate-500" th:text="${row.provider}"></span></td>
+                        <td class="px-6 py-5"><span class="text-xs text-slate-500" th:text="${row.createdAt == null ? '--' : #temporals.format(row.createdAt,'dd/MM/yyyy HH:mm')}"></span></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div th:if="${attemptsPage != null and attemptsPage.totalPages > 1}" class="flex items-center justify-between"
+             th:with="curPage=${attemptsPage.number},
+                      totalPages=${attemptsPage.totalPages},
+                      prev=${attemptsPage.number - 1 < 0 ? 0 : attemptsPage.number - 1},
+                      next=${attemptsPage.number + 1 > attemptsPage.totalPages - 1 ? attemptsPage.totalPages - 1 : attemptsPage.number + 1}">
+            <span class="text-sm text-slate-500">Trang <span th:text="${curPage + 1}"></span> / <span th:text="${totalPages}"></span></span>
+            <div class="flex gap-2">
+                <a class="px-4 py-2 rounded-xl bg-white text-slate-600 text-sm font-bold"
+                   th:classappend="${curPage == 0 ? 'pointer-events-none opacity-50' : ''}"
+                   th:href="@{/admin/pronunciation(provider=${selProvider},minScore=${selMinScore},q=${selKeyword},size=${pgSize},page=${prev})}">Truoc</a>
+                <a class="px-4 py-2 rounded-xl bg-white text-slate-600 text-sm font-bold"
+                   th:classappend="${curPage == totalPages - 1 ? 'pointer-events-none opacity-50' : ''}"
+                   th:href="@{/admin/pronunciation(provider=${selProvider},minScore=${selMinScore},q=${selKeyword},size=${pgSize},page=${next})}">Sau</a>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{admin/layout/fragments :: footer}"></div>
+</main>
+</body>
+</html>

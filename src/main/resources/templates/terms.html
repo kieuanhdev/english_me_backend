@@ -1,6 +1,5 @@
-<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -109,7 +108,7 @@
     <p>
         Chúng tôi thu thập và xử lý dữ liệu (email, tiến độ học, bản ghi âm phát âm) nhằm cung
         cấp và cải thiện dịch vụ. Chi tiết xem tại
-        <a href="/privacy">Chính sách quyền riêng tư</a>.
+        <a th:href="@{/privacy}" href="/privacy">Chính sách quyền riêng tư</a>.
     </p>
 
     <h2>6. Giới hạn trách nhiệm</h2>

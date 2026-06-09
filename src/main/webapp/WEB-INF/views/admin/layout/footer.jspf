@@ -1,6 +1,0 @@
-<%@ page pageEncoding="UTF-8" %>
-<footer class="px-8 pb-8">
-    <div class="rounded-2xl bg-surface-container-low p-4 text-xs text-slate-500">
-        © 2026 EnglishMe Admin
-    </div>
-</footer>

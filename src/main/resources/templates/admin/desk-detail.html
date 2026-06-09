@@ -1,50 +1,30 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ page import="com.kiovant.englishme.entity.Desk" %>
-<%@ page import="com.kiovant.englishme.dto.FlashcardResponse" %>
-<%@ page import="org.springframework.data.domain.Page" %>
 <!DOCTYPE html>
-<html lang="vi">
-<head>
-    <%@ include file="layout/head.jspf" %>
-</head>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout/fragments :: head}"></head>
 <body class="bg-surface text-on-surface">
-<%@ include file="layout/sidebar.jspf" %>
+<aside th:replace="~{admin/layout/fragments :: sidebar('desks')}"></aside>
 <main class="ml-64 min-h-screen">
-    <%@ include file="layout/topbar.jspf" %>
+    <div th:replace="~{admin/layout/fragments :: topbar}"></div>
 
-    <%
-        Desk desk = (Desk) request.getAttribute("desk");
-        @SuppressWarnings("unchecked")
-        Page<FlashcardResponse> fp = (Page<FlashcardResponse>) request.getAttribute("flashcardsPage");
-        Integer currentPage = (Integer) request.getAttribute("currentPage");
-        if (currentPage == null) currentPage = 0;
-        String successMessage = (String) request.getAttribute("successMessage");
-        String errorMessage = (String) request.getAttribute("errorMessage");
-        String ctx = request.getContextPath();
-        String deskUrl = desk != null ? ctx + "/admin/desks/" + desk.getId() : ctx + "/admin/desks";
-        long total = fp != null ? fp.getTotalElements() : 0;
-    %>
-
-    <div class="p-8 space-y-8">
-        <% if (successMessage != null) { %>
-        <div class="rounded-2xl bg-emerald-50 text-emerald-800 px-5 py-3 text-sm font-semibold border border-emerald-100"><%= successMessage %></div>
-        <% } %>
-        <% if (errorMessage != null) { %>
-        <div class="rounded-2xl bg-rose-50 text-rose-800 px-5 py-3 text-sm font-semibold border border-rose-100"><%= errorMessage %></div>
-        <% } %>
+    <div class="p-8 space-y-8"
+         th:with="fp=${flashcardsPage},
+                  curPage=${currentPage != null ? currentPage : 0},
+                  total=${flashcardsPage != null ? flashcardsPage.totalElements : 0}">
+        <div th:if="${successMessage != null}" class="rounded-2xl bg-emerald-50 text-emerald-800 px-5 py-3 text-sm font-semibold border border-emerald-100" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage != null}" class="rounded-2xl bg-rose-50 text-rose-800 px-5 py-3 text-sm font-semibold border border-rose-100" th:text="${errorMessage}"></div>
 
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="space-y-2">
-                <a href="<%= ctx %>/admin/desks" class="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1">
+                <a th:href="@{/admin/desks}" class="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1">
                     <span class="material-symbols-outlined text-sm">arrow_back</span> Danh sách desk
                 </a>
-                <% if (desk != null) { %>
-                <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline flex flex-wrap items-center gap-3">
-                    <%= desk.getTitle() %>
-                    <span class="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-800 text-sm font-black rounded-xl"><%= desk.getCefrLevel() %></span>
-                </h1>
-                <p class="text-slate-500 font-medium"><%= total %> flashcard trong desk này (<%= fp != null ? fp.getSize() : 0 %> / trang).</p>
-                <% } %>
+                <th:block th:if="${desk != null}">
+                    <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline flex flex-wrap items-center gap-3">
+                        <span th:text="${desk.title}"></span>
+                        <span class="inline-flex items-center px-3 py-1 bg-indigo-50 text-indigo-800 text-sm font-black rounded-xl" th:text="${desk.cefrLevel}"></span>
+                    </h1>
+                    <p class="text-slate-500 font-medium"><span th:text="${total}"></span> flashcard trong desk này (<span th:text="${fp != null ? fp.size : 0}"></span> / trang).</p>
+                </th:block>
             </div>
         </div>
 
@@ -52,8 +32,7 @@
             <h2 class="text-lg font-headline font-black text-primary flex items-center gap-2">
                 <span class="material-symbols-outlined">note_add</span> Thêm flashcard
             </h2>
-            <% if (desk != null) { %>
-            <form method="post" action="<%= ctx %>/admin/desks/<%= desk.getId() %>/flashcards" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <form th:if="${desk != null}" method="post" th:action="@{/admin/desks/{id}/flashcards(id=${desk.id})}" class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div class="space-y-2 md:col-span-2">
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">Từ (word) *</label>
                     <input name="word" required type="text" placeholder="abandon"
@@ -61,7 +40,7 @@
                 </div>
                 <div class="space-y-2">
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">CEFR *</label>
-                    <input name="cefr" required type="text" value="<%= desk.getCefrLevel() %>"
+                    <input name="cefr" required type="text" th:value="${desk.cefrLevel}"
                            class="mt-1 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
                 </div>
                 <div class="space-y-2">
@@ -106,23 +85,16 @@
                     </button>
                 </div>
             </form>
-            <% } %>
         </section>
 
         <div class="bg-surface-container-low rounded-[2rem] overflow-hidden">
             <div class="px-8 py-5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
                 <h2 class="text-lg font-headline font-black text-primary">Flashcard trong desk</h2>
-                <% if (fp != null && fp.getTotalPages() > 1) { %>
-                <nav class="flex items-center gap-2 text-xs font-bold">
-                    <% if (fp.hasPrevious()) { %>
-                    <a href="<%= deskUrl %>?page=<%= currentPage - 1 %>" class="px-3 py-2 rounded-xl bg-white text-primary hover:bg-indigo-50">← Trước</a>
-                    <% } %>
-                    <span class="text-slate-500">Trang <%= fp.getNumber() + 1 %> / <%= fp.getTotalPages() %></span>
-                    <% if (fp.hasNext()) { %>
-                    <a href="<%= deskUrl %>?page=<%= currentPage + 1 %>" class="px-3 py-2 rounded-xl bg-white text-primary hover:bg-indigo-50">Sau →</a>
-                    <% } %>
+                <nav th:if="${fp != null and fp.totalPages > 1}" class="flex items-center gap-2 text-xs font-bold">
+                    <a th:if="${fp.hasPrevious()}" th:href="@{/admin/desks/{id}(id=${desk.id},page=${curPage - 1})}" class="px-3 py-2 rounded-xl bg-white text-primary hover:bg-indigo-50">← Trước</a>
+                    <span class="text-slate-500">Trang <span th:text="${fp.number + 1}"></span> / <span th:text="${fp.totalPages}"></span></span>
+                    <a th:if="${fp.hasNext()}" th:href="@{/admin/desks/{id}(id=${desk.id},page=${curPage + 1})}" class="px-3 py-2 rounded-xl bg-white text-primary hover:bg-indigo-50">Sau →</a>
                 </nav>
-                <% } %>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-separate border-spacing-0">
@@ -135,31 +107,20 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <%
-                        if (fp == null || fp.isEmpty()) {
-                    %>
-                    <tr>
+                    <tr th:if="${fp == null or fp.isEmpty()}">
                         <td colspan="4" class="px-8 py-10 text-center text-slate-500 font-semibold">Chưa có flashcard.</td>
                     </tr>
-                    <%
-                        } else {
-                            for (FlashcardResponse fc : fp.getContent()) {
-                                String def = fc.getDefinition();
-                                if (def != null && def.length() > 120) def = def.substring(0, 117) + "...";
-                                String au = fc.getAudioUrl();
-                                if (au == null || au.isBlank()) au = "—";
-                    %>
-                    <tr class="group hover:bg-white transition-all duration-300">
+                    <tr th:each="fc : ${fp != null ? fp.content : null}" class="group hover:bg-white transition-all duration-300"
+                        th:with="def=${fc.definition == null ? null : (#strings.length(fc.definition) > 120 ? #strings.substring(fc.definition,0,117) + '...' : fc.definition)},
+                                 au=${fc.audioUrl == null or #strings.isEmpty(fc.audioUrl) ? '—' : fc.audioUrl}">
                         <td class="px-8 py-4">
-                            <span class="text-sm font-bold text-indigo-950"><%= fc.getWord() %></span>
-                            <% if (fc.getIpa() != null && !fc.getIpa().isBlank()) { %>
-                            <span class="block text-[11px] text-slate-400 font-medium mt-0.5"><%= fc.getIpa() %></span>
-                            <% } %>
+                            <span class="text-sm font-bold text-indigo-950" th:text="${fc.word}"></span>
+                            <span th:if="${fc.ipa != null and !#strings.isEmpty(fc.ipa)}" class="block text-[11px] text-slate-400 font-medium mt-0.5" th:text="${fc.ipa}"></span>
                         </td>
-                        <td class="px-6 py-4 text-xs font-mono text-slate-600 max-w-[200px] truncate" title="<%= fc.getAudioUrl() != null ? fc.getAudioUrl() : "" %>"><%= au %></td>
-                        <td class="px-6 py-4 text-xs text-slate-600 max-w-xl"><%= def != null ? def : "—" %></td>
+                        <td class="px-6 py-4 text-xs font-mono text-slate-600 max-w-[200px] truncate" th:title="${fc.audioUrl != null ? fc.audioUrl : ''}" th:text="${au}"></td>
+                        <td class="px-6 py-4 text-xs text-slate-600 max-w-xl" th:text="${def != null ? def : '—'}"></td>
                         <td class="px-6 py-4 text-right">
-                            <form method="post" action="<%= ctx %>/admin/desks/<%= desk.getId() %>/flashcards/<%= fc.getId() %>/delete"
+                            <form method="post" th:action="@{/admin/desks/{deskId}/flashcards/{fcId}/delete(deskId=${desk.id},fcId=${fc.id})}"
                                   onsubmit="return confirm('Xóa flashcard này?')">
                                 <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors">
                                     <span class="material-symbols-outlined text-sm">delete</span>
@@ -167,17 +128,13 @@
                             </form>
                         </td>
                     </tr>
-                    <%
-                            }
-                        }
-                    %>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <%@ include file="layout/footer.jspf" %>
+    <div th:replace="~{admin/layout/fragments :: footer}"></div>
 </main>
 </body>
 </html>

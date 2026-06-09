@@ -1,49 +1,33 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ page import="com.kiovant.englishme.dto.AdminGrammarLessonDetail" %>
-<%@ page import="com.kiovant.englishme.dto.AdminGrammarExerciseRow" %>
-<%@ page import="java.util.List" %>
-<%
-    AdminGrammarLessonDetail lesson = (AdminGrammarLessonDetail) request.getAttribute("lesson");
-    List<AdminGrammarExerciseRow> exercises = lesson != null ? lesson.exercises() : List.of();
-    String successMessage = (String) request.getAttribute("successMessage");
-    String errorMessage = (String) request.getAttribute("errorMessage");
-%>
 <!DOCTYPE html>
-<html lang="vi">
-<head>
-    <%@ include file="layout/head.jspf" %>
-</head>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout/fragments :: head}"></head>
 <body class="bg-surface text-on-surface">
-<%@ include file="layout/sidebar.jspf" %>
+<aside th:replace="~{admin/layout/fragments :: sidebar('grammar')}"></aside>
 <main class="ml-64 min-h-screen">
-    <%@ include file="layout/topbar.jspf" %>
+    <div th:replace="~{admin/layout/fragments :: topbar}"></div>
 
     <div class="p-8 space-y-8">
-        <% if (successMessage != null) { %>
-        <div class="rounded-2xl bg-emerald-50 text-emerald-800 px-5 py-3 text-sm font-semibold border border-emerald-100"><%= successMessage %></div>
-        <% } %>
-        <% if (errorMessage != null) { %>
-        <div class="rounded-2xl bg-rose-50 text-rose-800 px-5 py-3 text-sm font-semibold border border-rose-100"><%= errorMessage %></div>
-        <% } %>
+        <div th:if="${successMessage != null}" class="rounded-2xl bg-emerald-50 text-emerald-800 px-5 py-3 text-sm font-semibold border border-emerald-100" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage != null}" class="rounded-2xl bg-rose-50 text-rose-800 px-5 py-3 text-sm font-semibold border border-rose-100" th:text="${errorMessage}"></div>
 
-        <% if (lesson != null) { %>
+        <th:block th:if="${lesson != null}" th:with="exercises=${lesson.exercises}">
         <div class="flex items-center gap-3">
-            <a href="${pageContext.request.contextPath}/admin/grammar/topics/<%= lesson.topicId() %>" class="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1">
-                <span class="material-symbols-outlined text-sm">arrow_back</span> Danh sách bài học (<%= lesson.topicTitle() %>)
+            <a th:href="@{/admin/grammar/topics/{id}(id=${lesson.topicId})}" class="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">arrow_back</span> Danh sách bài học (<span th:text="${lesson.topicTitle}"></span>)
             </a>
         </div>
 
         <div class="flex justify-between items-end flex-wrap gap-4">
             <div class="space-y-1">
-                <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline"><%= lesson.title() %></h1>
-                <p class="text-slate-500 font-medium">Source ID: <span class="font-mono"><%= lesson.sourceId() != null ? lesson.sourceId() : "—" %></span> &middot; Sort: <%= lesson.sortOrder() %></p>
+                <h1 class="text-3xl font-extrabold tracking-tight text-indigo-950 font-headline" th:text="${lesson.title}"></h1>
+                <p class="text-slate-500 font-medium">Source ID: <span class="font-mono" th:text="${lesson.sourceId != null ? lesson.sourceId : '—'}"></span> &middot; Sort: <span th:text="${lesson.sortOrder}"></span></p>
             </div>
             <div class="flex gap-2">
                 <button type="button" id="openLessonEdit"
                         class="bg-slate-100 text-slate-700 px-5 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200">
                     <span class="material-symbols-outlined text-base">edit</span> Sửa bài học
                 </button>
-                <form method="post" action="${pageContext.request.contextPath}/admin/grammar/lessons/<%= lesson.id() %>/delete"
+                <form method="post" th:action="@{/admin/grammar/lessons/{id}/delete(id=${lesson.id})}"
                       onsubmit="return confirm('Xóa bài học này? Bài tập đi kèm cũng sẽ bị xóa.')">
                     <button type="submit" class="bg-rose-50 text-rose-700 px-5 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-rose-100">
                         <span class="material-symbols-outlined text-base">delete</span> Xóa bài học
@@ -52,105 +36,84 @@
             </div>
         </div>
 
-        <% if (lesson.explanationVi() != null && !lesson.explanationVi().isBlank()) { %>
-        <section class="bg-surface-container-low rounded-2xl p-8 space-y-4">
+        <section th:if="${lesson.explanationVi != null and !#strings.isEmpty(lesson.explanationVi)}" class="bg-surface-container-low rounded-2xl p-8 space-y-4">
             <h2 class="text-lg font-headline font-black text-primary flex items-center gap-2">
                 <span class="material-symbols-outlined">menu_book</span> Giải thích
             </h2>
-            <div class="prose prose-slate max-w-none text-sm leading-relaxed whitespace-pre-wrap"><%= lesson.explanationVi() %></div>
+            <div class="prose prose-slate max-w-none text-sm leading-relaxed whitespace-pre-wrap" th:text="${lesson.explanationVi}"></div>
         </section>
-        <% } %>
 
-        <% if (lesson.whenToUseVi() != null && !lesson.whenToUseVi().isBlank()) { %>
-        <section class="bg-surface-container-low rounded-2xl p-8 space-y-4">
+        <section th:if="${lesson.whenToUseVi != null and !#strings.isEmpty(lesson.whenToUseVi)}" class="bg-surface-container-low rounded-2xl p-8 space-y-4">
             <h2 class="text-lg font-headline font-black text-primary flex items-center gap-2">
                 <span class="material-symbols-outlined">help</span> Khi nào dùng
             </h2>
-            <div class="prose prose-slate max-w-none text-sm leading-relaxed whitespace-pre-wrap"><%= lesson.whenToUseVi() %></div>
+            <div class="prose prose-slate max-w-none text-sm leading-relaxed whitespace-pre-wrap" th:text="${lesson.whenToUseVi}"></div>
         </section>
-        <% } %>
 
-        <% if (lesson.tipsVi() != null && !lesson.tipsVi().isBlank()) { %>
-        <section class="bg-surface-container-low rounded-2xl p-8 space-y-4">
+        <section th:if="${lesson.tipsVi != null and !#strings.isEmpty(lesson.tipsVi)}" class="bg-surface-container-low rounded-2xl p-8 space-y-4">
             <h2 class="text-lg font-headline font-black text-primary flex items-center gap-2">
                 <span class="material-symbols-outlined">lightbulb</span> Mẹo
             </h2>
-            <div class="prose prose-slate max-w-none text-sm leading-relaxed whitespace-pre-wrap"><%= lesson.tipsVi() %></div>
+            <div class="prose prose-slate max-w-none text-sm leading-relaxed whitespace-pre-wrap" th:text="${lesson.tipsVi}"></div>
         </section>
-        <% } %>
 
-        <% if (lesson.formulasJson() != null) { %>
-        <section class="bg-surface-container-low rounded-2xl p-8 space-y-4">
+        <section th:if="${lesson.formulasJson != null}" class="bg-surface-container-low rounded-2xl p-8 space-y-4">
             <h2 class="text-lg font-headline font-black text-primary flex items-center gap-2">
                 <span class="material-symbols-outlined">function</span> Công thức (JSON)
             </h2>
-            <pre class="bg-slate-50 rounded-xl p-4 text-xs font-mono text-slate-700 overflow-x-auto"><%= lesson.formulasJson() %></pre>
+            <pre class="bg-slate-50 rounded-xl p-4 text-xs font-mono text-slate-700 overflow-x-auto" th:text="${lesson.formulasJson}"></pre>
         </section>
-        <% } %>
 
-        <% if (lesson.keyWordsJson() != null) { %>
-        <section class="bg-surface-container-low rounded-2xl p-8 space-y-4">
+        <section th:if="${lesson.keyWordsJson != null}" class="bg-surface-container-low rounded-2xl p-8 space-y-4">
             <h2 class="text-lg font-headline font-black text-primary flex items-center gap-2">
                 <span class="material-symbols-outlined">vpn_key</span> Từ khóa nhận biết (JSON)
             </h2>
-            <pre class="bg-slate-50 rounded-xl p-4 text-xs font-mono text-slate-700 overflow-x-auto"><%= lesson.keyWordsJson() %></pre>
+            <pre class="bg-slate-50 rounded-xl p-4 text-xs font-mono text-slate-700 overflow-x-auto" th:text="${lesson.keyWordsJson}"></pre>
         </section>
-        <% } %>
 
-        <% if (lesson.examplesJson() != null) { %>
-        <section class="bg-surface-container-low rounded-2xl p-8 space-y-4">
+        <section th:if="${lesson.examplesJson != null}" class="bg-surface-container-low rounded-2xl p-8 space-y-4">
             <h2 class="text-lg font-headline font-black text-primary flex items-center gap-2">
                 <span class="material-symbols-outlined">format_quote</span> Ví dụ (JSON)
             </h2>
-            <pre class="bg-slate-50 rounded-xl p-4 text-xs font-mono text-slate-700 overflow-x-auto"><%= lesson.examplesJson() %></pre>
+            <pre class="bg-slate-50 rounded-xl p-4 text-xs font-mono text-slate-700 overflow-x-auto" th:text="${lesson.examplesJson}"></pre>
         </section>
-        <% } %>
 
-        <% if (lesson.commonMistakesJson() != null) { %>
-        <section class="bg-surface-container-low rounded-2xl p-8 space-y-4">
+        <section th:if="${lesson.commonMistakesJson != null}" class="bg-surface-container-low rounded-2xl p-8 space-y-4">
             <h2 class="text-lg font-headline font-black text-primary flex items-center gap-2">
                 <span class="material-symbols-outlined">warning</span> Lỗi thường gặp (JSON)
             </h2>
-            <pre class="bg-slate-50 rounded-xl p-4 text-xs font-mono text-slate-700 overflow-x-auto"><%= lesson.commonMistakesJson() %></pre>
+            <pre class="bg-slate-50 rounded-xl p-4 text-xs font-mono text-slate-700 overflow-x-auto" th:text="${lesson.commonMistakesJson}"></pre>
         </section>
-        <% } %>
 
         <section class="bg-surface-container-low rounded-2xl p-8 space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="text-lg font-headline font-black text-primary flex items-center gap-2">
-                    <span class="material-symbols-outlined">quiz</span> Bài tập (<%= exercises.size() %>)
+                    <span class="material-symbols-outlined">quiz</span> Bài tập (<span th:text="${exercises.size()}"></span>)
                 </h2>
                 <button type="button" id="openExerciseModal"
                         class="primary-gradient text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-primary/20">
                     <span class="material-symbols-outlined text-base">add_circle</span> Thêm bài tập
                 </button>
             </div>
-            <% if (exercises.isEmpty()) { %>
-            <p class="text-slate-500 text-sm">Chưa có bài tập cho bài học này.</p>
-            <% } else { %>
-            <div class="space-y-4">
-                <% for (int i = 0; i < exercises.size(); i++) {
-                    AdminGrammarExerciseRow ex = exercises.get(i);
-                    String updateUrl = request.getContextPath() + "/admin/grammar/exercises/" + ex.id() + "/update";
-                    String deleteUrl = request.getContextPath() + "/admin/grammar/exercises/" + ex.id() + "/delete";
-                %>
-                <div class="bg-white rounded-xl p-5 space-y-3">
+            <p th:if="${exercises.isEmpty()}" class="text-slate-500 text-sm">Chưa có bài tập cho bài học này.</p>
+            <div th:unless="${exercises.isEmpty()}" class="space-y-4">
+                <div th:each="ex : ${exercises}" class="bg-white rounded-xl p-5 space-y-3">
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center gap-2">
-                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-100 text-primary text-xs font-bold">#<%= ex.exerciseOrder() %></span>
-                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400"><%= ex.exerciseType() != null ? ex.exerciseType() : "—" %></span>
+                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-100 text-primary text-xs font-bold">#<span th:text="${ex.exerciseOrder}"></span></span>
+                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400" th:text="${ex.exerciseType != null ? ex.exerciseType : '—'}"></span>
                         </div>
                         <div class="flex items-center gap-2">
                             <button type="button"
                                     class="exercise-edit-btn inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200"
-                                    data-id="<%= ex.id() %>"
-                                    data-order="<%= ex.exerciseOrder() %>"
-                                    data-type="<%= ex.exerciseType() != null ? ex.exerciseType() : "" %>"
-                                    data-content="<%= ex.contentJson() == null ? "" : ex.contentJson().replace("&", "&amp;").replace("\"", "&quot;").replace("<", "&lt;") %>"
-                                    data-update-url="<%= updateUrl %>">
+                                    th:attr="data-id=${ex.id},
+                                             data-order=${ex.exerciseOrder},
+                                             data-type=${ex.exerciseType != null ? ex.exerciseType : ''},
+                                             data-content=${ex.contentJson == null ? '' : ex.contentJson},
+                                             data-update-url=@{/admin/grammar/exercises/{id}/update(id=${ex.id})}">
                                 <span class="material-symbols-outlined text-sm">edit</span> Sửa
                             </button>
-                            <form method="post" action="<%= deleteUrl %>" class="inline"
+                            <form method="post" th:action="@{/admin/grammar/exercises/{id}/delete(id=${ex.id})}" class="inline"
                                   onsubmit="return confirm('Xóa bài tập này?')">
                                 <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100">
                                     <span class="material-symbols-outlined text-sm">delete</span> Xóa
@@ -158,11 +121,9 @@
                             </form>
                         </div>
                     </div>
-                    <pre class="bg-slate-50 rounded-lg p-3 text-xs font-mono text-slate-700 overflow-x-auto whitespace-pre-wrap"><%= ex.contentJson() %></pre>
+                    <pre class="bg-slate-50 rounded-lg p-3 text-xs font-mono text-slate-700 overflow-x-auto whitespace-pre-wrap" th:text="${ex.contentJson}"></pre>
                 </div>
-                <% } %>
             </div>
-            <% } %>
         </section>
 
         <!-- Edit lesson modal -->
@@ -176,53 +137,53 @@
                     </div>
                     <button type="button" class="material-symbols-outlined text-slate-400 hover:text-on-surface lesson-edit-modal-close">close</button>
                 </div>
-                <form class="p-8 pt-2 space-y-4 overflow-y-auto" method="post" action="${pageContext.request.contextPath}/admin/grammar/lessons/<%= lesson.id() %>/update">
+                <form class="p-8 pt-2 space-y-4 overflow-y-auto" method="post" th:action="@{/admin/grammar/lessons/{id}/update(id=${lesson.id})}">
                     <div class="grid grid-cols-3 gap-3">
                         <div class="space-y-2 col-span-2">
                             <label class="text-xs font-bold text-slate-500 uppercase px-1">Source ID</label>
-                            <input type="text" name="sourceId" required maxlength="120" value="<%= lesson.sourceId() %>"
+                            <input type="text" name="sourceId" required maxlength="120" th:value="${lesson.sourceId}"
                                    class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-mono text-slate-700">
                         </div>
                         <div class="space-y-2">
                             <label class="text-xs font-bold text-slate-500 uppercase px-1">Sort order</label>
-                            <input type="number" name="sortOrderRaw" value="<%= lesson.sortOrder() %>"
+                            <input type="number" name="sortOrderRaw" th:value="${lesson.sortOrder}"
                                    class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
                         </div>
                     </div>
                     <div class="space-y-2">
                         <label class="text-xs font-bold text-slate-500 uppercase px-1">Tiêu đề</label>
-                        <input type="text" name="title" required value="<%= lesson.title() %>"
+                        <input type="text" name="title" required th:value="${lesson.title}"
                                class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
                     </div>
                     <div class="space-y-2">
                         <label class="text-xs font-bold text-slate-500 uppercase px-1">Giải thích (VI)</label>
-                        <textarea name="explanationVi" rows="3" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm text-slate-700"><%= lesson.explanationVi() == null ? "" : lesson.explanationVi() %></textarea>
+                        <textarea name="explanationVi" rows="3" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm text-slate-700" th:text="${lesson.explanationVi == null ? '' : lesson.explanationVi}"></textarea>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-2">
                             <label class="text-xs font-bold text-slate-500 uppercase px-1">Khi nào dùng (VI)</label>
-                            <textarea name="whenToUseVi" rows="3" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm text-slate-700"><%= lesson.whenToUseVi() == null ? "" : lesson.whenToUseVi() %></textarea>
+                            <textarea name="whenToUseVi" rows="3" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm text-slate-700" th:text="${lesson.whenToUseVi == null ? '' : lesson.whenToUseVi}"></textarea>
                         </div>
                         <div class="space-y-2">
                             <label class="text-xs font-bold text-slate-500 uppercase px-1">Mẹo (VI)</label>
-                            <textarea name="tipsVi" rows="3" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm text-slate-700"><%= lesson.tipsVi() == null ? "" : lesson.tipsVi() %></textarea>
+                            <textarea name="tipsVi" rows="3" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm text-slate-700" th:text="${lesson.tipsVi == null ? '' : lesson.tipsVi}"></textarea>
                         </div>
                     </div>
                     <div class="space-y-2">
                         <label class="text-xs font-bold text-slate-500 uppercase px-1">Formulas (JSON array of objects)</label>
-                        <textarea name="formulasJson" rows="3" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700"><%= lesson.formulasJson() == null ? "" : lesson.formulasJson() %></textarea>
+                        <textarea name="formulasJson" rows="3" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700" th:text="${lesson.formulasJson == null ? '' : lesson.formulasJson}"></textarea>
                     </div>
                     <div class="space-y-2">
                         <label class="text-xs font-bold text-slate-500 uppercase px-1">Key words (JSON array of strings)</label>
-                        <textarea name="keyWordsJson" rows="2" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700"><%= lesson.keyWordsJson() == null ? "" : lesson.keyWordsJson() %></textarea>
+                        <textarea name="keyWordsJson" rows="2" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700" th:text="${lesson.keyWordsJson == null ? '' : lesson.keyWordsJson}"></textarea>
                     </div>
                     <div class="space-y-2">
                         <label class="text-xs font-bold text-slate-500 uppercase px-1">Examples (JSON array)</label>
-                        <textarea name="examplesJson" rows="3" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700"><%= lesson.examplesJson() == null ? "" : lesson.examplesJson() %></textarea>
+                        <textarea name="examplesJson" rows="3" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700" th:text="${lesson.examplesJson == null ? '' : lesson.examplesJson}"></textarea>
                     </div>
                     <div class="space-y-2">
                         <label class="text-xs font-bold text-slate-500 uppercase px-1">Common mistakes (JSON array)</label>
-                        <textarea name="commonMistakesJson" rows="3" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700"><%= lesson.commonMistakesJson() == null ? "" : lesson.commonMistakesJson() %></textarea>
+                        <textarea name="commonMistakesJson" rows="3" class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700" th:text="${lesson.commonMistakesJson == null ? '' : lesson.commonMistakesJson}"></textarea>
                     </div>
                     <div class="flex justify-end gap-3 pt-2">
                         <button type="button" class="text-slate-500 font-bold text-sm px-6 py-3 hover:bg-slate-100 rounded-xl lesson-edit-modal-close">Hủy</button>
@@ -244,8 +205,8 @@
                     <button type="button" class="material-symbols-outlined text-slate-400 hover:text-on-surface exercise-modal-close">close</button>
                 </div>
                 <form id="exerciseForm" class="p-8 pt-2 space-y-4 overflow-y-auto" method="post"
-                      action="${pageContext.request.contextPath}/admin/grammar/lessons/<%= lesson.id() %>/exercises">
-                    <input type="hidden" name="lessonId" value="<%= lesson.id() %>">
+                      th:action="@{/admin/grammar/lessons/{id}/exercises(id=${lesson.id})}">
+                    <input type="hidden" name="lessonId" th:value="${lesson.id}">
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-2">
                             <label class="text-xs font-bold text-slate-500 uppercase px-1">Order</label>
@@ -279,10 +240,10 @@
                 </form>
             </div>
         </div>
-        <% } %>
+        </th:block>
     </div>
 
-    <%@ include file="layout/footer.jspf" %>
+    <div th:replace="~{admin/layout/fragments :: footer}"></div>
 </main>
 <script>
     (function () {

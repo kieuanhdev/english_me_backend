@@ -21,7 +21,7 @@ import java.util.Map;
  *   tiết kiệm token.
  * - {@link #summarize(String, List)}: tổng kết & nhận xét cả đoạn hội thoại (JSON).
  *
- * Tái dùng DeepSeek chat API + key DEEPSEEK_API_KEY như {@link DeepSeekPronunciationScorer}.
+ * Dùng LLM chat API (cấu hình runtime qua admin) cho luyện hội thoại.
  * Stateless: FE giữ lịch sử và gửi full mỗi request.
  */
 @Service

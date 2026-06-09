@@ -1,9 +1,6 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <!DOCTYPE html>
-<html lang="vi">
-<head>
-    <%@ include file="layout/head.jspf" %>
-</head>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout/fragments :: head}"></head>
 <body class="bg-surface font-body text-on-surface">
 <header class="fixed top-0 left-0 right-0 z-50 bg-[#f9f9f9] shadow-[0_4px_24px_0_rgba(26,28,28,0.04)] backdrop-blur-[12px]">
     <nav class="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
@@ -40,14 +37,11 @@
                     </p>
                 </div>
 
-                <% String errorMessage = (String) request.getAttribute("errorMessage"); %>
-                <% if (errorMessage != null) { %>
-                <div class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                    <%= errorMessage %>
-                </div>
-                <% } %>
+                <div th:if="${errorMessage != null}"
+                     class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
+                     th:text="${errorMessage}"></div>
 
-                <form action="${pageContext.request.contextPath}/admin/login" method="post" class="space-y-6">
+                <form th:action="@{/admin/login}" method="post" class="space-y-6">
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-semibold text-on-surface mb-2 ml-1" for="email">Email</label>

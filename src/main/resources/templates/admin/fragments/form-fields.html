@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Các khối field dùng lại trong form thêm exercise / grammar lesson / grammar topic. -->
+
+<th:block th:fragment="exerciseFields">
+    <div class="grid grid-cols-3 gap-3">
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-500 uppercase px-1">Category</label>
+            <select name="category" required
+                    class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+                <option value="vocabulary">vocabulary</option>
+                <option value="grammar">grammar</option>
+            </select>
+        </div>
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-500 uppercase px-1">Difficulty</label>
+            <select name="difficulty" required
+                    class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+                <option value="easy">easy</option>
+                <option value="medium">medium</option>
+                <option value="hard">hard</option>
+            </select>
+        </div>
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-500 uppercase px-1">CEFR</label>
+            <select name="level"
+                    class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+                <option value="">—</option>
+                <option value="A1">A1</option><option value="A2">A2</option>
+                <option value="B1">B1</option><option value="B2">B2</option>
+                <option value="C1">C1</option><option value="C2">C2</option>
+            </select>
+        </div>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Câu hỏi</label>
+        <textarea name="question" rows="2" required
+                  placeholder="VD: She ___ to school every day."
+                  class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"></textarea>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Options (mảng JSON các chuỗi)</label>
+        <textarea name="optionsJson" rows="3" required
+                  placeholder='["go","goes","going","gone"]'
+                  class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-mono text-slate-700"></textarea>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Đáp án đúng (phải khớp 1 option)</label>
+        <input type="text" name="correctAnswer" required
+               placeholder="goes"
+               class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Giải thích</label>
+        <textarea name="explanation" rows="2"
+                  class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"></textarea>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Gợi ý (tùy chọn)</label>
+        <textarea name="hint" rows="2"
+                  class="w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"></textarea>
+    </div>
+</th:block>
+
+<th:block th:fragment="grammarLessonFields">
+    <div class="grid grid-cols-3 gap-3">
+        <div class="space-y-2 col-span-2">
+            <label class="text-xs font-bold text-slate-500 uppercase px-1">Source ID (duy nhất)</label>
+            <input type="text" name="sourceId" required maxlength="120"
+                   class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-mono text-slate-700"
+                   placeholder="present-simple-001">
+        </div>
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-500 uppercase px-1">Sort order</label>
+            <input type="number" name="sortOrderRaw"
+                   class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+        </div>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Tiêu đề</label>
+        <input type="text" name="title" required
+               class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"
+               placeholder="VD: Cấu trúc thì hiện tại đơn">
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Giải thích (VI)</label>
+        <textarea name="explanationVi" rows="3"
+                  class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm text-slate-700"></textarea>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-500 uppercase px-1">Khi nào dùng (VI)</label>
+            <textarea name="whenToUseVi" rows="3"
+                      class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm text-slate-700"></textarea>
+        </div>
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-500 uppercase px-1">Mẹo (VI)</label>
+            <textarea name="tipsVi" rows="3"
+                      class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm text-slate-700"></textarea>
+        </div>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Formulas (JSON array of objects, ví dụ: <code>[{"label":"+","form":"S + V(s/es)"}]</code>)</label>
+        <textarea name="formulasJson" rows="3" placeholder='[{"label":"+","form":"S + V(s/es)"}]'
+                  class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700"></textarea>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Key words (JSON array of strings, ví dụ: <code>["always","usually"]</code>)</label>
+        <textarea name="keyWordsJson" rows="2" placeholder='["always","usually","often"]'
+                  class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700"></textarea>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Examples (JSON array of objects)</label>
+        <textarea name="examplesJson" rows="3" placeholder='[{"en":"She works here.","vi":"Cô ấy làm việc ở đây."}]'
+                  class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700"></textarea>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Common mistakes (JSON array of objects)</label>
+        <textarea name="commonMistakesJson" rows="3" placeholder='[{"wrong":"She work here","right":"She works here"}]'
+                  class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-xs font-mono text-slate-700"></textarea>
+    </div>
+</th:block>
+
+<th:block th:fragment="grammarTopicFields">
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Slug (a-z, 0-9, '-', '_')</label>
+        <input type="text" name="slug" required pattern="[a-z0-9][a-z0-9_\-]*"
+               class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-mono text-slate-700"
+               placeholder="present-simple">
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-500 uppercase px-1">Danh mục</label>
+            <input type="text" name="category" required
+                   class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"
+                   placeholder="tenses">
+        </div>
+        <div class="space-y-2">
+            <label class="text-xs font-bold text-slate-500 uppercase px-1">CEFR</label>
+            <select name="level" required class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+                <option value="A1">A1</option><option value="A2">A2</option>
+                <option value="B1">B1</option><option value="B2">B2</option>
+                <option value="C1">C1</option><option value="C2">C2</option>
+            </select>
+        </div>
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Tiêu đề hiển thị</label>
+        <input type="text" name="title" required
+               class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700"
+               placeholder="Thì hiện tại đơn">
+    </div>
+    <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-500 uppercase px-1">Sort order (để trống = tự tăng)</label>
+        <input type="number" name="sortOrderRaw"
+               class="mt-1 w-full bg-surface-container-low border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
+    </div>
+</th:block>
+</body>
+</html>

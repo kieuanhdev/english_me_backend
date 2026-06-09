@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout/fragments :: head}"></head>
+<body class="bg-surface text-on-surface">
+<aside th:replace="~{admin/layout/fragments :: sidebar('xp-rules')}"></aside>
+<main class="ml-64 min-h-screen">
+    <div th:replace="~{admin/layout/fragments :: topbar}"></div>
+
+    <div class="p-8 space-y-8">
+        <section class="primary-gradient text-white rounded-3xl p-10 relative overflow-hidden">
+            <h1 class="text-4xl font-headline font-black mb-3">Cấu hình XP</h1>
+            <p class="max-w-3xl text-indigo-100">
+                Chỉnh giá trị XP của từng nguồn (test, exercise, các bonus). Thay đổi có hiệu lực ngay sau khi lưu.
+                <br>
+                <span class="text-indigo-200 text-sm">
+                    <strong>Không quản lý ở đây:</strong> XP từng bài học (cột <code>learning_lessons.xp_reward</code>) và
+                    XP review flashcard SM-2 (cố định trong code: Again=1, Hard=2, Good=3, Easy=4).
+                </span>
+            </p>
+        </section>
+
+        <div th:if="${successMessage != null}" class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl px-6 py-4" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage != null}" class="bg-red-50 border border-red-200 text-red-800 rounded-2xl px-6 py-4" th:text="${errorMessage}"></div>
+
+        <div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl px-6 py-4 text-sm leading-relaxed">
+            <p class="font-bold mb-2">Công thức tính XP</p>
+            <ul class="space-y-1 list-disc list-inside">
+                <li>
+                    <strong>Test / Exercise</strong> (accuracy-based):
+                    <code class="bg-white px-2 py-0.5 rounded">XP = base + perCorrect × số câu đúng + (accuracy ≥ threshold ? accuracyBonus : 0)</code>
+                </li>
+                <li>
+                    <strong>Bonus types</strong> (<code>daily_goal_bonus</code>, <code>path_bonus</code>, <code>level_bonus</code>,
+                    <code>streak_bonus</code>, <code>pronunciation</code>): chỉ dùng <strong>baseAmount</strong>. Các trường khác bỏ qua.
+                </li>
+                <li>
+                    <strong>Daily cap</strong>: trần XP/ngày cho source này (để trống = không giới hạn). Hiện chưa enforce trong code — chỉ lưu cấu hình.
+                </li>
+            </ul>
+        </div>
+
+        <div class="space-y-4">
+            <form th:each="rule : ${rules}" method="post" th:action="@{/admin/xp-rules}"
+                  class="bg-surface-container-lowest rounded-2xl p-6 space-y-4"
+                  th:with="isAccuracyBased=${rule.sourceType == 'test' or rule.sourceType == 'exercise'},
+                           base=${rule.baseAmount == null ? 0 : rule.baseAmount},
+                           per=${rule.perCorrect == null ? 0 : rule.perCorrect},
+                           bonus=${rule.accuracyBonus == null ? 0 : rule.accuracyBonus},
+                           threshold=${rule.accuracyThresholdPct == null ? 0 : rule.accuracyThresholdPct},
+                           displayName=${rule.sourceType == 'test' ? 'Test (Kiểm tra)'
+                               : (rule.sourceType == 'exercise' ? 'Exercise (Bài tập)'
+                                  : (rule.sourceType == 'daily_goal_bonus' ? 'Daily goal bonus'
+                                     : (rule.sourceType == 'path_bonus' ? 'Path bonus'
+                                        : (rule.sourceType == 'level_bonus' ? 'Level bonus'
+                                           : (rule.sourceType == 'streak_bonus' ? 'Streak bonus'
+                                              : (rule.sourceType == 'pronunciation' ? 'Pronunciation' : rule.sourceType))))))},
+                           hint=${rule.sourceType == 'test' ? 'XP cho mỗi lần làm xong 1 phiên test.'
+                               : (rule.sourceType == 'exercise' ? 'XP cho mỗi lần làm xong 1 phiên exercise.'
+                                  : (rule.sourceType == 'daily_goal_bonus' ? 'Cộng thêm khi user đạt mục tiêu XP/ngày (1 lần/ngày).'
+                                     : (rule.sourceType == 'path_bonus' ? 'Cộng khi hoàn thành 1 learning path (CHƯA wire vào BE).'
+                                        : (rule.sourceType == 'level_bonus' ? 'Cộng khi hoàn thành 1 CEFR level (CHƯA wire vào BE).'
+                                           : (rule.sourceType == 'streak_bonus' ? 'Cộng khi streak đạt mốc 7/14/21... ngày (CHƯA wire vào BE).'
+                                              : (rule.sourceType == 'pronunciation' ? 'Cộng khi luyện phát âm đạt yêu cầu (CHƯA wire vào BE).' : ''))))))}">
+                <input type="hidden" name="sourceType" th:value="${rule.sourceType}">
+
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <code class="text-sm font-bold text-primary bg-indigo-50 px-2 py-0.5 rounded" th:text="${rule.sourceType}"></code>
+                            <span class="text-sm font-bold text-slate-700" th:text="${displayName}"></span>
+                            <span th:if="${isAccuracyBased}" class="text-[10px] font-bold uppercase tracking-widest bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">accuracy-based</span>
+                            <span th:unless="${isAccuracyBased}" class="text-[10px] font-bold uppercase tracking-widest bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">flat bonus</span>
+                            <span th:unless="${rule.enabled == true}" class="text-[10px] font-bold uppercase tracking-widest bg-red-100 text-red-700 px-2 py-0.5 rounded-full">disabled</span>
+                        </div>
+                        <p th:if="${!#strings.isEmpty(hint)}" class="text-sm text-slate-500 mt-1" th:text="${hint}"></p>
+                    </div>
+                    <p th:if="${rule.updatedAt != null}" class="text-xs text-slate-400 whitespace-nowrap">Cập nhật: <span th:text="${#temporals.format(rule.updatedAt,'dd/MM/yyyy HH:mm')}"></span></p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Base XP</label>
+                        <input type="number" min="0" name="baseAmount" th:value="${base}"
+                               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">XP / câu đúng</label>
+                        <input type="number" min="0" name="perCorrect" th:value="${per}" th:disabled="${!isAccuracyBased}"
+                               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:bg-slate-100 disabled:text-slate-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Accuracy bonus</label>
+                        <input type="number" min="0" name="accuracyBonus" th:value="${bonus}" th:disabled="${!isAccuracyBased}"
+                               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:bg-slate-100 disabled:text-slate-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Threshold %</label>
+                        <input type="number" min="0" max="100" name="accuracyThresholdPct" th:value="${threshold}" th:disabled="${!isAccuracyBased}"
+                               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:bg-slate-100 disabled:text-slate-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Daily cap</label>
+                        <input type="number" min="0" name="dailyCapRaw" th:value="${rule.dailyCap == null ? '' : rule.dailyCap}"
+                               placeholder="∞"
+                               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <label class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <input type="checkbox" name="enabled" value="on" th:checked="${rule.enabled == true}"
+                               class="w-4 h-4 rounded border-slate-300 text-primary focus:ring-indigo-300">
+                        Bật rule này
+                    </label>
+                    <button type="submit" class="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90">Lưu thay đổi</button>
+                </div>
+
+                <div th:if="${isAccuracyBased}" class="text-xs text-slate-500 bg-slate-50 rounded-xl px-4 py-3"
+                     th:with="sample10=${base + per * 8 + (80 >= threshold ? bonus : 0)},
+                              sampleAll=${base + per * 10 + (100 >= threshold ? bonus : 0)}">
+                    <strong>Ví dụ với giá trị hiện tại:</strong>
+                    Làm 10 câu, đúng 8 (accuracy 80%) → <strong><span th:text="${sample10}"></span> XP</strong>.
+                    Đúng cả 10 câu (accuracy 100%) → <strong><span th:text="${sampleAll}"></span> XP</strong>.
+                </div>
+            </form>
+            <div th:if="${rules == null or rules.isEmpty()}" class="bg-slate-50 border border-slate-200 rounded-2xl px-6 py-8 text-center text-slate-500">
+                Chưa có rule nào. Hãy chạy migration <code>V22__xp_rules.sql</code>.
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

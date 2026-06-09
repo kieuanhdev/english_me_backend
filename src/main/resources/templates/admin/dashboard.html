@@ -1,71 +1,62 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ page import="com.kiovant.englishme.dto.DashboardStats" %>
-<%@ page import="com.kiovant.englishme.dto.DashboardAnalytics" %>
-<%@ page import="com.fasterxml.jackson.databind.ObjectMapper" %>
-<%
-    DashboardStats stats = (DashboardStats) request.getAttribute("stats");
-    long totalDesks = stats != null ? stats.totalDesks() : 0;
-    long totalFlashcards = stats != null ? stats.totalFlashcards() : 0;
-    long totalAttempts = stats != null ? stats.totalPronunciationAttempts() : 0;
-
-    DashboardAnalytics analytics = (DashboardAnalytics) request.getAttribute("analytics");
-    DashboardAnalytics.KpiSummary kpi = analytics != null ? analytics.kpi() : new DashboardAnalytics.KpiSummary(
-            0, 0, 0, 0, 0, 0.0, 0);
-
-    ObjectMapper mapper = new ObjectMapper();
-    String newUsersJson = analytics != null ? mapper.writeValueAsString(analytics.newUsersSeries()) : "{\"labels\":[],\"values\":[]}";
-    String cefrJson = analytics != null ? mapper.writeValueAsString(analytics.cefrDistribution()) : "[]";
-    String xpSourceJson = analytics != null ? mapper.writeValueAsString(analytics.xpBySource7d()) : "[]";
-%>
 <!DOCTYPE html>
-<html lang="vi">
-<head>
-    <%@ include file="layout/head.jspf" %>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-</head>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout/fragments :: head}"></head>
 <body class="bg-surface text-on-surface">
-<%@ include file="layout/sidebar.jspf" %>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<aside th:replace="~{admin/layout/fragments :: sidebar('overview')}"></aside>
 
 <main class="ml-64 min-h-screen">
-    <%@ include file="layout/topbar.jspf" %>
+    <header th:replace="~{admin/layout/fragments :: topbar}"></header>
 
-    <div class="p-8 space-y-8">
+    <div class="p-8 space-y-8" th:with="kpi=${analytics != null ? analytics.kpi : null}, stats=${stats}">
         <section class="primary-gradient text-white rounded-3xl p-10 relative overflow-hidden">
             <h1 class="text-4xl font-headline font-black mb-3">Dashboard Analytics</h1>
             <p class="max-w-2xl text-indigo-100">KPI người dùng, biểu đồ đăng ký 14 ngày và phân bố XP/CEFR.</p>
         </section>
 
-        <%-- KPI ROW --%>
+        <!-- KPI ROW -->
         <section class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
             <article class="bg-surface-container-lowest rounded-2xl p-6">
                 <p class="text-xs font-bold tracking-wider text-slate-500 uppercase">Tổng user</p>
-                <h3 class="text-3xl text-primary font-black font-headline mt-2"><%= String.format("%,d", kpi.totalUsers()) %></h3>
+                <h3 class="text-3xl text-primary font-black font-headline mt-2"
+                    th:text="${kpi != null ? #numbers.formatInteger(kpi.totalUsers, 1, 'COMMA') : '0'}">0</h3>
             </article>
             <article class="bg-surface-container-lowest rounded-2xl p-6">
                 <p class="text-xs font-bold tracking-wider text-slate-500 uppercase">User mới hôm nay</p>
-                <h3 class="text-3xl text-emerald-600 font-black font-headline mt-2"><%= String.format("%,d", kpi.newUsersToday()) %></h3>
+                <h3 class="text-3xl text-emerald-600 font-black font-headline mt-2"
+                    th:text="${kpi != null ? #numbers.formatInteger(kpi.newUsersToday, 1, 'COMMA') : '0'}">0</h3>
             </article>
             <article class="bg-surface-container-lowest rounded-2xl p-6">
                 <p class="text-xs font-bold tracking-wider text-slate-500 uppercase">DAU</p>
-                <h3 class="text-3xl text-primary font-black font-headline mt-2"><%= String.format("%,d", kpi.dau()) %></h3>
-                <p class="text-[11px] text-slate-500 mt-1">WAU <%= String.format("%,d", kpi.wau()) %> · MAU <%= String.format("%,d", kpi.mau()) %></p>
+                <h3 class="text-3xl text-primary font-black font-headline mt-2"
+                    th:text="${kpi != null ? #numbers.formatInteger(kpi.dau, 1, 'COMMA') : '0'}">0</h3>
+                <p class="text-[11px] text-slate-500 mt-1">
+                    WAU <span th:text="${kpi != null ? #numbers.formatInteger(kpi.wau, 1, 'COMMA') : '0'}">0</span> ·
+                    MAU <span th:text="${kpi != null ? #numbers.formatInteger(kpi.mau, 1, 'COMMA') : '0'}">0</span>
+                </p>
             </article>
             <article class="bg-surface-container-lowest rounded-2xl p-6">
                 <p class="text-xs font-bold tracking-wider text-slate-500 uppercase">Retention 7d</p>
-                <h3 class="text-3xl text-primary font-black font-headline mt-2"><%= kpi.retention7d() %>%</h3>
+                <h3 class="text-3xl text-primary font-black font-headline mt-2">
+                    <span th:text="${kpi != null ? kpi.retention7d : 0}">0</span>%</h3>
             </article>
             <article class="bg-surface-container-lowest rounded-2xl p-6">
                 <p class="text-xs font-bold tracking-wider text-slate-500 uppercase">XP cấp hôm nay</p>
-                <h3 class="text-3xl text-amber-600 font-black font-headline mt-2"><%= String.format("%,d", kpi.xpAwardedToday()) %></h3>
+                <h3 class="text-3xl text-amber-600 font-black font-headline mt-2"
+                    th:text="${kpi != null ? #numbers.formatInteger(kpi.xpAwardedToday, 1, 'COMMA') : '0'}">0</h3>
             </article>
             <article class="bg-surface-container-lowest rounded-2xl p-6">
                 <p class="text-xs font-bold tracking-wider text-slate-500 uppercase">Flashcards</p>
-                <h3 class="text-3xl text-primary font-black font-headline mt-2"><%= String.format("%,d", totalFlashcards) %></h3>
-                <p class="text-[11px] text-slate-500 mt-1">Desk <%= String.format("%,d", totalDesks) %> · Pron <%= String.format("%,d", totalAttempts) %></p>
+                <h3 class="text-3xl text-primary font-black font-headline mt-2"
+                    th:text="${stats != null ? #numbers.formatInteger(stats.totalFlashcards, 1, 'COMMA') : '0'}">0</h3>
+                <p class="text-[11px] text-slate-500 mt-1">
+                    Desk <span th:text="${stats != null ? #numbers.formatInteger(stats.totalDesks, 1, 'COMMA') : '0'}">0</span> ·
+                    Pron <span th:text="${stats != null ? #numbers.formatInteger(stats.totalPronunciationAttempts, 1, 'COMMA') : '0'}">0</span>
+                </p>
             </article>
         </section>
 
-        <%-- CHARTS --%>
+        <!-- CHARTS -->
         <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <div class="bg-surface-container-lowest rounded-3xl p-6">
                 <h4 class="text-lg font-headline font-black text-primary mb-1">User mới — 14 ngày</h4>
@@ -85,13 +76,14 @@
             <canvas id="chartCefr" height="80"></canvas>
         </section>
     </div>
-    <%@ include file="layout/footer.jspf" %>
+    <footer th:replace="~{admin/layout/fragments :: footer}"></footer>
 </main>
 
-<script>
-    const newUsers = <%= newUsersJson %>;
-    const cefr = <%= cefrJson %>;
-    const xpSource = <%= xpSourceJson %>;
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const newUsers = /*[[${analytics != null ? analytics.newUsersSeries : null}]]*/ {labels: [], values: []};
+    const cefr = /*[[${analytics != null ? analytics.cefrDistribution : null}]]*/ [];
+    const xpSource = /*[[${analytics != null ? analytics.xpBySource7d : null}]]*/ [];
 
     new Chart(document.getElementById("chartNewUsers"), {
         type: "line",
@@ -135,6 +127,7 @@
         },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
     });
+    /*]]>*/
 </script>
 </body>
 </html>

@@ -39,7 +39,7 @@ public class PronunciationAssessmentService {
     private final CloudPronunciationClient cloudPronunciationClient;
     private final PronunciationScoringMapper pronunciationScoringMapper;
     private final PronunciationRateLimiter pronunciationRateLimiter;
-    private final DeepSeekPronunciationScorer deepSeekPronunciationScorer;
+    private final LevenshteinPronunciationScorer levenshteinPronunciationScorer;
 
     public PronunciationAssessmentService(
             UserRepository userRepository,
@@ -48,7 +48,7 @@ public class PronunciationAssessmentService {
             CloudPronunciationClient cloudPronunciationClient,
             PronunciationScoringMapper pronunciationScoringMapper,
             PronunciationRateLimiter pronunciationRateLimiter,
-            DeepSeekPronunciationScorer deepSeekPronunciationScorer
+            LevenshteinPronunciationScorer levenshteinPronunciationScorer
     ) {
         this.userRepository = userRepository;
         this.attemptRepository = attemptRepository;
@@ -56,7 +56,7 @@ public class PronunciationAssessmentService {
         this.cloudPronunciationClient = cloudPronunciationClient;
         this.pronunciationScoringMapper = pronunciationScoringMapper;
         this.pronunciationRateLimiter = pronunciationRateLimiter;
-        this.deepSeekPronunciationScorer = deepSeekPronunciationScorer;
+        this.levenshteinPronunciationScorer = levenshteinPronunciationScorer;
     }
 
     @Transactional
@@ -140,7 +140,7 @@ public class PronunciationAssessmentService {
 
     /**
      * Chấm phát âm dựa trên transcript (text người dùng nói được từ STT trên mobile)
-     * thay vì gửi audio. Dùng DeepSeek (fallback Levenshtein) để so với câu mẫu.
+     * thay vì gửi audio. Dùng thuật toán Levenshtein Distance để so với câu mẫu.
      */
     @Transactional
     public PronunciationAssessResponse assessText(
@@ -168,13 +168,13 @@ public class PronunciationAssessmentService {
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        PronunciationAssessResponse response = deepSeekPronunciationScorer.score(safeReference, safeSpoken);
+        PronunciationAssessResponse response = levenshteinPronunciationScorer.score(safeReference, safeSpoken);
 
         PronunciationAttempt attempt = new PronunciationAttempt();
         attempt.setUser(user);
         attempt.setExerciseId(exerciseId);
         attempt.setReferenceText(safeReference);
-        attempt.setProvider("deepseek");
+        attempt.setProvider("levenshtein");
         attempt.setOverallScore((int) Math.round(response.score()));
         attempt.setAccuracyScore((int) Math.round(response.accuracy()));
         attempt.setFluencyScore((int) Math.round(response.fluency()));
