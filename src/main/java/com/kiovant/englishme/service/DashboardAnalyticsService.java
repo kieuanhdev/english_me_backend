@@ -1,17 +1,16 @@
 package com.kiovant.englishme.service;
 
 import com.kiovant.englishme.dto.DashboardAnalytics;
-import com.kiovant.englishme.repository.ExerciseSessionRepository;
-import com.kiovant.englishme.repository.StudySessionRepository;
 import com.kiovant.englishme.repository.UserRepository;
-import com.kiovant.englishme.repository.UserTestSessionRepository;
 import com.kiovant.englishme.repository.XpHistoryRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,24 +20,16 @@ public class DashboardAnalyticsService {
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("MM-dd");
     private static final List<String> CEFR_ORDER = List.of("A1", "A2", "B1", "B2", "C1", "C2");
+    private static final int TOP_LEARNERS_LIMIT = 10;
 
     private final UserRepository userRepository;
-    private final StudySessionRepository studySessionRepository;
-    private final ExerciseSessionRepository exerciseSessionRepository;
-    private final UserTestSessionRepository userTestSessionRepository;
     private final XpHistoryRepository xpHistoryRepository;
 
     public DashboardAnalyticsService(
             UserRepository userRepository,
-            StudySessionRepository studySessionRepository,
-            ExerciseSessionRepository exerciseSessionRepository,
-            UserTestSessionRepository userTestSessionRepository,
             XpHistoryRepository xpHistoryRepository
     ) {
         this.userRepository = userRepository;
-        this.studySessionRepository = studySessionRepository;
-        this.exerciseSessionRepository = exerciseSessionRepository;
-        this.userTestSessionRepository = userTestSessionRepository;
         this.xpHistoryRepository = xpHistoryRepository;
     }
 
@@ -50,7 +41,8 @@ public class DashboardAnalyticsService {
                 buildKpi(today, todayStart),
                 buildNewUsersSeries(today, 14),
                 buildCefrDistribution(),
-                buildXpBySource7d()
+                buildXpDailySeries(today, 7),
+                buildTopLearners()
         );
     }
 
@@ -96,16 +88,35 @@ public class DashboardAnalyticsService {
         return result;
     }
 
-    private List<DashboardAnalytics.NamedCount> buildXpBySource7d() {
-        LocalDateTime weekStart = LocalDate.now().minusDays(6).atStartOfDay();
-        long study = studySessionRepository.countSince(weekStart) * 2L;
-        long exercise = exerciseSessionRepository.countSince(weekStart) * 5L;
-        long test = userTestSessionRepository.countSince(weekStart) * 10L;
-        return List.of(
-                new DashboardAnalytics.NamedCount("Study", study),
-                new DashboardAnalytics.NamedCount("Exercise", exercise),
-                new DashboardAnalytics.NamedCount("Test", test)
-        );
+    /** XP thực thu mỗi ngày trong {@code days} ngày gần nhất, đọc trực tiếp từ xp_history. */
+    private DashboardAnalytics.TimeSeries buildXpDailySeries(LocalDate today, int days) {
+        LocalDate from = today.minusDays(days - 1L);
+        Map<LocalDate, Long> byDate = new HashMap<>();
+        for (Object[] row : xpHistoryRepository.sumXpByDateBetween(from, today)) {
+            byDate.put((LocalDate) row[0], ((Number) row[1]).longValue());
+        }
+        List<String> labels = new ArrayList<>(days);
+        List<Long> values = new ArrayList<>(days);
+        for (int i = days - 1; i >= 0; i--) {
+            LocalDate d = today.minusDays(i);
+            labels.add(d.format(DAY_FMT));
+            values.add(byDate.getOrDefault(d, 0L));
+        }
+        return new DashboardAnalytics.TimeSeries(labels, values);
+    }
+
+    private List<DashboardAnalytics.TopLearner> buildTopLearners() {
+        List<Object[]> rows = userRepository.findTopLearners(PageRequest.of(0, TOP_LEARNERS_LIMIT));
+        List<DashboardAnalytics.TopLearner> result = new ArrayList<>(rows.size());
+        int rank = 1;
+        for (Object[] row : rows) {
+            String name = row[0] != null ? String.valueOf(row[0]) : String.valueOf(row[1]);
+            String cefr = row[2] != null ? String.valueOf(row[2]).toUpperCase() : "—";
+            long totalXp = row[3] != null ? ((Number) row[3]).longValue() : 0L;
+            int streak = row[4] != null ? ((Number) row[4]).intValue() : 0;
+            result.add(new DashboardAnalytics.TopLearner(rank++, name, cefr, totalXp, streak));
+        }
+        return result;
     }
 
     private static double round1(double value) {

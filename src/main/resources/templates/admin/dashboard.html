@@ -64,16 +64,53 @@
                 <canvas id="chartNewUsers" height="120"></canvas>
             </div>
             <div class="bg-surface-container-lowest rounded-3xl p-6">
-                <h4 class="text-lg font-headline font-black text-primary mb-1">XP theo nguồn — 7 ngày</h4>
-                <p class="text-xs text-slate-500 mb-4">Study / Exercise / Test</p>
-                <canvas id="chartXpSource" height="120"></canvas>
+                <h4 class="text-lg font-headline font-black text-primary mb-1">XP thực thu — 7 ngày</h4>
+                <p class="text-xs text-slate-500 mb-4">Tổng XP học viên kiếm mỗi ngày (xp_history)</p>
+                <canvas id="chartXpDaily" height="120"></canvas>
             </div>
         </section>
 
-        <section class="bg-surface-container-lowest rounded-3xl p-6">
-            <h4 class="text-lg font-headline font-black text-primary mb-1">Phân bố CEFR</h4>
-            <p class="text-xs text-slate-500 mb-4">Tổng user theo trình độ</p>
-            <canvas id="chartCefr" height="80"></canvas>
+        <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div class="bg-surface-container-lowest rounded-3xl p-6">
+                <h4 class="text-lg font-headline font-black text-primary mb-1">Phân bố CEFR</h4>
+                <p class="text-xs text-slate-500 mb-4">Tổng user theo trình độ</p>
+                <canvas id="chartCefr" height="120"></canvas>
+            </div>
+
+            <!-- TOP LEARNERS -->
+            <div class="bg-surface-container-lowest rounded-3xl p-6">
+                <h4 class="text-lg font-headline font-black text-primary mb-1">Top học viên</h4>
+                <p class="text-xs text-slate-500 mb-4">10 user XP cao nhất</p>
+                <div th:with="top=${analytics != null ? analytics.topLearners : null}">
+                    <p th:if="${top == null or top.isEmpty()}" class="text-sm text-slate-400 py-6 text-center">
+                        Chưa có dữ liệu học viên.
+                    </p>
+                    <table th:if="${top != null and !top.isEmpty()}" class="w-full text-sm">
+                        <thead>
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                            <th class="py-2 pr-2 w-8">#</th>
+                            <th class="py-2 pr-2">Học viên</th>
+                            <th class="py-2 pr-2">CEFR</th>
+                            <th class="py-2 pr-2 text-right">XP</th>
+                            <th class="py-2 text-right">Streak</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="l : ${top}" class="border-b border-slate-100">
+                            <td class="py-2 pr-2 font-black text-primary" th:text="${l.rank}">1</td>
+                            <td class="py-2 pr-2 font-semibold truncate max-w-[160px]" th:text="${l.name}">Nguyễn Văn A</td>
+                            <td class="py-2 pr-2">
+                                <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-primary"
+                                      th:text="${l.cefrLevel}">A1</span>
+                            </td>
+                            <td class="py-2 pr-2 text-right font-bold text-amber-600"
+                                th:text="${#numbers.formatInteger(l.totalXp, 1, 'COMMA')}">0</td>
+                            <td class="py-2 text-right text-slate-600" th:text="${l.currentStreak} + ' 🔥'">0 🔥</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </section>
     </div>
     <footer th:replace="~{admin/layout/fragments :: footer}"></footer>
@@ -83,7 +120,7 @@
     /*<![CDATA[*/
     const newUsers = /*[[${analytics != null ? analytics.newUsersSeries : null}]]*/ {labels: [], values: []};
     const cefr = /*[[${analytics != null ? analytics.cefrDistribution : null}]]*/ [];
-    const xpSource = /*[[${analytics != null ? analytics.xpBySource7d : null}]]*/ [];
+    const xpDaily = /*[[${analytics != null ? analytics.xpDailySeries7d : null}]]*/ {labels: [], values: []};
 
     new Chart(document.getElementById("chartNewUsers"), {
         type: "line",
@@ -115,14 +152,18 @@
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
     });
 
-    new Chart(document.getElementById("chartXpSource"), {
-        type: "bar",
+    new Chart(document.getElementById("chartXpDaily"), {
+        type: "line",
         data: {
-            labels: xpSource.map(x => x.label),
+            labels: xpDaily.labels,
             datasets: [{
                 label: "XP",
-                data: xpSource.map(x => x.value),
-                backgroundColor: ["#24389c", "#10b981", "#f59e0b"]
+                data: xpDaily.values,
+                borderColor: "#f59e0b",
+                backgroundColor: "#f59e0b33",
+                fill: true,
+                tension: 0.35,
+                pointRadius: 3
             }]
         },
         options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }

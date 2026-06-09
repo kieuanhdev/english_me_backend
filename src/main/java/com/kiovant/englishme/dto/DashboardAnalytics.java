@@ -6,7 +6,8 @@ public record DashboardAnalytics(
         KpiSummary kpi,
         TimeSeries newUsersSeries,
         List<NamedCount> cefrDistribution,
-        List<NamedCount> xpBySource7d
+        TimeSeries xpDailySeries7d,
+        List<TopLearner> topLearners
 ) {
 
     public record KpiSummary(
@@ -22,4 +23,12 @@ public record DashboardAnalytics(
     public record TimeSeries(List<String> labels, List<Long> values) {}
 
     public record NamedCount(String label, long value) {}
+
+    public record TopLearner(
+            int rank,
+            String name,
+            String cefrLevel,
+            long totalXp,
+            int currentStreak
+    ) {}
 }

@@ -24,4 +24,8 @@ public interface UserRepository extends JpaRepository<User, UUID>, JpaSpecificat
 
     @Query("SELECT u.cefrLevel, COUNT(u) FROM User u WHERE u.deletedAt IS NULL GROUP BY u.cefrLevel")
     List<Object[]> countByCefrLevel();
+
+    @Query("SELECT u.fullName, u.email, u.cefrLevel, u.totalXp, u.currentStreak FROM User u " +
+            "WHERE u.deletedAt IS NULL ORDER BY u.totalXp DESC, u.currentStreak DESC")
+    List<Object[]> findTopLearners(org.springframework.data.domain.Pageable pageable);
 }
