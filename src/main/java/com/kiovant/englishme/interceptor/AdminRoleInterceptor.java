@@ -18,6 +18,13 @@ public class AdminRoleInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        // Phòng thủ: không bao giờ gác trang login/logout, tránh redirect loop
+        // nếu excludePathPatterns ở WebMvcConfig vì lý do nào đó không khớp.
+        String path = request.getRequestURI().substring(request.getContextPath().length());
+        if (path.equals("/admin/login") || path.equals("/admin/logout")) {
+            return true;
+        }
+
         HttpSession session = request.getSession(false);
         if (session == null) {
             response.sendRedirect(request.getContextPath() + "/admin/login");
