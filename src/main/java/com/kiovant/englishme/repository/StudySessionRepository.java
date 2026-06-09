@@ -35,7 +35,7 @@ public interface StudySessionRepository extends JpaRepository<StudySession, UUID
             FROM StudySession s
             WHERE s.user.id = :userId AND s.startedAt >= :since
             """)
-    List<java.sql.Date> findActiveDaysForUser(@Param("userId") UUID userId, @Param("since") LocalDateTime since);
+    List<java.time.LocalDate> findActiveDaysForUser(@Param("userId") UUID userId, @Param("since") LocalDateTime since);
 
     List<StudySession> findTop50ByUser_IdOrderByStartedAtDesc(UUID userId);
 

@@ -111,7 +111,7 @@ public class AdminUserService {
         LocalDateTime since30 = LocalDate.now().minusDays(29).atStartOfDay();
         Map<String, Long> xpByDay = new HashMap<>();
         for (Object[] row : studySessionRepository.sumXpByDayForUser(userId, since30)) {
-            String date = ((java.sql.Date) row[0]).toLocalDate().format(DATE_FMT);
+            String date = toLocalDate(row[0]).format(DATE_FMT);
             long xp = ((Number) row[1]).longValue();
             xpByDay.put(date, xp);
         }
@@ -124,7 +124,7 @@ public class AdminUserService {
         // Streak calendar 90 ngày — ngày nào user có hoạt động
         LocalDateTime since90 = LocalDate.now().minusDays(89).atStartOfDay();
         List<String> activeDays = studySessionRepository.findActiveDaysForUser(userId, since90).stream()
-                .map(d -> d.toLocalDate().format(DATE_FMT))
+                .map(d -> d.format(DATE_FMT))
                 .toList();
 
         // Activity feed — merge top 50 từ 4 nguồn rồi sort desc, lấy 50
@@ -233,6 +233,15 @@ public class AdminUserService {
               .append(csv(u.getCreatedAt() == null ? null : u.getCreatedAt().toString())).append('\n');
         }
         return sb.toString();
+    }
+
+    /** Hibernate 6 trả DATE() dưới dạng LocalDate; vẫn nhận java.sql.Date phòng driver khác. */
+    private static LocalDate toLocalDate(Object value) {
+        if (value instanceof LocalDate d) return d;
+        if (value instanceof java.sql.Date d) return d.toLocalDate();
+        if (value instanceof java.util.Date d) return d.toInstant()
+                .atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        throw new IllegalStateException("Unexpected date type: " + value.getClass());
     }
 
     private static String csv(String value) {
