@@ -12,6 +12,12 @@ UPDATE learning_units SET review_lesson_id = NULL WHERE level_code = 'B2';
 DELETE FROM learning_lesson_activities
  WHERE lesson_id IN (SELECT id FROM learning_lessons WHERE level_code = 'B2');
 
+-- learning_path_activities.lesson_id KHÔNG có ON DELETE CASCADE (V19) → xóa tay trước,
+-- nếu không FK learning_path_activities_lesson_id_fkey chặn DELETE learning_lessons.
+-- B2 path-based cũ (V19 seed b*-path lessons) trỏ qua bảng này.
+DELETE FROM learning_path_activities
+ WHERE lesson_id IN (SELECT id FROM learning_lessons WHERE level_code = 'B2');
+
 DELETE FROM learning_lessons WHERE level_code = 'B2';
 DELETE FROM learning_units WHERE level_code = 'B2';
 
