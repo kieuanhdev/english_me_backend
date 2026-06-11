@@ -78,11 +78,16 @@ public class UserService {
         }
 
         if (keyword != null && !keyword.isBlank()) {
-            String kw = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
+            // Escape wildcard LIKE (%, _, \) — user gõ "%" không được phép match mọi row.
+            String escaped = keyword.trim().toLowerCase(Locale.ROOT)
+                    .replace("\\", "\\\\")
+                    .replace("%", "\\%")
+                    .replace("_", "\\_");
+            String kw = "%" + escaped + "%";
             spec = spec.and((root, query, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("fullName")), kw),
-                    cb.like(cb.lower(root.get("email")), kw),
-                    cb.like(cb.lower(root.get("firebaseUid")), kw)
+                    cb.like(cb.lower(root.get("fullName")), kw, '\\'),
+                    cb.like(cb.lower(root.get("email")), kw, '\\'),
+                    cb.like(cb.lower(root.get("firebaseUid")), kw, '\\')
             ));
         }
 

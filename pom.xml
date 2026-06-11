@@ -43,6 +43,15 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
 		</dependency>
+		<!-- Cache in-memory cho app_config (đọc nhiều, đổi hiếm) — spec ở application.yaml -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>com.google.firebase</groupId>
 			<artifactId>firebase-admin</artifactId>
@@ -76,6 +85,18 @@
 			<artifactId>h2</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Testcontainers: integration test chạy Postgres THẬT + đủ Flyway migration
+		     (H2 không bắt được lỗi migration). Cần Docker — test gắn @Tag("docker"). -->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
@@ -83,7 +104,26 @@
 		</dependency>
 		<!-- Source: https://mvnrepository.com/artifact/com.google.firebase/firebase-admin -->
 
+		<!-- Google Cloud Speech-to-Text: chấm phát âm từ audio thật (MT4 đề cương).
+		     Version do com.google.cloud:libraries-bom quản (xem dependencyManagement). -->
+		<dependency>
+			<groupId>com.google.cloud</groupId>
+			<artifactId>google-cloud-speech</artifactId>
+		</dependency>
+
 	</dependencies>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.google.cloud</groupId>
+				<artifactId>libraries-bom</artifactId>
+				<version>26.50.0</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<build>
 		<plugins>
@@ -132,6 +172,28 @@
 								</path>
 							</annotationProcessorPaths>
 						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- JaCoCo: đo line/branch coverage. Báo cáo: target/site/jacoco/index.html
+			     (chạy ./mvnw test jacoco:report). Chưa bật rule fail-under — bật sau khi
+			     có baseline (FIX_PLAN Đợt 5). -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>0.8.12</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
 					</execution>
 				</executions>
 			</plugin>

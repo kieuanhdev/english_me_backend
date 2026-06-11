@@ -1,6 +1,7 @@
 package com.kiovant.englishme.controller;
 
 import com.kiovant.englishme.service.AdminAuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -32,7 +33,7 @@ public class AdminAuthViewController {
     public String login(
             @RequestParam String email,
             @RequestParam String password,
-            HttpSession session,
+            HttpServletRequest request,
             Model model
     ) {
         if (!adminAuthService.authenticate(email, password)) {
@@ -40,6 +41,13 @@ public class AdminAuthViewController {
             return "admin/login";
         }
 
+        // Chống session fixation: hủy session cũ (attacker có thể đã biết ID),
+        // cấp session ID mới rồi mới gắn quyền admin.
+        HttpSession oldSession = request.getSession(false);
+        if (oldSession != null) {
+            oldSession.invalidate();
+        }
+        HttpSession session = request.getSession(true);
         session.setAttribute("ADMIN_EMAIL", email);
         session.setAttribute("ADMIN_ROLE", adminAuthService.getAdminRole());
         return "redirect:/admin";

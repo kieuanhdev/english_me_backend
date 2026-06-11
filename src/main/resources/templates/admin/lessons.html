@@ -101,6 +101,7 @@
                     <td class="px-4 py-3 text-center">
                         <form method="post" th:action="@{/admin/lessons/{id}/xp(id=${lesson.id})}"
                               class="flex items-center gap-2 justify-center">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                             <input type="hidden" name="level" th:value="${selLevel}">
                             <input type="hidden" name="skill" th:value="${selSkill}">
                             <input type="hidden" name="q" th:value="${selKeyword}">

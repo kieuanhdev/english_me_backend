@@ -1,7 +1,10 @@
 package com.kiovant.englishme.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -15,11 +18,17 @@ import java.util.UUID;
                 columnNames = {"user_id", "dedup_key"}
         )
 )
-@Data
+// Không dùng @Data trên entity có quan hệ LAZY: toString/equals trên mọi field
+// sẽ trigger lazy-load hoặc vỡ với proxy (mẫu chuẩn: Flashcard).
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = "user")
 public class Notification {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -135,6 +135,7 @@
                             <form th:if="${accountActive}" method="post"
                                   th:action="@{/admin/users/{id}/lock(id=${user.id})}"
                                   class="inline">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                                 <input type="hidden" name="cefr" th:value="${selCefr}"/>
                                 <input type="hidden" name="status" th:value="${selStatus}"/>
                                 <input type="hidden" name="q" th:value="${selKeyword}"/>
@@ -147,6 +148,7 @@
                             <form th:unless="${accountActive}" method="post"
                                   th:action="@{/admin/users/{id}/unlock(id=${user.id})}"
                                   class="inline">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                                 <input type="hidden" name="cefr" th:value="${selCefr}"/>
                                 <input type="hidden" name="status" th:value="${selStatus}"/>
                                 <input type="hidden" name="q" th:value="${selKeyword}"/>
@@ -183,6 +185,7 @@
             </div>
 
             <form class="p-8 pt-4 space-y-8" action="#" method="post">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                 <div class="bg-surface-container-low p-6 rounded-xl space-y-5">
                     <div class="space-y-2">
                         <label class="text-xs font-bold text-primary tracking-wide block ml-1">Họ và tên</label>

@@ -12,14 +12,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface PronunciationAttemptRepository extends JpaRepository<PronunciationAttempt, UUID> {
-    List<PronunciationAttempt> findByUser_FirebaseUidOrderByCreatedAtDesc(String firebaseUid, Pageable pageable);
-
-    List<PronunciationAttempt> findByUser_FirebaseUidAndExerciseIdOrderByCreatedAtDesc(
-            String firebaseUid,
-            UUID exerciseId,
-            Pageable pageable
-    );
-
     @Query("""
             SELECT p FROM PronunciationAttempt p
             JOIN p.user u

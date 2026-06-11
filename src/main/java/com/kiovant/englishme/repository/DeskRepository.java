@@ -26,4 +26,13 @@ public interface DeskRepository extends JpaRepository<Desk, UUID> {
 
     @Query("SELECT COALESCE(MAX(d.sortOrder), 0) FROM Desk d WHERE d.owner IS NULL")
     int findMaxSortOrderWhereOwnerIsNull();
+
+    /** Check trùng desk hệ thống (CEFR + title, không phân biệt hoa thường) — khớp uq_desk_global_cefr_title. */
+    @Query("""
+            SELECT COUNT(d) > 0 FROM Desk d
+            WHERE d.owner IS NULL
+              AND UPPER(d.cefrLevel) = UPPER(:cefrLevel)
+              AND UPPER(d.title) = UPPER(:title)
+            """)
+    boolean existsSystemDeskByCefrAndTitle(String cefrLevel, String title);
 }

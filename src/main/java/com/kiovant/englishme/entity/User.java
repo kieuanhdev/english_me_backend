@@ -1,19 +1,26 @@
 package com.kiovant.englishme.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+// equals/hashCode CHỈ theo id (identity của entity) — equals trên mọi field
+// mutable vỡ khi entity nằm trong Set/Map mà state thay đổi (totalXp, streak...).
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @EqualsAndHashCode.Include
     private UUID id;
 
     @Column(unique = true, nullable = false)

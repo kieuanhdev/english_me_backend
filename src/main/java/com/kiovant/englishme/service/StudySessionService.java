@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,6 +44,7 @@ public class StudySessionService {
     private final StudySessionRepository sessionRepository;
     private final SM2Service sm2Service;
     private final XpService xpService;
+    private final Clock clock;
 
     public StudySessionService(UserRepository userRepository,
                                DeskRepository deskRepository,
@@ -50,7 +52,8 @@ public class StudySessionService {
                                FlashcardProgressRepository progressRepository,
                                StudySessionRepository sessionRepository,
                                SM2Service sm2Service,
-                               XpService xpService) {
+                               XpService xpService,
+                               Clock clock) {
         this.userRepository = userRepository;
         this.deskRepository = deskRepository;
         this.flashcardRepository = flashcardRepository;
@@ -58,6 +61,7 @@ public class StudySessionService {
         this.sessionRepository = sessionRepository;
         this.sm2Service = sm2Service;
         this.xpService = xpService;
+        this.clock = clock;
     }
 
     // ── Due cards (preview, no session created) ──────────────────────────
@@ -67,7 +71,7 @@ public class StudySessionService {
         User user = loadUser(firebaseUid);
         Desk desk = loadAccessibleDesk(deskId, user.getId());
         int cap = clampLimit(limit);
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
 
         // Danh sach (gioi han boi limit) — phuc vu hien thi/preview.
         List<DueCardResponse> dueCards = new ArrayList<>();
@@ -224,7 +228,7 @@ public class StudySessionService {
                 && reviewed >= nullToZero(session.getTotalCards());
         if (justCompleted) {
             session.setStatus("completed");
-            session.setCompletedAt(LocalDateTime.now());
+            session.setCompletedAt(LocalDateTime.now(clock));
             session = sessionRepository.save(session);
 
             int sessionXp = nullToZero(session.getXpEarned());
@@ -265,7 +269,7 @@ public class StudySessionService {
 
     private List<DueCardResponse> getDueCardsInternal(User user, Desk desk, int cap) {
         List<DueCardResponse> result = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
 
         List<FlashcardProgress> due = progressRepository.findDueProgress(
                 user.getId(), desk.getId(), now, PageRequest.of(0, cap));

@@ -15,15 +15,16 @@ public interface ExerciseQuestionRepository extends JpaRepository<ExerciseQuesti
 
     /**
      * Admin search. {@code levelUpper} đã được uppercase và {@code keywordPattern}
-     * đã được lowercase + bọc '%...%' ở caller — query không gọi UPPER/LOWER trên param
-     * để tránh lỗi "function lower(bytea) does not exist" khi PostgreSQL bind NULL.
+     * đã được lowercase + escape wildcard (\% \_ \\) + bọc '%...%' ở caller — query
+     * không gọi UPPER/LOWER trên param để tránh lỗi "function lower(bytea) does not
+     * exist" khi PostgreSQL bind NULL. ESCAPE '\' khớp với escape ở caller.
      */
     @Query("""
             SELECT q FROM ExerciseQuestion q
             WHERE (:category IS NULL OR q.category = :category)
               AND (:difficulty IS NULL OR q.difficulty = :difficulty)
               AND (:levelUpper IS NULL OR UPPER(q.level) = :levelUpper)
-              AND (:keywordPattern IS NULL OR LOWER(q.question) LIKE :keywordPattern)
+              AND (:keywordPattern IS NULL OR LOWER(q.question) LIKE :keywordPattern ESCAPE '\\')
             ORDER BY q.category ASC, q.difficulty ASC, q.id ASC
             """)
     List<ExerciseQuestion> searchQuestions(@Param("category") String category,

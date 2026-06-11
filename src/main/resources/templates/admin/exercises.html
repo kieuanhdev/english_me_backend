@@ -150,6 +150,7 @@
                             </button>
                             <form method="post" th:action="@{/admin/exercises/{id}/delete(id=${q.id})}" class="inline"
                                   onsubmit="return confirm('Xóa câu hỏi này?')">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                                 <button type="submit"
                                         class="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100">
                                     <span class="material-symbols-outlined text-base">delete</span>
@@ -176,6 +177,7 @@
                 <button type="button" class="material-symbols-outlined text-slate-400 hover:text-on-surface create-modal-close">close</button>
             </div>
             <form class="p-8 pt-2 space-y-4" method="post" th:action="@{/admin/exercises}">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                 <th:block th:replace="~{admin/fragments/form-fields :: exerciseFields}"></th:block>
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" class="text-slate-500 font-bold text-sm px-6 py-3 hover:bg-slate-100 rounded-xl create-modal-close">Hủy</button>
@@ -199,6 +201,7 @@
                 <button type="button" class="material-symbols-outlined text-slate-400 hover:text-on-surface edit-modal-close">close</button>
             </div>
             <form id="questionEditForm" class="p-8 pt-2 space-y-4" method="post" action="">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                 <div class="grid grid-cols-3 gap-3">
                     <div class="space-y-2">
                         <label class="text-xs font-bold text-slate-500 uppercase px-1">Category</label>
@@ -279,6 +282,7 @@
                 <button type="button" class="material-symbols-outlined text-slate-400 hover:text-on-surface import-modal-close">close</button>
             </div>
             <form class="p-8 pt-2 space-y-4" method="post" th:action="@{/admin/exercises/import}">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                 <div class="space-y-2">
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">JSON payload</label>
                     <textarea name="jsonPayload" rows="12" required

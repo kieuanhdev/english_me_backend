@@ -53,6 +53,7 @@ public class AdminUserService {
     private final DeskRepository deskRepository;
     private final FlashcardRepository flashcardRepository;
     private final FlashcardProgressRepository flashcardProgressRepository;
+    private final UserService userService;
 
     public AdminUserService(UserRepository userRepository,
                             StudySessionRepository studySessionRepository,
@@ -63,7 +64,8 @@ public class AdminUserService {
                             BadgeRepository badgeRepository,
                             DeskRepository deskRepository,
                             FlashcardRepository flashcardRepository,
-                            FlashcardProgressRepository flashcardProgressRepository) {
+                            FlashcardProgressRepository flashcardProgressRepository,
+                            UserService userService) {
         this.userRepository = userRepository;
         this.studySessionRepository = studySessionRepository;
         this.exerciseSessionRepository = exerciseSessionRepository;
@@ -74,6 +76,7 @@ public class AdminUserService {
         this.deskRepository = deskRepository;
         this.flashcardRepository = flashcardRepository;
         this.flashcardProgressRepository = flashcardProgressRepository;
+        this.userService = userService;
     }
 
     @Transactional(readOnly = true)
@@ -196,27 +199,9 @@ public class AdminUserService {
 
     @Transactional(readOnly = true)
     public String exportUsersAsCsv(String cefrLevel, String status, String keyword) {
-        // Tận dụng UserService specs đã có sẵn — gọi qua repository.findAll(spec) cũng được,
-        // nhưng để tách dependency, ta lọc thủ công trên kết quả findAll.
-        List<User> users = userRepository.findAll().stream()
-                .filter(u -> u.getDeletedAt() == null)
-                .filter(u -> cefrLevel == null || cefrLevel.isBlank()
-                        || cefrLevel.equalsIgnoreCase(u.getCefrLevel()))
-                .filter(u -> {
-                    if (status == null || status.isBlank() || "all".equalsIgnoreCase(status)) return true;
-                    boolean locked = "locked".equalsIgnoreCase(status);
-                    return Boolean.valueOf(locked).equals(Boolean.TRUE.equals(u.getAccountLocked()));
-                })
-                .filter(u -> {
-                    if (keyword == null || keyword.isBlank()) return true;
-                    String kw = keyword.trim().toLowerCase(Locale.ROOT);
-                    return (u.getFullName() != null && u.getFullName().toLowerCase(Locale.ROOT).contains(kw))
-                            || (u.getEmail() != null && u.getEmail().toLowerCase(Locale.ROOT).contains(kw))
-                            || (u.getFirebaseUid() != null && u.getFirebaseUid().toLowerCase(Locale.ROOT).contains(kw));
-                })
-                .sorted(Comparator.comparing(User::getCreatedAt,
-                        Comparator.nullsLast(Comparator.reverseOrder())))
-                .toList();
+        // Lọc ở tầng DB qua spec của UserService (cùng spec màn list user) —
+        // trước đây findAll() kéo cả bảng về heap rồi filter bằng stream.
+        List<User> users = userService.findUsersByFilter(cefrLevel, status, keyword);
 
         StringBuilder sb = new StringBuilder();
         sb.append("id,email,full_name,cefr_level,total_xp,current_streak,longest_streak,account_locked,last_active_date,created_at\n");
@@ -247,6 +232,11 @@ public class AdminUserService {
     private static String csv(String value) {
         if (value == null) return "";
         String escaped = value.replace("\"", "\"\"");
+        // Chống CSV formula injection: cell bắt đầu bằng = + - @ sẽ bị Excel/Sheets
+        // thực thi như công thức — prefix dấu nháy đơn để ép thành text.
+        if (!escaped.isEmpty() && "=+-@".indexOf(escaped.charAt(0)) >= 0) {
+            escaped = "'" + escaped;
+        }
         return "\"" + escaped + "\"";
     }
 }

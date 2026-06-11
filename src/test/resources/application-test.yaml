@@ -19,9 +19,13 @@ spring:
         jdbc:
           time_zone: UTC
 
-# Pronunciation provider = mock để không gọi Speechace
+# Tắt Firebase trong test — FirebaseConfig có @ConditionalOnProperty,
+# test không cần (và không được phụ thuộc) service account key.
 englishme:
-  ai:
-    pronunciation:
-      provider: mock
-      api-key: ""
+  firebase:
+    enabled: false
+
+# Override placeholder bắt buộc của môi trường thật — test không đọc env.
+admin:
+  auth:
+    password: test-admin-password

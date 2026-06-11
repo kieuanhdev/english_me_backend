@@ -114,10 +114,7 @@ public class DeskFlashcardService {
         String title = (req.title() == null || req.title().isBlank())
                 ? "Desk " + cefr
                 : req.title().trim();
-        if (deskRepository.findAll().stream().anyMatch(
-                d -> d.getOwner() == null
-                        && cefr.equalsIgnoreCase(d.getCefrLevel())
-                        && title.equalsIgnoreCase(d.getTitle()))) {
+        if (deskRepository.existsSystemDeskByCefrAndTitle(cefr, title)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Desk already exists for CEFR " + cefr + " with title \"" + title + "\"");
         }

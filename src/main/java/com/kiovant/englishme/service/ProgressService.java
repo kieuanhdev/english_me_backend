@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -56,6 +57,7 @@ public class ProgressService {
     private final XpLedgerRepository xpLedgerRepository;
     private final UserDailyGoalRepository userDailyGoalRepository;
     private final UserSkillXpRepository userSkillXpRepository;
+    private final Clock clock;
 
     public ProgressService(UserRepository userRepository,
                            XpHistoryRepository xpHistoryRepository,
@@ -63,7 +65,8 @@ public class ProgressService {
                            UserBadgeRepository userBadgeRepository,
                            XpLedgerRepository xpLedgerRepository,
                            UserDailyGoalRepository userDailyGoalRepository,
-                           UserSkillXpRepository userSkillXpRepository) {
+                           UserSkillXpRepository userSkillXpRepository,
+                           Clock clock) {
         this.userRepository = userRepository;
         this.xpHistoryRepository = xpHistoryRepository;
         this.badgeRepository = badgeRepository;
@@ -71,13 +74,14 @@ public class ProgressService {
         this.xpLedgerRepository = xpLedgerRepository;
         this.userDailyGoalRepository = userDailyGoalRepository;
         this.userSkillXpRepository = userSkillXpRepository;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
     public ProgressResponse getProgress(String firebaseUid) {
         User user = loadUser(firebaseUid);
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
 
         int weekXp = xpHistoryRepository.sumXpBetween(user.getId(), weekStart, today);
@@ -120,7 +124,7 @@ public class ProgressService {
     public DailyGoalResponse getDailyGoal(String firebaseUid) {
         User user = loadUser(firebaseUid);
         UserDailyGoal goal = userDailyGoalRepository
-                .findByUserIdAndGoalDate(user.getId(), LocalDate.now())
+                .findByUserIdAndGoalDate(user.getId(), LocalDate.now(clock))
                 .orElse(null);
         int target = goal == null || goal.getTargetXp() == null
                 ? DEFAULT_DAILY_XP_GOAL : goal.getTargetXp();
@@ -144,7 +148,7 @@ public class ProgressService {
                     "targetXp phải thuộc " + ALLOWED_DAILY_GOALS);
         }
         User user = loadUser(firebaseUid);
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         UserDailyGoal goal = userDailyGoalRepository
                 .findByUserIdAndGoalDate(user.getId(), today)
                 .orElseGet(() -> {
@@ -165,7 +169,7 @@ public class ProgressService {
         User user = loadUser(firebaseUid);
         int safeDays = Math.min(Math.max(days, 1), 365);
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         LocalDate from = today.minusDays(safeDays - 1L);
 
         Map<LocalDate, Integer> byDate = new HashMap<>();
@@ -242,7 +246,7 @@ public class ProgressService {
 
     private YearMonth parseMonth(String month) {
         if (month == null || month.isBlank()) {
-            return YearMonth.now();
+            return YearMonth.now(clock);
         }
         try {
             return YearMonth.parse(month.trim(), MONTH_FMT);

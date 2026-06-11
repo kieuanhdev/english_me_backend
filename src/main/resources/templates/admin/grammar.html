@@ -116,6 +116,7 @@
                             </button>
                             <form method="post" th:action="@{/admin/grammar/topics/{id}/delete(id=${t.id})}" class="inline"
                                   onsubmit="return confirm('Xóa chủ đề này? Toàn bộ bài học và bài tập bên trong cũng sẽ bị xóa.')">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                                 <button type="submit"
                                         class="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100">
                                     <span class="material-symbols-outlined text-base">delete</span> Xóa
@@ -141,6 +142,7 @@
                 <button type="button" class="material-symbols-outlined text-slate-400 hover:text-on-surface topic-modal-close">close</button>
             </div>
             <form class="p-8 pt-2 space-y-4" method="post" th:action="@{/admin/grammar/topics}">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                 <th:block th:replace="~{admin/fragments/form-fields :: grammarTopicFields}"></th:block>
                 <div class="flex justify-end gap-3 pt-2">
                     <button type="button" class="text-slate-500 font-bold text-sm px-6 py-3 hover:bg-slate-100 rounded-xl topic-modal-close">Hủy</button>
@@ -164,6 +166,7 @@
                 <button type="button" class="material-symbols-outlined text-slate-400 hover:text-on-surface topic-edit-modal-close">close</button>
             </div>
             <form id="topicEditForm" class="p-8 pt-2 space-y-4" method="post" action="">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                 <div class="space-y-2">
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">Slug</label>
                     <input type="text" name="slug" id="editSlug" required pattern="[a-z0-9][a-z0-9_\-]*"
@@ -214,6 +217,7 @@
                 <button type="button" class="material-symbols-outlined text-slate-400 hover:text-on-surface import-modal-close">close</button>
             </div>
             <form class="p-8 pt-2 space-y-4" method="post" th:action="@{/admin/grammar/import}">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                 <div class="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-xl">
                     Payload có thể là mảng <code>[ {topic}, ... ]</code> hoặc object <code>{ "topics": [ ... ] }</code>.
                     Mỗi topic gồm <code>slug, category, level, title, sortOrder?, lessons[]</code>.

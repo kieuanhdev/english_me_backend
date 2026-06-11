@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -57,6 +58,7 @@ public class XpService {
     private final UserSkillXpRepository skillXpRepository;
     private final XpRuleService xpRuleService;
     private final ObjectMapper objectMapper;
+    private final Clock clock;
 
     public XpService(UserRepository userRepository,
                      XpLedgerRepository ledgerRepository,
@@ -64,7 +66,8 @@ public class XpService {
                      XpHistoryRepository xpHistoryRepository,
                      UserSkillXpRepository skillXpRepository,
                      XpRuleService xpRuleService,
-                     ObjectMapper objectMapper) {
+                     ObjectMapper objectMapper,
+                     Clock clock) {
         this.userRepository = userRepository;
         this.ledgerRepository = ledgerRepository;
         this.dailyGoalRepository = dailyGoalRepository;
@@ -72,6 +75,7 @@ public class XpService {
         this.skillXpRepository = skillXpRepository;
         this.xpRuleService = xpRuleService;
         this.objectMapper = objectMapper;
+        this.clock = clock;
     }
 
     /**
@@ -103,7 +107,10 @@ public class XpService {
         if (amount <= 0) {
             return readOnlyResult(userId, 0, false, false);
         }
-        User user = userRepository.findById(userId)
+        // Row lock (FOR UPDATE): serialize các grant song song của cùng user —
+        // total_xp/streak/xp_history/daily_goal đều là load-modify-save, không lock
+        // thì 2 request cùng lúc sẽ lost-update lẫn nhau.
+        User user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         String metaJson = serializeMetadata(metadata);
@@ -143,10 +150,10 @@ public class XpService {
         List<XpGrantResult.Bonus> bonuses = new ArrayList<>();
         int dailyGoalBonusAmount = xpRuleService.baseAmount("daily_goal_bonus", DAILY_GOAL_BONUS_FALLBACK);
         if (daily.justReachedTarget() && dailyGoalBonusAmount > 0) {
-            String bonusKey = "daily_goal_bonus:" + userId + ":" + LocalDate.now();
+            String bonusKey = "daily_goal_bonus:" + userId + ":" + LocalDate.now(clock);
             int bonusInserted = ledgerRepository.insertIfAbsent(
                     userId, dailyGoalBonusAmount, "daily_goal_bonus",
-                    LocalDate.now().toString(), bonusKey,
+                    LocalDate.now(clock).toString(), bonusKey,
                     serializeMetadata(Map.of("targetXp", daily.targetXp()))
             );
             if (bonusInserted > 0) {
@@ -193,13 +200,13 @@ public class XpService {
         long newTotal = current + amount;
         // total_xp là Integer trong entity; clamp về Integer range an toàn (XP thực tế không vượt 2^31).
         user.setTotalXp((int) Math.min(Integer.MAX_VALUE, newTotal));
-        user.setLastXpDate(LocalDate.now());
+        user.setLastXpDate(LocalDate.now(clock));
         return user.getTotalXp();
     }
 
     /** Cập nhật current_streak / longest_streak / last_active_date. Trả true nếu hôm nay là ngày đầu kiếm XP. */
     private boolean updateStreak(User user) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         LocalDate last = user.getLastActiveDate();
 
         int newStreak;
@@ -231,7 +238,7 @@ public class XpService {
      * @return earned_xp sau update + có vừa đạt target lần đầu không.
      */
     private DailyResult applyDailyGoal(UUID userId, int amount, boolean isBonus) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         UserDailyGoal goal = dailyGoalRepository.findByUserIdAndGoalDate(userId, today).orElseGet(() -> {
             UserDailyGoal g = new UserDailyGoal();
             g.setUserId(userId);
@@ -260,7 +267,7 @@ public class XpService {
 
     /** Cộng dồn vào xp_history (theo ngày) — phục vụ chart progress & streak calendar. */
     private void addToXpHistory(User user, int amount) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock);
         XpHistory row = xpHistoryRepository.findByUser_IdAndActivityDate(user.getId(), today).orElseGet(() -> {
             XpHistory x = new XpHistory();
             x.setUser(user);
@@ -273,7 +280,7 @@ public class XpService {
     }
 
     private int readDailyEarned(UUID userId) {
-        return dailyGoalRepository.findByUserIdAndGoalDate(userId, LocalDate.now())
+        return dailyGoalRepository.findByUserIdAndGoalDate(userId, LocalDate.now(clock))
                 .map(g -> g.getEarnedXp() == null ? 0 : g.getEarnedXp().intValue())
                 .orElse(0);
     }

@@ -282,6 +282,11 @@ public class AdminGrammarController {
             @RequestParam(required = false, defaultValue = "") String jsonPayload,
             RedirectAttributes ra
     ) {
+        // Chặn payload quá khổ trước khi đưa vào ObjectMapper (tránh OOM).
+        if (jsonPayload.length() > 1_048_576) {
+            ra.addFlashAttribute("errorMessage", "Payload vượt quá 1MB — chia nhỏ file import.");
+            return "redirect:/admin/grammar";
+        }
         try {
             GrammarImportResult result = adminGrammarService.importGrammar(jsonPayload);
             StringBuilder msg = new StringBuilder();

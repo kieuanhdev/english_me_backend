@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -112,12 +113,13 @@ class PlacementTestServiceTest {
         session.setStatus(TestSession.TestStatus.IN_PROGRESS);
         session.setQuestionIds(new ArrayList<>(List.of(q.getId())));
 
-        when(testSessionRepository.findById(any())).thenReturn(Optional.of(session));
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
         when(questionRepository.findById(q.getId())).thenReturn(Optional.of(q));
         when(testAnswerRepository.findByTestSessionAndQuestion(session, q)).thenReturn(Optional.empty());
         when(testAnswerRepository.countByTestSession(session)).thenReturn(1L);
 
         AnswerQuestionResponse response = service.answerQuestion(
+                "uid-1",
                 UUID.randomUUID(),
                 new AnswerQuestionRequest(q.getId(), "B")
         );
@@ -138,10 +140,10 @@ class PlacementTestServiceTest {
         session.setStatus(TestSession.TestStatus.COMPLETED);
         session.setQuestionIds(List.of(q.getId()));
 
-        when(testSessionRepository.findById(any())).thenReturn(Optional.of(session));
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
 
         assertThrows(IllegalStateException.class, () ->
-                service.answerQuestion(UUID.randomUUID(), new AnswerQuestionRequest(q.getId(), "A"))
+                service.answerQuestion("uid-1", UUID.randomUUID(), new AnswerQuestionRequest(q.getId(), "A"))
         );
         verify(testAnswerRepository, never()).save(any());
     }
@@ -156,14 +158,39 @@ class PlacementTestServiceTest {
         session.setQuestionIds(List.of(q.getId()));
 
         TestAnswer existing = new TestAnswer();
-        when(testSessionRepository.findById(any())).thenReturn(Optional.of(session));
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
         when(questionRepository.findById(q.getId())).thenReturn(Optional.of(q));
         when(testAnswerRepository.findByTestSessionAndQuestion(session, q)).thenReturn(Optional.of(existing));
 
         assertThrows(IllegalStateException.class, () ->
-                service.answerQuestion(UUID.randomUUID(), new AnswerQuestionRequest(q.getId(), "A"))
+                service.answerQuestion("uid-1", UUID.randomUUID(), new AnswerQuestionRequest(q.getId(), "A"))
         );
         verify(testAnswerRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("answerQuestion: user khác (uid lạ) đụng session -> not found (chống IDOR)")
+    void answerQuestionRejectsForeignUser() {
+        // Repo chỉ stub cho uid-1; uid-2 trả Optional.empty() (mặc định mock).
+        Question q = buildQuestion("A1", "Grammar", "A");
+        TestSession session = new TestSession();
+        session.setUser(user);
+        session.setStatus(TestSession.TestStatus.IN_PROGRESS);
+        session.setQuestionIds(List.of(q.getId()));
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
+
+        assertThrows(IllegalArgumentException.class, () ->
+                service.answerQuestion("uid-2", UUID.randomUUID(), new AnswerQuestionRequest(q.getId(), "A"))
+        );
+        verify(testAnswerRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("completeTest: user khác (uid lạ) -> not found (chống IDOR)")
+    void completeTestRejectsForeignUser() {
+        assertThrows(IllegalArgumentException.class, () ->
+                service.completeTest("uid-2", UUID.randomUUID())
+        );
     }
 
     @Test
@@ -174,10 +201,10 @@ class PlacementTestServiceTest {
         session.setStatus(TestSession.TestStatus.IN_PROGRESS);
         session.setQuestionIds(List.of(UUID.randomUUID()));
 
-        when(testSessionRepository.findById(any())).thenReturn(Optional.of(session));
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
 
         assertThrows(IllegalArgumentException.class, () ->
-                service.answerQuestion(UUID.randomUUID(), new AnswerQuestionRequest(UUID.randomUUID(), "A"))
+                service.answerQuestion("uid-1", UUID.randomUUID(), new AnswerQuestionRequest(UUID.randomUUID(), "A"))
         );
     }
 
@@ -203,13 +230,13 @@ class PlacementTestServiceTest {
         }
         session.setQuestionIds(all.stream().map(Question::getId).toList());
 
-        when(testSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(session.getId(), "uid-1")).thenReturn(Optional.of(session));
         when(testAnswerRepository.findByTestSession(session)).thenReturn(answers);
         when(questionRepository.findAllById(session.getQuestionIds())).thenReturn(all);
         when(testSessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        return service.completeTest(session.getId());
+        return service.completeTest("uid-1", session.getId());
     }
 
     @Test
@@ -265,13 +292,13 @@ class PlacementTestServiceTest {
         session.setStatus(TestSession.TestStatus.IN_PROGRESS);
         session.setQuestionIds(List.of());
 
-        when(testSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(session.getId(), "uid-1")).thenReturn(Optional.of(session));
         when(testAnswerRepository.findByTestSession(session)).thenReturn(List.of());
         when(questionRepository.findAllById(session.getQuestionIds())).thenReturn(List.of());
         when(testSessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        TestResultResponse result = service.completeTest(session.getId());
+        TestResultResponse result = service.completeTest("uid-1", session.getId());
         assertEquals("A1", result.resultLevel());
         assertEquals(TestSession.TestStatus.COMPLETED, session.getStatus());
     }
@@ -297,9 +324,85 @@ class PlacementTestServiceTest {
         session.setUser(user);
         session.setStatus(TestSession.TestStatus.COMPLETED);
 
-        when(testSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(session.getId(), "uid-1")).thenReturn(Optional.of(session));
 
-        assertThrows(IllegalStateException.class, () -> service.completeTest(session.getId()));
+        assertThrows(IllegalStateException.class, () -> service.completeTest("uid-1", session.getId()));
+    }
+
+    // ── Bổ sung FIX_PLAN Đợt 5: biên cutoff, re-test, selfSelect ──────────
+
+    @Test
+    @DisplayName("Biên cutoff CHÍNH XÁC: R=0.25 (earned=10/40) -> A2 (không phải A1, vì so sánh r < cutoff)")
+    void cutoffBoundaryExactlyA2() {
+        // 4 A1 đúng (4) + 3 A2 đúng (6) = 10/40 = 0.25 — đúng ngưỡng CUTOFF_A2.
+        TestResultResponse result = runComplete(4, 3, 0, 0);
+        assertEquals("A2", result.resultLevel(), "r=0.25 không < 0.25 -> rơi vào band A2");
+    }
+
+    @Test
+    @DisplayName("Biên cutoff CHÍNH XÁC: R=0.45 (earned=18/40) -> B1")
+    void cutoffBoundaryExactlyB1() {
+        // 4+4*2+2*3 = 4+8+6 = 18/40 = 0.45 — đúng ngưỡng CUTOFF_B1.
+        TestResultResponse result = runComplete(4, 4, 2, 0);
+        assertEquals("B1", result.resultLevel());
+    }
+
+    @Test
+    @DisplayName("Sát ngưỡng B2: earned=27 (0.675) -> B1; earned=28 (0.70) -> B2")
+    void cutoffAroundB2() {
+        // (3,4,4,1): 3+8+12+4 = 27/40 = 0.675 < 0.68 -> B1.
+        assertEquals("B1", runComplete(3, 4, 4, 1).resultLevel());
+        // (4,4,4,1): 4+8+12+4 = 28/40 = 0.70 >= 0.68 -> B2.
+        assertEquals("B2", runComplete(4, 4, 4, 1).resultLevel());
+    }
+
+    @Test
+    @DisplayName("Re-test ra level THẤP hơn -> user GIỮ level cũ (spec §6.4: chỉ nâng, không hạ)")
+    void completeTestNeverDowngradesUserLevel() {
+        user.setCefrLevel("B2");
+        TestResultResponse result = runComplete(4, 0, 0, 0); // r=0.1 -> A1
+
+        assertEquals("A1", result.resultLevel(), "kết quả bài thi vẫn báo A1");
+        assertEquals("B2", user.getCefrLevel(), "nhưng level user không bị hạ");
+    }
+
+    @Test
+    @DisplayName("Re-test ra level CAO hơn -> nâng level user")
+    void completeTestUpgradesUserLevel() {
+        user.setCefrLevel("A1");
+        TestResultResponse result = runComplete(4, 4, 4, 1); // 0.70 -> B2
+
+        assertEquals("B2", result.resultLevel());
+        assertEquals("B2", user.getCefrLevel());
+    }
+
+    @Test
+    @DisplayName("selfSelectLevel: level hợp lệ -> set cefr + onboarded; level lạ -> reject")
+    void selfSelectLevelValidatesCefr() {
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.selfSelectLevel("uid-1", new com.kiovant.englishme.dto.SelfSelectLevelRequest("b1"));
+        assertEquals("B1", user.getCefrLevel(), "lowercase được normalize");
+        assertEquals(Boolean.TRUE, user.getIsOnboarded());
+
+        assertThrows(IllegalArgumentException.class, () ->
+                service.selfSelectLevel("uid-1", new com.kiovant.englishme.dto.SelfSelectLevelRequest("Z9")));
+    }
+
+    @Test
+    @DisplayName("answerQuestion: question đã bị xóa khỏi DB -> lỗi rõ ràng, không NPE")
+    void answerQuestionWithDeletedQuestionFailsCleanly() {
+        UUID qid = UUID.randomUUID();
+        TestSession session = new TestSession();
+        session.setUser(user);
+        session.setStatus(TestSession.TestStatus.IN_PROGRESS);
+        session.setQuestionIds(List.of(qid));
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
+        when(questionRepository.findById(qid)).thenReturn(Optional.empty());
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+                service.answerQuestion("uid-1", UUID.randomUUID(), new AnswerQuestionRequest(qid, "A")));
+        assertTrue(ex.getMessage().contains("Question not found"));
     }
 
     private TestAnswer buildAnswer(TestSession session, Question q, boolean correct) {

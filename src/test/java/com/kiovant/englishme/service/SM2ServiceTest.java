@@ -4,8 +4,13 @@ import com.kiovant.englishme.entity.FlashcardProgress;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,11 +27,15 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class SM2ServiceTest {
 
+    /** Clock đóng băng — test kiểm soát "bây giờ", không phụ thuộc giờ máy chạy test. */
+    static final Clock FIXED_CLOCK =
+            Clock.fixed(Instant.parse("2026-06-10T12:00:00Z"), ZoneOffset.UTC);
+
     private SM2Service sm2;
 
     @BeforeEach
     void setUp() {
-        sm2 = new SM2Service();
+        sm2 = new SM2Service(FIXED_CLOCK);
     }
 
     private FlashcardProgress newProgress() {
@@ -129,18 +138,19 @@ class SM2ServiceTest {
     @DisplayName("nextReviewAt = lastReviewedAt + interval days")
     void nextReviewAtMatchesIntervalDays() {
         FlashcardProgress p = newProgress();
-        LocalDateTime before = LocalDateTime.now();
+        LocalDateTime expectedNow = LocalDateTime.now(FIXED_CLOCK);
 
         sm2.applyReview(p, 4);
 
-        assertNotNull(p.getLastReviewedAt());
+        // Clock đóng băng -> assert chính xác tuyệt đối, không cần khoảng dung sai.
+        assertEquals(expectedNow, p.getLastReviewedAt());
         assertNotNull(p.getNextReviewAt());
         long days = ChronoUnit.DAYS.between(
                 p.getLastReviewedAt().toLocalDate(),
                 p.getNextReviewAt().toLocalDate()
         );
         assertEquals(p.getIntervalDays().longValue(), days);
-        assertFalse(p.getLastReviewedAt().isBefore(before.minusSeconds(1)));
+        assertEquals(expectedNow.plusDays(p.getIntervalDays()), p.getNextReviewAt());
     }
 
     @Test
@@ -179,5 +189,88 @@ class SM2ServiceTest {
         // q clamp = 0 -> lapse
         assertEquals(0, pLow.getRepetitions());
         assertEquals(1, pLow.getIntervalDays());
+    }
+
+    // ── Biên thuật toán (bổ sung FIX_PLAN Đợt 5) ─────────────────────────
+
+    /**
+     * Regression chốt CÔNG THỨC EF theo paper SM-2 gốc:
+     * EF' = EF + (0.1 - (5-q)·(0.08 + (5-q)·0.02)), floor 1.3.
+     * Đổi công thức là các case này đỏ ngay — số liệu trích dẫn được vào luận văn.
+     */
+    @ParameterizedTest(name = "q={0}, EF {1} -> {2}")
+    @CsvSource({
+            "0, 2.5,  1.7",   // (5-0)=5: 0.1 - 5*(0.08+0.10) = -0.8
+            "1, 2.5,  1.96",  // (5-1)=4: 0.1 - 4*(0.08+0.08) = -0.54
+            "2, 2.5,  2.18",  // (5-2)=3: 0.1 - 3*(0.08+0.06) = -0.32
+            "3, 2.5,  2.36",  // (5-3)=2: 0.1 - 2*(0.08+0.04) = -0.14
+            "4, 2.5,  2.5",   // (5-4)=1: 0.1 - 1*(0.08+0.02) =  0.00 (số liệu paper gốc)
+            "5, 2.5,  2.6",   // (5-5)=0: +0.1
+            "0, 1.31, 1.3",   // floor: 1.31 - 0.8 = 0.51 -> clamp 1.3
+    })
+    void easinessFactorFollowsSm2PaperFormula(int quality, double startEf, double expectedEf) {
+        FlashcardProgress p = newProgress();
+        p.setEasinessFactor(startEf);
+
+        sm2.applyReview(p, quality);
+
+        assertEquals(expectedEf, p.getEasinessFactor(), 0.0001);
+    }
+
+    @Test
+    @DisplayName("Progress toàn null (card mới tinh) -> default EF=2.5, lapse-safe")
+    void nullProgressFieldsGetDefaults() {
+        FlashcardProgress p = new FlashcardProgress(); // EF/reps/interval đều null
+
+        sm2.applyReview(p, 4);
+
+        assertEquals(1, p.getRepetitions(), "null reps -> coi như 0, +1 = 1");
+        assertEquals(1, p.getIntervalDays(), "reps 1 -> interval 1");
+        assertEquals(2.5, p.getEasinessFactor(), 0.0001, "EF default 2.5, q=4 giữ nguyên");
+        assertNotNull(p.getNextReviewAt());
+    }
+
+    @Test
+    @DisplayName("Biên lapse/pass: q=3 là PASS (reps tăng), q=2 là LAPSE (reps reset)")
+    void qualityThreeIsPassQualityTwoIsLapse() {
+        FlashcardProgress pass = newProgress();
+        pass.setRepetitions(4);
+        pass.setIntervalDays(15);
+        sm2.applyReview(pass, 3);
+        assertEquals(5, pass.getRepetitions(), "q=3 (Hard) vẫn là pass -> reps+1");
+
+        FlashcardProgress lapse = newProgress();
+        lapse.setRepetitions(4);
+        lapse.setIntervalDays(15);
+        sm2.applyReview(lapse, 2);
+        assertEquals(0, lapse.getRepetitions(), "q=2 -> lapse, reset reps");
+        assertEquals(1, lapse.getIntervalDays());
+    }
+
+    @Test
+    @DisplayName("Interval rounding: prev=10, EF=1.45 -> round(14.5) = 15 (half-up)")
+    void intervalRoundingHalfUp() {
+        FlashcardProgress p = newProgress();
+        p.setRepetitions(2);      // lần này thành reps=3 -> nhánh prev*EF
+        p.setIntervalDays(10);
+        p.setEasinessFactor(1.45);
+
+        sm2.applyReview(p, 4);
+
+        assertEquals(15, p.getIntervalDays(), "Math.round half-up: 14.5 -> 15");
+    }
+
+    @Test
+    @DisplayName("EF floor asymptote: q=0 lặp 10 lần từ 1.31 -> không bao giờ < 1.3")
+    void efFloorNeverBreached() {
+        FlashcardProgress p = newProgress();
+        p.setEasinessFactor(1.31);
+
+        for (int i = 0; i < 10; i++) {
+            sm2.applyReview(p, 0);
+            assertTrue(p.getEasinessFactor() >= 1.3 - 1e-9,
+                    "EF tụt dưới floor 1.3 ở vòng " + i + ": " + p.getEasinessFactor());
+        }
+        assertEquals(1.3, p.getEasinessFactor(), 0.0001);
     }
 }

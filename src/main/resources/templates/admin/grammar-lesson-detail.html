@@ -29,6 +29,7 @@
                 </button>
                 <form method="post" th:action="@{/admin/grammar/lessons/{id}/delete(id=${lesson.id})}"
                       onsubmit="return confirm('Xóa bài học này? Bài tập đi kèm cũng sẽ bị xóa.')">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                     <button type="submit" class="bg-rose-50 text-rose-700 px-5 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-rose-100">
                         <span class="material-symbols-outlined text-base">delete</span> Xóa bài học
                     </button>
@@ -115,6 +116,7 @@
                             </button>
                             <form method="post" th:action="@{/admin/grammar/exercises/{id}/delete(id=${ex.id})}" class="inline"
                                   onsubmit="return confirm('Xóa bài tập này?')">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                                 <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100">
                                     <span class="material-symbols-outlined text-sm">delete</span> Xóa
                                 </button>
@@ -138,6 +140,7 @@
                     <button type="button" class="material-symbols-outlined text-slate-400 hover:text-on-surface lesson-edit-modal-close">close</button>
                 </div>
                 <form class="p-8 pt-2 space-y-4 overflow-y-auto" method="post" th:action="@{/admin/grammar/lessons/{id}/update(id=${lesson.id})}">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                     <div class="grid grid-cols-3 gap-3">
                         <div class="space-y-2 col-span-2">
                             <label class="text-xs font-bold text-slate-500 uppercase px-1">Source ID</label>
@@ -206,6 +209,7 @@
                 </div>
                 <form id="exerciseForm" class="p-8 pt-2 space-y-4 overflow-y-auto" method="post"
                       th:action="@{/admin/grammar/lessons/{id}/exercises(id=${lesson.id})}">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                     <input type="hidden" name="lessonId" th:value="${lesson.id}">
                     <div class="grid grid-cols-2 gap-3">
                         <div class="space-y-2">

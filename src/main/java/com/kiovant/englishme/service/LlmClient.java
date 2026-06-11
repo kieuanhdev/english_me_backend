@@ -9,6 +9,7 @@ import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -99,8 +100,16 @@ public class LlmClient {
 
             JsonNode root = objectMapper.readTree(raw);
             return root.path("choices").path(0).path("message").path("content").asText("").trim();
+        } catch (RestClientResponseException ex) {
+            // Non-2xx từ provider: log status code (quan trọng nhất để chẩn đoán —
+            // 401 key sai, 429 hết quota, 5xx provider sập). KHÔNG log response body
+            // ở mức error (có thể chứa echo của request).
+            log.error("LLM chatCompletion provider trả {} {}", ex.getStatusCode().value(), ex.getStatusText());
+            log.debug("LLM chatCompletion error body", ex);
+            return "";
         } catch (Exception ex) {
-            log.error("LLM chatCompletion lỗi: {}", ex.getMessage());
+            log.error("LLM chatCompletion lỗi ({})", ex.getClass().getSimpleName());
+            log.debug("LLM chatCompletion stack trace", ex);
             return "";
         }
     }

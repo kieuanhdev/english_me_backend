@@ -23,7 +23,7 @@
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">Provider</label>
                     <select name="provider" class="mt-1.5 w-full bg-white border-0 rounded-xl px-4 py-3 text-sm font-semibold text-slate-700">
                         <option value="" th:selected="${#strings.isEmpty(selProvider)}">Tất cả</option>
-                        <option value="speechace" th:selected="${#strings.equalsIgnoreCase(selProvider,'speechace')}">Speechace</option>
+                        <option value="levenshtein" th:selected="${#strings.equalsIgnoreCase(selProvider,'levenshtein')}">Levenshtein</option>
                     </select>
                 </div>
                 <div class="flex-1 min-w-[180px]">

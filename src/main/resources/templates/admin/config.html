@@ -54,6 +54,7 @@
                     </p>
                 </div>
                 <form th:if="${isPrompt}" method="post" th:action="@{/admin/config}" class="space-y-3">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                     <input type="hidden" name="key" th:value="${cfg.configKey}">
                     <textarea name="value" rows="10"
                         class="w-full font-mono text-xs border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300" th:text="${rawValue}"></textarea>
@@ -63,6 +64,7 @@
                 </form>
                 <form th:unless="${isPrompt}" method="post" th:action="@{/admin/config}" class="flex gap-3"
                       th:with="displayValue=${(isSecret and !#strings.isEmpty(rawValue)) ? '••••••••' : rawValue}">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                     <input type="hidden" name="key" th:value="${cfg.configKey}">
                     <input
                         th:type="${isSecret ? 'password' : 'text'}"
@@ -111,6 +113,9 @@
             params.append('baseUrl', fieldValue('LLM_BASE_URL'));
             params.append('apiKey', fieldValue('LLM_API_KEY'));
             params.append('model', fieldValue('LLM_MODEL'));
+            // CSRF token bắt buộc cho mọi POST /admin/** (CsrfInterceptor).
+            var csrfInput = document.querySelector('input[name="_csrf"]');
+            if (csrfInput) params.append('_csrf', csrfInput.value);
 
             fetch(url, {
                 method: 'POST',

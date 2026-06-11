@@ -1,0 +1,24 @@
+# Profile PRODUCTION — kích hoạt: SPRING_PROFILES_ACTIVE=prod
+# Đè lên application.yaml/properties gốc. Secrets vẫn qua env (không default).
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true   # prod chạy sau HTTPS — cookie session không đi qua HTTP
+
+spring:
+  jpa:
+    show-sql: false
+
+# Tắt Swagger UI + OpenAPI docs — không lộ surface API công khai (SEC-08).
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.kiovant.englishme: INFO

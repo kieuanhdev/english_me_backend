@@ -2,6 +2,8 @@ package com.kiovant.englishme.service;
 
 import com.kiovant.englishme.entity.AppConfig;
 import com.kiovant.englishme.repository.AppConfigRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,11 @@ public class AppConfigService {
         return repo.findAll();
     }
 
+    /**
+     * Cache theo key (TTL ở application.yaml — spring.cache.caffeine.spec). Admin lưu
+     * config sẽ evict ngay; instance khác (nếu scale ngang) trễ tối đa 1 TTL.
+     */
+    @Cacheable(value = "appConfig", key = "#key")
     public String getValue(String key) {
         return repo.findById(key).map(AppConfig::getConfigValue).orElse(null);
     }
@@ -58,6 +65,7 @@ public class AppConfigService {
     }
 
     @Transactional
+    @CacheEvict(value = "appConfig", key = "#key")
     public void setValue(String key, String value, String updatedByEmail) {
         AppConfig config = repo.findById(key)
                 .orElseThrow(() -> new IllegalArgumentException("Config key không tồn tại: " + key));

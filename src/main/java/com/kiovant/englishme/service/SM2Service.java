@@ -3,6 +3,7 @@ package com.kiovant.englishme.service;
 import com.kiovant.englishme.entity.FlashcardProgress;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 /**
@@ -18,6 +19,12 @@ import java.time.LocalDateTime;
 public class SM2Service {
 
     private static final double MIN_EF = 1.3;
+
+    private final Clock clock;
+
+    public SM2Service(Clock clock) {
+        this.clock = clock;
+    }
 
     public FlashcardProgress applyReview(FlashcardProgress progress, int quality) {
         int q = Math.max(0, Math.min(5, quality));
@@ -48,7 +55,7 @@ public class SM2Service {
             ef = MIN_EF;
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         progress.setEasinessFactor(ef);
         progress.setRepetitions(reps);
         progress.setIntervalDays(interval);

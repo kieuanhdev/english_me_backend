@@ -33,6 +33,7 @@
                 <span class="material-symbols-outlined">note_add</span> Thêm flashcard
             </h2>
             <form th:if="${desk != null}" method="post" th:action="@{/admin/desks/{id}/flashcards(id=${desk.id})}" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                 <div class="space-y-2 md:col-span-2">
                     <label class="text-xs font-bold text-slate-500 uppercase px-1">Từ (word) *</label>
                     <input name="word" required type="text" placeholder="abandon"
@@ -122,6 +123,7 @@
                         <td class="px-6 py-4 text-right">
                             <form method="post" th:action="@{/admin/desks/{deskId}/flashcards/{fcId}/delete(deskId=${desk.id},fcId=${fc.id})}"
                                   onsubmit="return confirm('Xóa flashcard này?')">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                                 <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors">
                                     <span class="material-symbols-outlined text-sm">delete</span>
                                 </button>

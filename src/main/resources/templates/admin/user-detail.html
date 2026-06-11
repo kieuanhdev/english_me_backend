@@ -82,6 +82,7 @@
                 <form method="post"
                       th:action="@{/admin/users/{id}/delete(id=${d.id})}"
                       onsubmit="return confirm('Soft-delete tài khoản này?\nUser sẽ bị ẩn khỏi list và chặn đăng nhập sync Firebase.');">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                     <button type="submit"
                             class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-800 hover:bg-rose-100">
                         <span class="material-symbols-outlined text-base">delete</span>

@@ -334,7 +334,13 @@ public class AdminExerciseService {
      */
     private static String toLikePatternOrNull(String keyword) {
         if (keyword == null || keyword.isBlank()) return null;
-        return "%" + keyword.trim().toLowerCase() + "%";
+        // Escape ký tự wildcard của LIKE (%, _) + chính ký tự escape (\) —
+        // không escape thì user gõ "%" match mọi row. Query dùng ESCAPE '\'.
+        String escaped = keyword.trim().toLowerCase()
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
+        return "%" + escaped + "%";
     }
 
     private static String toUpperOrNull(String s) {
@@ -359,6 +365,11 @@ public class AdminExerciseService {
     private static String csv(String value) {
         if (value == null) return "";
         String escaped = value.replace("\"", "\"\"");
+        // Chống CSV formula injection: cell bắt đầu bằng = + - @ sẽ bị Excel/Sheets
+        // thực thi như công thức — prefix dấu nháy đơn để ép thành text.
+        if (!escaped.isEmpty() && "=+-@".indexOf(escaped.charAt(0)) >= 0) {
+            escaped = "'" + escaped;
+        }
         return "\"" + escaped + "\"";
     }
 }

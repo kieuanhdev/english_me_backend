@@ -19,6 +19,9 @@ public interface TestSessionRepository extends JpaRepository<TestSession, UUID> 
     @Query("SELECT ts FROM TestSession ts JOIN FETCH ts.user WHERE ts.id = :id")
     java.util.Optional<TestSession> findByIdWithUser(UUID id);
 
+    // Chống IDOR: chỉ trả session nếu thuộc đúng user đang đăng nhập.
+    java.util.Optional<TestSession> findByIdAndUser_FirebaseUid(UUID id, String firebaseUid);
+
     long countByUser_Id(UUID userId);
 
     java.util.List<TestSession> findTop50ByUser_IdOrderByStartedAtDesc(UUID userId);

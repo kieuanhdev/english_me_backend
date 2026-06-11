@@ -27,15 +27,16 @@ public class PlacementTestController {
         return placementTestService.startTest(decoded.getUid());
     }
 
-    // Trả lời 1 câu — nhận ngay đáp án đúng + giải thích
+    // Trả lời 1 câu — nhận ngay đáp án đúng + giải thích.
+    // Session load theo (sessionId, uid) trong service — user khác không đụng được.
     @PostMapping("/{sessionId}/answer")
     public AnswerQuestionResponse answerQuestion(
             @RequestHeader("Authorization") String token,
             @PathVariable UUID sessionId,
             @RequestBody AnswerQuestionRequest request
     ) {
-        authHelper.verifyBearer(token);
-        return placementTestService.answerQuestion(sessionId, request);
+        FirebaseToken decoded = authHelper.verifyBearer(token);
+        return placementTestService.answerQuestion(decoded.getUid(), sessionId, request);
     }
 
     // Hoàn thành bài — nhận kết quả CEFR + tổng điểm
@@ -44,8 +45,8 @@ public class PlacementTestController {
             @RequestHeader("Authorization") String token,
             @PathVariable UUID sessionId
     ) {
-        authHelper.verifyBearer(token);
-        return placementTestService.completeTest(sessionId);
+        FirebaseToken decoded = authHelper.verifyBearer(token);
+        return placementTestService.completeTest(decoded.getUid(), sessionId);
     }
 
     // Tự chọn trình độ — không làm bài kiểm tra, set CEFR + onboarded

@@ -109,6 +109,7 @@ class PlacementTestFlowTest {
                     ? q.getCorrectAnswer()
                     : ("A".equals(q.getCorrectAnswer()) ? "B" : "A");
             AnswerQuestionResponse ans = placementTestService.answerQuestion(
+                    user.getFirebaseUid(),
                     start.sessionId(),
                     new AnswerQuestionRequest(q.getId(), selected)
             );
@@ -118,7 +119,7 @@ class PlacementTestFlowTest {
         }
 
         // 3. Complete — pool đủ A1–B2 (4/cấp): R = (1*4 + 2*4)/40 = 0.30 -> A2 (cap B2 không kích hoạt).
-        TestResultResponse result = placementTestService.completeTest(start.sessionId());
+        TestResultResponse result = placementTestService.completeTest(user.getFirebaseUid(), start.sessionId());
         assertNotNull(result);
         assertEquals(start.totalQuestions(), result.totalQuestions());
         assertEquals("A2", result.resultLevel(),
@@ -137,9 +138,9 @@ class PlacementTestFlowTest {
         StartTestResponse start = placementTestService.startTest(user.getFirebaseUid());
         var q = start.questions().get(0);
 
-        placementTestService.answerQuestion(start.sessionId(), new AnswerQuestionRequest(q.id(), "A"));
+        placementTestService.answerQuestion(user.getFirebaseUid(), start.sessionId(), new AnswerQuestionRequest(q.id(), "A"));
         assertThrows(IllegalStateException.class, () ->
-                placementTestService.answerQuestion(start.sessionId(), new AnswerQuestionRequest(q.id(), "B"))
+                placementTestService.answerQuestion(user.getFirebaseUid(), start.sessionId(), new AnswerQuestionRequest(q.id(), "B"))
         );
     }
 
@@ -150,13 +151,36 @@ class PlacementTestFlowTest {
 
         // Trả lời hết
         for (var qDto : start.questions()) {
-            placementTestService.answerQuestion(start.sessionId(), new AnswerQuestionRequest(qDto.id(), "A"));
+            placementTestService.answerQuestion(user.getFirebaseUid(), start.sessionId(), new AnswerQuestionRequest(qDto.id(), "A"));
         }
-        placementTestService.completeTest(start.sessionId());
+        placementTestService.completeTest(user.getFirebaseUid(), start.sessionId());
 
         var firstQuestion = start.questions().get(0);
         assertThrows(IllegalStateException.class, () ->
-                placementTestService.answerQuestion(start.sessionId(), new AnswerQuestionRequest(firstQuestion.id(), "B"))
+                placementTestService.answerQuestion(user.getFirebaseUid(), start.sessionId(), new AnswerQuestionRequest(firstQuestion.id(), "B"))
         );
+    }
+
+    @Test
+    @DisplayName("User B đụng session của user A -> not found (chống IDOR)")
+    void foreignUserCannotTouchSession() {
+        StartTestResponse start = placementTestService.startTest(user.getFirebaseUid());
+        var q = start.questions().get(0);
+
+        User other = new User();
+        other.setFirebaseUid("uid-it-2");
+        other.setEmail("it2@example.com");
+        other.setFullName("IT User 2");
+        other.setAccountLocked(false);
+        other.setTotalXp(0);
+        other.setCurrentStreak(0);
+        other.setLongestStreak(0);
+        userRepository.save(other);
+
+        assertThrows(IllegalArgumentException.class, () ->
+                placementTestService.answerQuestion(other.getFirebaseUid(), start.sessionId(),
+                        new AnswerQuestionRequest(q.id(), "A")));
+        assertThrows(IllegalArgumentException.class, () ->
+                placementTestService.completeTest(other.getFirebaseUid(), start.sessionId()));
     }
 }

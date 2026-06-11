@@ -94,8 +94,9 @@ public class PlacementTestService {
     }
 
     @Transactional
-    public AnswerQuestionResponse answerQuestion(UUID sessionId, AnswerQuestionRequest request) {
-        TestSession session = testSessionRepository.findById(sessionId)
+    public AnswerQuestionResponse answerQuestion(String firebaseUid, UUID sessionId, AnswerQuestionRequest request) {
+        // Load theo (sessionId, firebaseUid) — user khác đoán được UUID cũng chỉ nhận "not found".
+        TestSession session = testSessionRepository.findByIdAndUser_FirebaseUid(sessionId, firebaseUid)
                 .orElseThrow(() -> new IllegalArgumentException("Test session not found"));
         userService.requireAccountNotLocked(session.getUser());
 
@@ -172,8 +173,8 @@ public class PlacementTestService {
     }
 
     @Transactional
-    public TestResultResponse completeTest(UUID sessionId) {
-        TestSession session = testSessionRepository.findById(sessionId)
+    public TestResultResponse completeTest(String firebaseUid, UUID sessionId) {
+        TestSession session = testSessionRepository.findByIdAndUser_FirebaseUid(sessionId, firebaseUid)
                 .orElseThrow(() -> new IllegalArgumentException("Test session not found"));
         userService.requireAccountNotLocked(session.getUser());
 

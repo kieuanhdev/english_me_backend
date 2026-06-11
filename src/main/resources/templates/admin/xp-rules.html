@@ -61,6 +61,7 @@
                                         : (rule.sourceType == 'level_bonus' ? 'Cộng khi hoàn thành 1 CEFR level (CHƯA wire vào BE).'
                                            : (rule.sourceType == 'streak_bonus' ? 'Cộng khi streak đạt mốc 7/14/21... ngày (CHƯA wire vào BE).'
                                               : (rule.sourceType == 'pronunciation' ? 'Cộng khi luyện phát âm đạt yêu cầu (CHƯA wire vào BE).' : ''))))))}">
+<input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                 <input type="hidden" name="sourceType" th:value="${rule.sourceType}">
 
                 <div class="flex items-start justify-between gap-4">
