@@ -8,10 +8,11 @@ public record TestResultResponse(
         String resultLevel,
         int score,
         int totalQuestions,
-        // Cờ tín hiệu UI: học viên đã kịch trần B2 và có dấu hiệu giỏi hơn B2.
-        // KHÔNG đổi resultLevel (vẫn "B2"). Xem HE_THONG_KIEM_TRA_TRINH_DO.md §A.3.
-        boolean canGoHigherThanB2,
-        // Thông báo gợi ý làm bài kiểm tra lên cấp (chỉ set khi canGoHigherThanB2 == true).
+        // Ability estimate cuối của phiên CAT (IRT 1PL θ) → vẽ biểu đồ trong báo cáo.
+        double finalTheta,
+        // Cờ tín hiệu UI: học viên kịch trần C1 và có dấu hiệu giỏi hơn (gợi ý C2).
+        boolean canGoHigherThanC1,
+        // Thông báo gợi ý làm bài kiểm tra lên cấp (chỉ set khi canGoHigherThanC1 == true).
         String aboveLevelMessage,
         List<AnswerReview> review
 ) {

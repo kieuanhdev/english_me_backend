@@ -20,17 +20,17 @@ public class PlacementTestController {
         this.authHelper = authHelper;
     }
 
-    // Bắt đầu bài kiểm tra — trả về 16 câu A1–B2 (không có đáp án) + notice giới hạn B2
+    // Bắt đầu phiên CAT — trả về câu hỏi ĐẦU TIÊN (1 câu) + notice + maxQuestions
     @PostMapping("/start")
     public StartTestResponse startTest(@RequestHeader("Authorization") String token) {
         FirebaseToken decoded = authHelper.verifyBearer(token);
         return placementTestService.startTest(decoded.getUid());
     }
 
-    // Trả lời 1 câu — nhận ngay đáp án đúng + giải thích.
+    // Trả lời 1 câu — nhận đáp án đúng + giải thích + câu kế tiếp (CAT) hoặc isDone.
     // Session load theo (sessionId, uid) trong service — user khác không đụng được.
     @PostMapping("/{sessionId}/answer")
-    public AnswerQuestionResponse answerQuestion(
+    public CatAnswerResponse answerQuestion(
             @RequestHeader("Authorization") String token,
             @PathVariable UUID sessionId,
             @RequestBody AnswerQuestionRequest request

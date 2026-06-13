@@ -1,13 +1,16 @@
 package com.kiovant.englishme.dto;
 
-import java.util.List;
 import java.util.UUID;
 
+/**
+ * Phản hồi khi bắt đầu phiên CAT: chỉ trả câu hỏi ĐẦU TIÊN (1 câu).
+ * Các câu sau lấy dần qua /answer (nextQuestion). Xem docs/placement-test-cat-upgrade.md.
+ */
 public record StartTestResponse(
         UUID sessionId,
-        List<QuestionDto> questions,
-        int totalQuestions,
-        // Thông báo tĩnh cho người dùng TRƯỚC khi làm bài: bài đầu vào chỉ xác định
-        // trình độ tối đa tới B2 + câu bỏ trống tính là sai. Xem HE_THONG_KIEM_TRA_TRINH_DO.md §A.7.
+        QuestionDto firstQuestion,
+        // Số câu tối đa của phiên (CAT dừng khi đủ).
+        int maxQuestions,
+        // Thông báo tĩnh cho người dùng TRƯỚC khi làm bài.
         String notice
 ) {}

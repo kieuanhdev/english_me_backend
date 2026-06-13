@@ -10,50 +10,37 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Placement Test theo mô hình CAT (Computerized Adaptive Testing) + IRT 1PL (Rasch).
+ *
+ * <p>Câu kế tiếp phụ thuộc câu trước: đúng → câu khó hơn, sai → câu dễ hơn. Dừng sau
+ * {@code maxQuestions} câu. Ability estimate θ cập nhật sau mỗi câu, map → CEFR (A1–C1).
+ * Xem docs/placement-test-cat-upgrade.md.
+ */
 @Service
 public class PlacementTestService {
 
-    // Bài kiểm tra ĐẦU VÀO chấm tối đa B2 (cap cứng) → đề chỉ rút câu A1–B2.
-    // Xem HE_THONG_KIEM_TRA_TRINH_DO.md §A.4.
-    private static final int TOTAL_QUESTIONS = 16;
-
-    // 16 câu: A1×4, A2×4, B1×4, B2×4 (mỗi cấp 2 grammar + 2 vocabulary). Bỏ C1/C2.
-    private static final Map<String, Integer> LEVEL_DISTRIBUTION = new LinkedHashMap<>();
-
-    static {
-        LEVEL_DISTRIBUTION.put("A1", 4);
-        LEVEL_DISTRIBUTION.put("A2", 4);
-        LEVEL_DISTRIBUTION.put("B1", 4);
-        LEVEL_DISTRIBUTION.put("B2", 4);
-    }
+    // ── IRT 1PL constants ────────────────────────────────────────────────────
+    private static final double THETA_START = 0.0;   // khởi đầu ~B1
+    private static final double THETA_MIN = -3.0;
+    private static final double THETA_MAX = 3.0;
+    private static final double LEARNING_RATE = 0.3; // constant step-size MLE (Newton–Raphson bước đầu)
+    private static final int DEFAULT_MAX_QUESTIONS = 15;
 
     private static final List<String> CEFR_ORDER = List.of("A1", "A2", "B1", "B2", "C1", "C2");
 
-    // Trọng số độ khó theo cấp — dùng cho Weighted Difficulty Scoring (§A.1).
-    private static final Map<String, Integer> WEIGHTS = Map.of("A1", 1, "A2", 2, "B1", 3, "B2", 4);
+    // Ngưỡng phát hiện "có thể cao hơn C1" (kịch trần): θ cuối rất cao.
+    private static final double GO_HIGHER_THETA = 2.2;
 
-    // Cutoff R → band CEFR (§A.1 Bước 3).
-    private static final double CUTOFF_A2 = 0.25;
-    private static final double CUTOFF_B1 = 0.45;
-    private static final double CUTOFF_B2 = 0.68;
-
-    // Ngưỡng phát hiện "có thể cao hơn B2" (§A.3).
-    private static final double GO_HIGHER_MIN_R = 0.90;
-    private static final double GO_HIGHER_B2_SMOOTHED = 0.83;
-
-    // Index của B2 trong CEFR_ORDER (cap cứng).
-    private static final int B2_INDEX = 3;
-
-    // Thông báo cho người dùng (§A.7).
+    // Thông báo cho người dùng.
     private static final String NOTICE_INTRO =
-            "Bài kiểm tra đầu vào này gồm 16 câu (ngữ pháp + từ vựng) và chỉ xác định trình độ của bạn "
-            + "tối đa tới mức B2 theo chuẩn CEFR. Nếu trình độ của bạn cao hơn B2, hệ thống sẽ gợi ý bạn "
-            + "học và làm các bài kiểm tra lên cấp để xác định chính xác. Câu bỏ trống được tính là sai, "
-            + "nên hãy cố gắng trả lời tất cả các câu nhé!";
-    private static final String MESSAGE_ABOVE_B2 =
-            "Bạn đã đạt B2 — mức cao nhất của bài kiểm tra đầu vào! Trình độ thực tế của bạn có thể còn "
-            + "cao hơn B2. Hãy học và hoàn thành các bài kiểm tra lên cấp trong lộ trình để xác định chính "
-            + "xác trình độ C1/C2 của mình.";
+            "Bài kiểm tra đầu vào này điều chỉnh độ khó theo từng câu trả lời của bạn (tối đa 15 câu, "
+            + "ngữ pháp + từ vựng) và xác định trình độ của bạn theo chuẩn CEFR từ A1 đến C1. Câu càng về "
+            + "sau càng phản ánh đúng năng lực thật của bạn, nên hãy cố gắng trả lời thật chính xác nhé!";
+    private static final String MESSAGE_ABOVE_C1 =
+            "Bạn đã đạt C1 — mức cao nhất của bài kiểm tra đầu vào! Trình độ thực tế của bạn có thể còn "
+            + "cao hơn. Hãy học và hoàn thành các bài kiểm tra lên cấp trong lộ trình để xác định chính "
+            + "xác trình độ C2 của mình.";
 
     private final QuestionRepository questionRepository;
     private final TestSessionRepository testSessionRepository;
@@ -81,20 +68,25 @@ public class PlacementTestService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         userService.requireAccountNotLocked(user);
 
-        List<Question> selected = selectQuestions();
-
         TestSession session = new TestSession();
         session.setUser(user);
         session.setStatus(TestSession.TestStatus.IN_PROGRESS);
-        session.setQuestionIds(selected.stream().map(Question::getId).toList());
+        session.setTheta(THETA_START);
+        session.setMaxQuestions(DEFAULT_MAX_QUESTIONS);
+
+        // Câu đầu: chọn theo θ khởi đầu (0.0) — câu gần B1 nhất.
+        Question first = selectNextQuestion(THETA_START, List.of(), Map.of());
+        if (first == null) {
+            throw new IllegalStateException("No placement questions available");
+        }
+        session.setQuestionIds(new ArrayList<>(List.of(first.getId())));
         testSessionRepository.save(session);
 
-        var questions = selected.stream().map(this::toDto).toList();
-        return new StartTestResponse(session.getId(), questions, questions.size(), NOTICE_INTRO);
+        return new StartTestResponse(session.getId(), toDto(first), DEFAULT_MAX_QUESTIONS, NOTICE_INTRO);
     }
 
     @Transactional
-    public AnswerQuestionResponse answerQuestion(String firebaseUid, UUID sessionId, AnswerQuestionRequest request) {
+    public CatAnswerResponse answerQuestion(String firebaseUid, UUID sessionId, AnswerQuestionRequest request) {
         // Load theo (sessionId, firebaseUid) — user khác đoán được UUID cũng chỉ nhận "not found".
         TestSession session = testSessionRepository.findByIdAndUser_FirebaseUid(sessionId, firebaseUid)
                 .orElseThrow(() -> new IllegalArgumentException("Test session not found"));
@@ -106,7 +98,7 @@ public class PlacementTestService {
 
         UUID questionId = request.questionId();
 
-        // Kiểm tra câu hỏi có thuộc session này không
+        // Câu hỏi phải thuộc session này (CAT chỉ append câu hệ thống chọn).
         if (session.getQuestionIds() == null || !session.getQuestionIds().contains(questionId)) {
             throw new IllegalArgumentException("Question does not belong to this session");
         }
@@ -114,7 +106,7 @@ public class PlacementTestService {
         Question question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new IllegalArgumentException("Question not found"));
 
-        // Kiểm tra đã trả lời câu này chưa (không cho trả lời lại)
+        // Không cho trả lời lại 1 câu.
         if (testAnswerRepository.findByTestSessionAndQuestion(session, question).isPresent()) {
             throw new IllegalStateException("Question already answered");
         }
@@ -129,16 +121,43 @@ public class PlacementTestService {
         answer.setIsCorrect(correct);
         testAnswerRepository.save(answer);
 
-        long answeredCount = testAnswerRepository.countByTestSession(session);
+        // ── IRT 1PL: cập nhật θ ───────────────────────────────────────────────
+        double theta = session.getTheta() == null ? THETA_START : session.getTheta();
+        double b = question.getDifficulty() == null ? 0.0 : question.getDifficulty();
+        double p = probabilityCorrect(theta, b);
+        theta += correct ? LEARNING_RATE * (1 - p) : -LEARNING_RATE * p;
+        theta = clamp(theta, THETA_MIN, THETA_MAX);
+        session.setTheta(theta);
 
-        return new AnswerQuestionResponse(
+        int answeredCount = (int) testAnswerRepository.countByTestSession(session);
+        int maxQuestions = session.getMaxQuestions() == null ? DEFAULT_MAX_QUESTIONS : session.getMaxQuestions();
+        boolean isDone = answeredCount >= maxQuestions;
+
+        QuestionDto nextDto = null;
+        if (!isDone) {
+            Map<String, Integer> skillCounts = countSkills(session);
+            Question next = selectNextQuestion(theta, session.getQuestionIds(), skillCounts);
+            if (next != null) {
+                session.getQuestionIds().add(next.getId());
+                nextDto = toDto(next);
+            } else {
+                // Hết câu trong pool → dừng sớm.
+                isDone = true;
+            }
+        }
+
+        testSessionRepository.save(session);
+
+        return new CatAnswerResponse(
                 questionId,
                 selected,
                 question.getCorrectAnswer(),
                 correct,
                 question.getExplanation(),
-                (int) answeredCount,
-                session.getQuestionIds().size()
+                answeredCount,
+                maxQuestions,
+                isDone,
+                nextDto
         );
     }
 
@@ -185,13 +204,9 @@ public class PlacementTestService {
         List<TestAnswer> answers = testAnswerRepository.findByTestSession(session);
         List<Question> questions = questionRepository.findAllById(session.getQuestionIds());
 
-        // Map questionId -> đáp án, để tính điểm trên TOÀN BỘ đề (câu bỏ trống vẫn vào mẫu số).
-        Map<UUID, TestAnswer> answerByQid = answers.stream()
-                .collect(Collectors.toMap(a -> a.getQuestion().getId(), a -> a, (x, y) -> x));
-
-        // Weighted Difficulty Scoring (§A.1): R = earned / max, cap cứng B2.
-        ScoreResult sr = score(questions, answerByQid);
-        String resultLevel = sr.resultLevel();
+        double finalTheta = session.getTheta() == null ? THETA_START : session.getTheta();
+        String resultLevel = mapThetaToCefr(finalTheta);
+        boolean canGoHigherThanC1 = "C1".equals(resultLevel) && finalTheta >= GO_HIGHER_THETA;
 
         int totalCorrect = (int) answers.stream().filter(a -> Boolean.TRUE.equals(a.getIsCorrect())).count();
 
@@ -214,101 +229,74 @@ public class PlacementTestService {
             userRepository.save(user);
         }
 
-        return buildResult(session, questions, answers, sr.canGoHigherThanB2());
+        return buildResult(session, questions, answers, finalTheta, canGoHigherThanC1);
     }
 
-    /** Kết quả chấm: band CEFR (cap B2) + cờ có thể cao hơn B2. */
-    private record ScoreResult(String resultLevel, boolean canGoHigherThanB2) {}
+    // ── IRT 1PL helpers ────────────────────────────────────────────────────────
+
+    /** P(đúng | θ, b) = 1 / (1 + exp(-(θ - b))). */
+    private double probabilityCorrect(double theta, double b) {
+        return 1.0 / (1.0 + Math.exp(-(theta - b)));
+    }
 
     /**
-     * Weighted Difficulty Scoring with CEFR Cutoffs (cap cứng B2).
-     * Xem HE_THONG_KIEM_TRA_TRINH_DO.md §A.1 + §A.3.
-     *
-     * <p>R = Σ w(câu đúng) / Σ w(MỌI câu trong đề). Mẫu số ĐỘNG lấy từ toàn bộ đề
-     * (câu bỏ trống không cộng earned nhưng vẫn vào max → tính là sai).
+     * Chọn câu kế tiếp: trong pool (loại câu đã hỏi) lấy câu có |b_i - θ| nhỏ nhất.
+     * Tiebreak: ưu tiên skill đang bị hỏi ít hơn để balance grammar/vocabulary.
      */
-    private ScoreResult score(List<Question> questions, Map<UUID, TestAnswer> answerByQid) {
-        int earned = 0, max = 0;
-        int b2Correct = 0, b2Total = 0;
-        for (Question q : questions) {
-            int w = WEIGHTS.getOrDefault(q.getCefrLevel(), 0);
-            if (w == 0) continue; // bỏ câu C1/C2 lỡ lọt vào (an toàn)
-            max += w;
-            boolean correct = isCorrect(answerByQid.get(q.getId()));
-            if (correct) earned += w;
-            if ("B2".equals(q.getCefrLevel())) {
-                b2Total++;
-                if (correct) b2Correct++;
+    private Question selectNextQuestion(double theta, List<UUID> askedIds, Map<String, Integer> skillCounts) {
+        List<Question> pool = (askedIds == null || askedIds.isEmpty())
+                ? questionRepository.findAllForCat()
+                : questionRepository.findForCat(askedIds);
+        if (pool.isEmpty()) return null;
+
+        int grammar = skillCounts.getOrDefault("grammar", 0);
+        int vocab = skillCounts.getOrDefault("vocabulary", 0);
+        // Skill đang ít hơn được ưu tiên khi |b_i - θ| hoà.
+        String preferredSkill = grammar <= vocab ? "grammar" : "vocabulary";
+
+        Question best = null;
+        double bestDist = Double.MAX_VALUE;
+        boolean bestPreferred = false;
+        for (Question q : pool) {
+            double b = q.getDifficulty() == null ? 0.0 : q.getDifficulty();
+            double dist = Math.abs(b - theta);
+            boolean preferred = preferredSkill.equals(q.getSkillCategory());
+            if (dist < bestDist - 1e-9
+                    || (Math.abs(dist - bestDist) <= 1e-9 && preferred && !bestPreferred)) {
+                best = q;
+                bestDist = dist;
+                bestPreferred = preferred;
             }
         }
-
-        if (max == 0) return new ScoreResult("A1", false); // chống chia 0
-
-        double r = (double) earned / max;
-        String band;
-        if (r < CUTOFF_A2) band = "A1";
-        else if (r < CUTOFF_B1) band = "A2";
-        else if (r < CUTOFF_B2) band = "B1";
-        else band = "B2";
-
-        // Cap cứng B2 (lưới an toàn tường minh).
-        String resultLevel = CEFR_ORDER.indexOf(band) > B2_INDEX ? "B2" : band;
-
-        boolean canGoHigher = detectAboveB2(resultLevel, r, b2Correct, b2Total);
-        return new ScoreResult(resultLevel, canGoHigher);
+        return best;
     }
 
-    /**
-     * Phát hiện "có thể cao hơn B2" — thỏa đồng thời cả 3 điều kiện (§A.3):
-     *   (1) resultLevel == B2, (2) Laplace-smoothed B2 accuracy ≥ 0.83, (3) R ≥ 0.90.
-     * Dùng Laplace add-1 (Beta(1,1) prior) cho B2 vì chỉ 4 câu B2 → accuracy thô rất nhiễu.
-     */
-    private boolean detectAboveB2(String resultLevel, double r, int b2Correct, int b2Total) {
-        if (!"B2".equals(resultLevel)) return false;
-        if (r < GO_HIGHER_MIN_R) return false;
-        double b2Smoothed = (double) (b2Correct + 1) / (b2Total + 2);
-        return b2Smoothed >= GO_HIGHER_B2_SMOOTHED;
+    /** Map θ → band CEFR (A1–C1). Xem docs/placement-test-cat-upgrade.md. */
+    private String mapThetaToCefr(double theta) {
+        if (theta < -1.5) return "A1";
+        if (theta < -0.5) return "A2";
+        if (theta < 0.5) return "B1";
+        if (theta < 1.5) return "B2";
+        return "C1";
     }
 
-    private boolean isCorrect(TestAnswer a) {
-        return a != null && Boolean.TRUE.equals(a.getIsCorrect());
+    /** Đếm số câu grammar/vocabulary ĐÃ hỏi trong session (để balance skill). */
+    private Map<String, Integer> countSkills(TestSession session) {
+        List<UUID> ids = session.getQuestionIds();
+        if (ids == null || ids.isEmpty()) return Map.of();
+        Map<String, Integer> counts = new HashMap<>();
+        for (Question q : questionRepository.findAllById(ids)) {
+            counts.merge(q.getSkillCategory(), 1, Integer::sum);
+        }
+        return counts;
+    }
+
+    private double clamp(double v, double min, double max) {
+        return Math.max(min, Math.min(max, v));
     }
 
     private int compareCefr(String a, String b) {
         return Integer.compare(CEFR_ORDER.indexOf(a), CEFR_ORDER.indexOf(b));
-    }
-
-    private List<Question> selectQuestions() {
-        List<Question> result = new ArrayList<>();
-
-        for (Map.Entry<String, Integer> entry : LEVEL_DISTRIBUTION.entrySet()) {
-            String level = entry.getKey();
-            int count = entry.getValue();
-            int grammarCount = count / 2;
-            int vocabCount = count - grammarCount;
-            result.addAll(questionRepository.findRandomByCefrLevelAndSkillCategory(level, "grammar", grammarCount));
-            result.addAll(questionRepository.findRandomByCefrLevelAndSkillCategory(level, "vocabulary", vocabCount));
-        }
-
-        if (result.size() < TOTAL_QUESTIONS) {
-            Set<UUID> existingIds = result.stream().map(Question::getId).collect(Collectors.toSet());
-            int needed = TOTAL_QUESTIONS - result.size();
-            for (Map.Entry<String, Integer> entry : LEVEL_DISTRIBUTION.entrySet()) {
-                if (needed <= 0) break;
-                List<Question> extra = questionRepository.findRandomByCefrLevel(entry.getKey(), needed * 2);
-                for (Question q : extra) {
-                    if (!existingIds.contains(q.getId())) {
-                        result.add(q);
-                        existingIds.add(q.getId());
-                        needed--;
-                        if (needed <= 0) break;
-                    }
-                }
-            }
-        }
-
-        Collections.shuffle(result);
-        return result.size() > TOTAL_QUESTIONS ? result.subList(0, TOTAL_QUESTIONS) : result;
     }
 
     private QuestionDto toDto(Question q) {
@@ -322,7 +310,8 @@ public class PlacementTestService {
     }
 
     private TestResultResponse buildResult(TestSession session, List<Question> questions,
-                                           List<TestAnswer> answers, boolean canGoHigherThanB2) {
+                                           List<TestAnswer> answers, double finalTheta,
+                                           boolean canGoHigherThanC1) {
         Map<UUID, TestAnswer> answerByQuestion = answers.stream()
                 .collect(Collectors.toMap(a -> a.getQuestion().getId(), a -> a, (x, y) -> x));
 
@@ -343,8 +332,9 @@ public class PlacementTestService {
                 session.getResultLevel(),
                 session.getScore() != null ? session.getScore() : 0,
                 questions.size(),
-                canGoHigherThanB2,
-                canGoHigherThanB2 ? MESSAGE_ABOVE_B2 : "",
+                finalTheta,
+                canGoHigherThanC1,
+                canGoHigherThanC1 ? MESSAGE_ABOVE_C1 : "",
                 reviews
         );
     }

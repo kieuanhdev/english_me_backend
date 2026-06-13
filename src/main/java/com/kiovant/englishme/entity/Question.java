@@ -24,6 +24,11 @@ public class Question {
     @Column(nullable = false)
     private String skillCategory; // grammar, vocabulary, reading, listening
 
+    // IRT 1PL b-parameter (độ khó). Map từ cefr_level làm proxy (V67):
+    // A1=-2.0, A2=-1.0, B1=0.0, B2=1.0, C1=2.0. Dùng cho CAT chọn câu theo |b_i - θ|.
+    @Column(nullable = false)
+    private Double difficulty;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String question;
 

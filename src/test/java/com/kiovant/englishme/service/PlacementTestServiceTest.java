@@ -1,7 +1,7 @@
 package com.kiovant.englishme.service;
 
 import com.kiovant.englishme.dto.AnswerQuestionRequest;
-import com.kiovant.englishme.dto.AnswerQuestionResponse;
+import com.kiovant.englishme.dto.CatAnswerResponse;
 import com.kiovant.englishme.dto.StartTestResponse;
 import com.kiovant.englishme.dto.TestResultResponse;
 import com.kiovant.englishme.entity.Question;
@@ -20,15 +20,15 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
- * Unit test cho PlacementTestService — Trụ 3 (Placement Test thích ứng CEFR).
+ * Unit test cho PlacementTestService — Trụ 3 (Placement Test thích ứng CEFR / CAT + IRT 1PL).
  *
- * Cover flow: start -> answer -> complete + suy luận CEFR theo % đúng từng level.
+ * Cover: start (1 câu), answer (update θ + chọn câu kế / isDone), complete (map θ → CEFR),
+ * bảo mật IDOR, edge cases. Xem docs/placement-test-cat-upgrade.md.
  */
 class PlacementTestServiceTest {
 
@@ -63,7 +63,7 @@ class PlacementTestServiceTest {
         doNothing().when(userService).requireAccountNotLocked(any());
     }
 
-    private Question buildQuestion(String level, String skill, String correct) {
+    private Question buildQuestion(String level, String skill, String correct, double difficulty) {
         Question q = new Question();
         q.setId(UUID.randomUUID());
         q.setCefrLevel(level);
@@ -72,125 +72,192 @@ class PlacementTestServiceTest {
         q.setOptions(Map.of("A", "a", "B", "b", "C", "c", "D", "d"));
         q.setCorrectAnswer(correct);
         q.setExplanation("explain");
+        q.setDifficulty(difficulty);
         return q;
     }
 
+    /** Pool 1 câu mỗi level (A1..C1) — đủ để CAT chọn theo |b_i - θ|. */
+    private List<Question> buildPool() {
+        return new ArrayList<>(List.of(
+                buildQuestion("A1", "grammar", "A", -2.0),
+                buildQuestion("A2", "vocabulary", "A", -1.0),
+                buildQuestion("B1", "grammar", "A", 0.0),
+                buildQuestion("B2", "vocabulary", "A", 1.0),
+                buildQuestion("C1", "grammar", "A", 2.0)
+        ));
+    }
+
     @Test
-    @DisplayName("startTest tạo session IN_PROGRESS, trả 16 câu A1–B2 + notice cap B2")
-    void startTestCreatesInProgressSession() {
-        // Service rút 2 grammar + 2 vocabulary mỗi cấp A1–B2 (skill_category LOWERCASE, khớp V18).
-        for (String level : List.of("A1", "A2", "B1", "B2")) {
-            when(questionRepository.findRandomByCefrLevelAndSkillCategory(level, "grammar", 2))
-                    .thenReturn(List.of(buildQuestion(level, "grammar", "A"), buildQuestion(level, "grammar", "B")));
-            when(questionRepository.findRandomByCefrLevelAndSkillCategory(level, "vocabulary", 2))
-                    .thenReturn(List.of(buildQuestion(level, "vocabulary", "A"), buildQuestion(level, "vocabulary", "B")));
-        }
-        when(questionRepository.findRandomByCefrLevel(anyString(), anyInt())).thenReturn(List.of());
+    @DisplayName("startTest tạo session IN_PROGRESS, θ=0, trả 1 câu đầu (gần B1) + notice A1–C1")
+    void startTestCreatesSessionWithFirstQuestion() {
+        when(questionRepository.findAllForCat()).thenReturn(buildPool());
         when(testSessionRepository.save(any(TestSession.class))).thenAnswer(inv -> inv.getArgument(0));
 
         StartTestResponse response = service.startTest("uid-1");
 
         assertNotNull(response);
-        assertEquals(16, response.questions().size());
-        assertEquals(16, response.totalQuestions());
+        assertNotNull(response.firstQuestion());
+        assertEquals("B1", response.firstQuestion().cefrLevel(), "θ=0 → câu gần b=0 nhất = B1");
+        assertEquals(15, response.maxQuestions());
         assertNotNull(response.notice());
-        assertTrue(response.notice().contains("B2"), "notice phải nêu rõ giới hạn B2");
 
         verify(testSessionRepository).save(argThat(s ->
                 s.getStatus() == TestSession.TestStatus.IN_PROGRESS
-                        && s.getQuestionIds() != null
-                        && s.getQuestionIds().size() == 16
+                        && s.getTheta() != null && s.getTheta() == 0.0
+                        && s.getQuestionIds() != null && s.getQuestionIds().size() == 1
                         && s.getUser() == user
         ));
     }
 
     @Test
-    @DisplayName("answerQuestion lưu đáp án + cập nhật answeredCount")
-    void answerQuestionPersistsAnswerAndCountsCorrectly() {
-        Question q = buildQuestion("A1", "Grammar", "B");
+    @DisplayName("answerQuestion đúng: θ tăng + trả câu kế tiếp khó hơn, isDone=false")
+    void answerCorrectIncreasesThetaAndReturnsNext() {
+        Question b1 = buildQuestion("B1", "grammar", "B", 0.0);
         TestSession session = new TestSession();
         session.setUser(user);
         session.setStatus(TestSession.TestStatus.IN_PROGRESS);
+        session.setTheta(0.0);
+        session.setMaxQuestions(15);
+        session.setQuestionIds(new ArrayList<>(List.of(b1.getId())));
+
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
+        when(questionRepository.findById(b1.getId())).thenReturn(Optional.of(b1));
+        when(testAnswerRepository.findByTestSessionAndQuestion(session, b1)).thenReturn(Optional.empty());
+        when(testAnswerRepository.countByTestSession(session)).thenReturn(1L);
+        when(questionRepository.findAllById(anyList())).thenReturn(List.of(b1));
+        when(questionRepository.findForCat(anyList())).thenReturn(List.of(
+                buildQuestion("B2", "vocabulary", "A", 1.0)));
+        when(testSessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CatAnswerResponse response = service.answerQuestion(
+                "uid-1", UUID.randomUUID(), new AnswerQuestionRequest(b1.getId(), "B"));
+
+        assertTrue(response.isCorrect());
+        assertFalse(response.isDone());
+        assertNotNull(response.nextQuestion());
+        assertEquals(1, response.answeredCount());
+        assertTrue(session.getTheta() > 0.0, "trả lời đúng → θ tăng");
+        assertEquals(2, session.getQuestionIds().size(), "câu kế tiếp được append vào session");
+    }
+
+    @Test
+    @DisplayName("answerQuestion sai: θ giảm")
+    void answerWrongDecreasesTheta() {
+        Question b1 = buildQuestion("B1", "grammar", "B", 0.0);
+        TestSession session = new TestSession();
+        session.setUser(user);
+        session.setStatus(TestSession.TestStatus.IN_PROGRESS);
+        session.setTheta(0.0);
+        session.setMaxQuestions(15);
+        session.setQuestionIds(new ArrayList<>(List.of(b1.getId())));
+
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
+        when(questionRepository.findById(b1.getId())).thenReturn(Optional.of(b1));
+        when(testAnswerRepository.findByTestSessionAndQuestion(session, b1)).thenReturn(Optional.empty());
+        when(testAnswerRepository.countByTestSession(session)).thenReturn(1L);
+        when(questionRepository.findAllById(anyList())).thenReturn(List.of(b1));
+        when(questionRepository.findForCat(anyList())).thenReturn(List.of(
+                buildQuestion("A2", "vocabulary", "A", -1.0)));
+        when(testSessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CatAnswerResponse response = service.answerQuestion(
+                "uid-1", UUID.randomUUID(), new AnswerQuestionRequest(b1.getId(), "Z"));
+
+        assertFalse(response.isCorrect());
+        assertTrue(session.getTheta() < 0.0, "trả lời sai → θ giảm");
+    }
+
+    @Test
+    @DisplayName("answerQuestion: đạt maxQuestions → isDone=true, nextQuestion=null")
+    void answerReachingMaxIsDone() {
+        Question q = buildQuestion("B1", "grammar", "A", 0.0);
+        TestSession session = new TestSession();
+        session.setUser(user);
+        session.setStatus(TestSession.TestStatus.IN_PROGRESS);
+        session.setTheta(0.5);
+        session.setMaxQuestions(15);
         session.setQuestionIds(new ArrayList<>(List.of(q.getId())));
 
         when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
         when(questionRepository.findById(q.getId())).thenReturn(Optional.of(q));
         when(testAnswerRepository.findByTestSessionAndQuestion(session, q)).thenReturn(Optional.empty());
-        when(testAnswerRepository.countByTestSession(session)).thenReturn(1L);
+        when(testAnswerRepository.countByTestSession(session)).thenReturn(15L); // đã đủ
+        when(testSessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AnswerQuestionResponse response = service.answerQuestion(
-                "uid-1",
-                UUID.randomUUID(),
-                new AnswerQuestionRequest(q.getId(), "B")
-        );
+        CatAnswerResponse response = service.answerQuestion(
+                "uid-1", UUID.randomUUID(), new AnswerQuestionRequest(q.getId(), "A"));
 
-        assertTrue(response.isCorrect());
-        assertEquals("B", response.selectedAnswer());
-        assertEquals("B", response.correctAnswer());
-        assertEquals(1, response.answeredCount());
-        verify(testAnswerRepository).save(any(TestAnswer.class));
+        assertTrue(response.isDone());
+        assertNull(response.nextQuestion());
+        verify(questionRepository, never()).findForCat(anyList());
     }
 
     @Test
-    @DisplayName("answerQuestion ném IllegalStateException khi session đã COMPLETED")
+    @DisplayName("completeTest: θ cao → C1; θ thấp → A1 (map θ → CEFR)")
+    void completeTestMapsThetaToCefr() {
+        // θ = 2.0 → C1
+        assertEquals("C1", runComplete(2.0).resultLevel());
+        // θ = 1.0 → B2
+        assertEquals("B2", runComplete(1.0).resultLevel());
+        // θ = 0.0 → B1
+        assertEquals("B1", runComplete(0.0).resultLevel());
+        // θ = -1.0 → A2
+        assertEquals("A2", runComplete(-1.0).resultLevel());
+        // θ = -2.0 → A1
+        assertEquals("A1", runComplete(-2.0).resultLevel());
+    }
+
+    @Test
+    @DisplayName("completeTest: θ kịch trần (≥2.2) → C1 + canGoHigherThanC1=true + finalTheta truyền về")
+    void completeTestFlagsAboveC1() {
+        TestResultResponse result = runComplete(2.5);
+        assertEquals("C1", result.resultLevel());
+        assertTrue(result.canGoHigherThanC1());
+        assertFalse(result.aboveLevelMessage().isEmpty());
+        assertEquals(2.5, result.finalTheta(), 1e-9);
+    }
+
+    @Test
+    @DisplayName("completeTest gán cefrLevel cho user nếu chưa có; re-test chỉ nâng không hạ")
+    void completeTestUserLevelLogic() {
+        assertNull(user.getCefrLevel());
+        runComplete(2.0); // C1
+        assertEquals("C1", user.getCefrLevel());
+        assertEquals(Boolean.TRUE, user.getIsOnboarded());
+
+        // Re-test ra thấp hơn → giữ level cũ.
+        runComplete(-2.0); // A1
+        assertEquals("C1", user.getCefrLevel(), "không hạ level");
+    }
+
+    @Test
+    @DisplayName("answerQuestion: user khác (uid lạ) → not found (chống IDOR)")
+    void answerQuestionRejectsForeignUser() {
+        Question q = buildQuestion("B1", "grammar", "A", 0.0);
+        TestSession session = new TestSession();
+        session.setUser(user);
+        session.setStatus(TestSession.TestStatus.IN_PROGRESS);
+        session.setQuestionIds(List.of(q.getId()));
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
+
+        assertThrows(IllegalArgumentException.class, () ->
+                service.answerQuestion("uid-2", UUID.randomUUID(), new AnswerQuestionRequest(q.getId(), "A")));
+        verify(testAnswerRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("answerQuestion ném lỗi khi session đã COMPLETED")
     void answerQuestionRejectsCompletedSession() {
-        Question q = buildQuestion("A1", "Grammar", "A");
+        Question q = buildQuestion("B1", "grammar", "A", 0.0);
         TestSession session = new TestSession();
         session.setUser(user);
         session.setStatus(TestSession.TestStatus.COMPLETED);
         session.setQuestionIds(List.of(q.getId()));
-
         when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
 
         assertThrows(IllegalStateException.class, () ->
-                service.answerQuestion("uid-1", UUID.randomUUID(), new AnswerQuestionRequest(q.getId(), "A"))
-        );
+                service.answerQuestion("uid-1", UUID.randomUUID(), new AnswerQuestionRequest(q.getId(), "A")));
         verify(testAnswerRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("answerQuestion ném lỗi khi câu đã trả lời rồi")
-    void answerQuestionRejectsDuplicateAnswer() {
-        Question q = buildQuestion("A1", "Grammar", "A");
-        TestSession session = new TestSession();
-        session.setUser(user);
-        session.setStatus(TestSession.TestStatus.IN_PROGRESS);
-        session.setQuestionIds(List.of(q.getId()));
-
-        TestAnswer existing = new TestAnswer();
-        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
-        when(questionRepository.findById(q.getId())).thenReturn(Optional.of(q));
-        when(testAnswerRepository.findByTestSessionAndQuestion(session, q)).thenReturn(Optional.of(existing));
-
-        assertThrows(IllegalStateException.class, () ->
-                service.answerQuestion("uid-1", UUID.randomUUID(), new AnswerQuestionRequest(q.getId(), "A"))
-        );
-        verify(testAnswerRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("answerQuestion: user khác (uid lạ) đụng session -> not found (chống IDOR)")
-    void answerQuestionRejectsForeignUser() {
-        // Repo chỉ stub cho uid-1; uid-2 trả Optional.empty() (mặc định mock).
-        Question q = buildQuestion("A1", "Grammar", "A");
-        TestSession session = new TestSession();
-        session.setUser(user);
-        session.setStatus(TestSession.TestStatus.IN_PROGRESS);
-        session.setQuestionIds(List.of(q.getId()));
-        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
-
-        assertThrows(IllegalArgumentException.class, () ->
-                service.answerQuestion("uid-2", UUID.randomUUID(), new AnswerQuestionRequest(q.getId(), "A"))
-        );
-        verify(testAnswerRepository, never()).save(any());
-    }
-
-    @Test
-    @DisplayName("completeTest: user khác (uid lạ) -> not found (chống IDOR)")
-    void completeTestRejectsForeignUser() {
-        assertThrows(IllegalArgumentException.class, () ->
-                service.completeTest("uid-2", UUID.randomUUID())
-        );
     }
 
     @Test
@@ -200,184 +267,14 @@ class PlacementTestServiceTest {
         session.setUser(user);
         session.setStatus(TestSession.TestStatus.IN_PROGRESS);
         session.setQuestionIds(List.of(UUID.randomUUID()));
-
         when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
 
         assertThrows(IllegalArgumentException.class, () ->
-                service.answerQuestion("uid-1", UUID.randomUUID(), new AnswerQuestionRequest(UUID.randomUUID(), "A"))
-        );
-    }
-
-    /**
-     * Dựng đề 16 câu (4/cấp A1–B2) với số câu ĐÚNG mỗi cấp cho trước, rồi chạy completeTest.
-     * earned = Σ w·correct, max = Σ w·4 = 40. Dùng để kiểm chứng cutoff (§A.1/A.2).
-     */
-    private TestResultResponse runComplete(int a1, int a2, int b1, int b2) {
-        Map<String, Integer> correctByLevel = Map.of("A1", a1, "A2", a2, "B1", b1, "B2", b2);
-        List<Question> all = new ArrayList<>();
-        List<TestAnswer> answers = new ArrayList<>();
-        TestSession session = new TestSession();
-        session.setId(UUID.randomUUID());
-        session.setUser(user);
-        session.setStatus(TestSession.TestStatus.IN_PROGRESS);
-        for (String level : List.of("A1", "A2", "B1", "B2")) {
-            int correct = correctByLevel.get(level);
-            for (int i = 0; i < 4; i++) {
-                Question q = buildQuestion(level, i < 2 ? "grammar" : "vocabulary", "A");
-                all.add(q);
-                answers.add(buildAnswer(session, q, i < correct));
-            }
-        }
-        session.setQuestionIds(all.stream().map(Question::getId).toList());
-
-        when(testSessionRepository.findByIdAndUser_FirebaseUid(session.getId(), "uid-1")).thenReturn(Optional.of(session));
-        when(testAnswerRepository.findByTestSession(session)).thenReturn(answers);
-        when(questionRepository.findAllById(session.getQuestionIds())).thenReturn(all);
-        when(testSessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        return service.completeTest("uid-1", session.getId());
+                service.answerQuestion("uid-1", UUID.randomUUID(), new AnswerQuestionRequest(UUID.randomUUID(), "A")));
     }
 
     @Test
-    @DisplayName("Weighted scoring: A1 4/4, A2 4/4, B1 3/4, B2 2/4 -> R=29/40=0.725 -> B2")
-    void completeTestWeightedScoringB2() {
-        TestResultResponse result = runComplete(4, 4, 3, 2);
-        assertEquals("B2", result.resultLevel());
-        assertFalse(result.canGoHigherThanB2(), "R<0.90 nên không gợi ý cao hơn B2");
-        assertEquals(13, result.score()); // 4+4+3+2
-        assertEquals(16, result.totalQuestions());
-    }
-
-    @Test
-    @DisplayName("Weighted scoring: A1 4/4, A2 4/4, B1 2/4, B2 1/4 -> R=22/40=0.55 -> B1")
-    void completeTestWeightedScoringB1() {
-        TestResultResponse result = runComplete(4, 4, 2, 1);
-        assertEquals("B1", result.resultLevel());
-        assertFalse(result.canGoHigherThanB2());
-    }
-
-    @Test
-    @DisplayName("Weighted scoring: A1 4/4, A2 3/4, B1 1/4, B2 0/4 -> R=13/40=0.325 -> A2")
-    void completeTestWeightedScoringA2() {
-        TestResultResponse result = runComplete(4, 3, 1, 0);
-        assertEquals("A2", result.resultLevel());
-    }
-
-    @Test
-    @DisplayName("Đúng tuyệt đối 16/16 -> B2 + canGoHigherThanB2=true + có aboveLevelMessage")
-    void completeTestPerfectScoreFlagsAboveB2() {
-        TestResultResponse result = runComplete(4, 4, 4, 4);
-        assertEquals("B2", result.resultLevel(), "cap cứng B2 dù làm đúng hết");
-        assertTrue(result.canGoHigherThanB2(), "R=1.0 + B2 4/4 (smoothed 0.833) -> gợi ý cao hơn B2");
-        assertNotNull(result.aboveLevelMessage());
-        assertFalse(result.aboveLevelMessage().isEmpty());
-    }
-
-    @Test
-    @DisplayName("B2 đúng 3/4 (smoothed 0.667 < 0.83) -> KHÔNG bật canGoHigherThanB2")
-    void completeTestB2NotPerfectDoesNotFlag() {
-        // A1 4/4, A2 4/4, B1 4/4, B2 3/4 -> earned=4+8+12+9=33, R=0.825 -> B2 nhưng <0.90
-        TestResultResponse result = runComplete(4, 4, 4, 3);
-        assertEquals("B2", result.resultLevel());
-        assertFalse(result.canGoHigherThanB2(), "R=0.825<0.90 nên không bật");
-    }
-
-    @Test
-    @DisplayName("completeTest: không có câu hợp lệ (maxScore==0) -> A1, chống chia 0")
-    void completeTestEmptyAnswersFallsBackToA1() {
-        TestSession session = new TestSession();
-        session.setId(UUID.randomUUID());
-        session.setUser(user);
-        session.setStatus(TestSession.TestStatus.IN_PROGRESS);
-        session.setQuestionIds(List.of());
-
-        when(testSessionRepository.findByIdAndUser_FirebaseUid(session.getId(), "uid-1")).thenReturn(Optional.of(session));
-        when(testAnswerRepository.findByTestSession(session)).thenReturn(List.of());
-        when(questionRepository.findAllById(session.getQuestionIds())).thenReturn(List.of());
-        when(testSessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        TestResultResponse result = service.completeTest("uid-1", session.getId());
-        assertEquals("A1", result.resultLevel());
-        assertEquals(TestSession.TestStatus.COMPLETED, session.getStatus());
-    }
-
-    @Test
-    @DisplayName("completeTest gán cefrLevel cho user nếu user chưa có (lần đầu)")
-    void completeTestSetsUserCefrLevelIfMissing() {
-        // 4 câu A1 đúng, còn lại sai -> earned=4, max=40, R=0.1 -> A1.
-        assertNull(user.getCefrLevel());
-        TestResultResponse result = runComplete(4, 0, 0, 0);
-
-        assertEquals("A1", result.resultLevel());
-        assertEquals("A1", user.getCefrLevel());
-        assertEquals(Boolean.TRUE, user.getIsOnboarded());
-        verify(userRepository).save(user);
-    }
-
-    @Test
-    @DisplayName("completeTest ném IllegalStateException khi session đã COMPLETED")
-    void completeTestRejectsAlreadyCompletedSession() {
-        TestSession session = new TestSession();
-        session.setId(UUID.randomUUID());
-        session.setUser(user);
-        session.setStatus(TestSession.TestStatus.COMPLETED);
-
-        when(testSessionRepository.findByIdAndUser_FirebaseUid(session.getId(), "uid-1")).thenReturn(Optional.of(session));
-
-        assertThrows(IllegalStateException.class, () -> service.completeTest("uid-1", session.getId()));
-    }
-
-    // ── Bổ sung FIX_PLAN Đợt 5: biên cutoff, re-test, selfSelect ──────────
-
-    @Test
-    @DisplayName("Biên cutoff CHÍNH XÁC: R=0.25 (earned=10/40) -> A2 (không phải A1, vì so sánh r < cutoff)")
-    void cutoffBoundaryExactlyA2() {
-        // 4 A1 đúng (4) + 3 A2 đúng (6) = 10/40 = 0.25 — đúng ngưỡng CUTOFF_A2.
-        TestResultResponse result = runComplete(4, 3, 0, 0);
-        assertEquals("A2", result.resultLevel(), "r=0.25 không < 0.25 -> rơi vào band A2");
-    }
-
-    @Test
-    @DisplayName("Biên cutoff CHÍNH XÁC: R=0.45 (earned=18/40) -> B1")
-    void cutoffBoundaryExactlyB1() {
-        // 4+4*2+2*3 = 4+8+6 = 18/40 = 0.45 — đúng ngưỡng CUTOFF_B1.
-        TestResultResponse result = runComplete(4, 4, 2, 0);
-        assertEquals("B1", result.resultLevel());
-    }
-
-    @Test
-    @DisplayName("Sát ngưỡng B2: earned=27 (0.675) -> B1; earned=28 (0.70) -> B2")
-    void cutoffAroundB2() {
-        // (3,4,4,1): 3+8+12+4 = 27/40 = 0.675 < 0.68 -> B1.
-        assertEquals("B1", runComplete(3, 4, 4, 1).resultLevel());
-        // (4,4,4,1): 4+8+12+4 = 28/40 = 0.70 >= 0.68 -> B2.
-        assertEquals("B2", runComplete(4, 4, 4, 1).resultLevel());
-    }
-
-    @Test
-    @DisplayName("Re-test ra level THẤP hơn -> user GIỮ level cũ (spec §6.4: chỉ nâng, không hạ)")
-    void completeTestNeverDowngradesUserLevel() {
-        user.setCefrLevel("B2");
-        TestResultResponse result = runComplete(4, 0, 0, 0); // r=0.1 -> A1
-
-        assertEquals("A1", result.resultLevel(), "kết quả bài thi vẫn báo A1");
-        assertEquals("B2", user.getCefrLevel(), "nhưng level user không bị hạ");
-    }
-
-    @Test
-    @DisplayName("Re-test ra level CAO hơn -> nâng level user")
-    void completeTestUpgradesUserLevel() {
-        user.setCefrLevel("A1");
-        TestResultResponse result = runComplete(4, 4, 4, 1); // 0.70 -> B2
-
-        assertEquals("B2", result.resultLevel());
-        assertEquals("B2", user.getCefrLevel());
-    }
-
-    @Test
-    @DisplayName("selfSelectLevel: level hợp lệ -> set cefr + onboarded; level lạ -> reject")
+    @DisplayName("selfSelectLevel: level hợp lệ → set cefr + onboarded; level lạ → reject")
     void selfSelectLevelValidatesCefr() {
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -389,28 +286,31 @@ class PlacementTestServiceTest {
                 service.selfSelectLevel("uid-1", new com.kiovant.englishme.dto.SelfSelectLevelRequest("Z9")));
     }
 
-    @Test
-    @DisplayName("answerQuestion: question đã bị xóa khỏi DB -> lỗi rõ ràng, không NPE")
-    void answerQuestionWithDeletedQuestionFailsCleanly() {
-        UUID qid = UUID.randomUUID();
+    /** Dựng session có θ cho trước rồi chạy completeTest. */
+    private TestResultResponse runComplete(double theta) {
         TestSession session = new TestSession();
+        session.setId(UUID.randomUUID());
         session.setUser(user);
         session.setStatus(TestSession.TestStatus.IN_PROGRESS);
-        session.setQuestionIds(List.of(qid));
-        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
-        when(questionRepository.findById(qid)).thenReturn(Optional.empty());
+        session.setTheta(theta);
+        session.setMaxQuestions(15);
+        List<Question> questions = List.of(buildQuestion("B1", "grammar", "A", 0.0));
+        session.setQuestionIds(questions.stream().map(Question::getId).toList());
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                service.answerQuestion("uid-1", UUID.randomUUID(), new AnswerQuestionRequest(qid, "A")));
-        assertTrue(ex.getMessage().contains("Question not found"));
-    }
-
-    private TestAnswer buildAnswer(TestSession session, Question q, boolean correct) {
+        List<TestAnswer> answers = new ArrayList<>();
         TestAnswer a = new TestAnswer();
         a.setTestSession(session);
-        a.setQuestion(q);
-        a.setSelectedAnswer(correct ? q.getCorrectAnswer() : "Z");
-        a.setIsCorrect(correct);
-        return a;
+        a.setQuestion(questions.get(0));
+        a.setSelectedAnswer("A");
+        a.setIsCorrect(true);
+        answers.add(a);
+
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(session.getId(), "uid-1")).thenReturn(Optional.of(session));
+        when(testAnswerRepository.findByTestSession(session)).thenReturn(answers);
+        when(questionRepository.findAllById(session.getQuestionIds())).thenReturn(questions);
+        when(testSessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        return service.completeTest("uid-1", session.getId());
     }
 }

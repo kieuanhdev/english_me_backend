@@ -44,10 +44,19 @@ public class TestSession {
     @Column(nullable = false)
     private TestStatus status = TestStatus.IN_PROGRESS;
 
-    // Danh sách UUID câu hỏi được chọn cho session này (giữ thứ tự)
+    // Danh sách UUID câu hỏi được chọn cho session này (giữ thứ tự).
+    // CAT: append dần mỗi khi selectNextQuestion() chọn câu mới.
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private List<UUID> questionIds;
+
+    // CAT / IRT 1PL: ability estimate hiện tại của session, khởi đầu 0.0 (~B1).
+    @Column(name = "theta")
+    private Double theta = 0.0;
+
+    // CAT: số câu tối đa của phiên (dừng khi answeredCount ≥ maxQuestions).
+    @Column(name = "max_questions")
+    private Integer maxQuestions = 15;
 
     @OneToMany(mappedBy = "testSession", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<TestAnswer> answers;
