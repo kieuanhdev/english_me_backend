@@ -1,7 +1,8 @@
 package com.kiovant.englishme.integration;
 
 import com.kiovant.englishme.dto.AnswerQuestionRequest;
-import com.kiovant.englishme.dto.AnswerQuestionResponse;
+import com.kiovant.englishme.dto.CatAnswerResponse;
+import com.kiovant.englishme.dto.QuestionDto;
 import com.kiovant.englishme.dto.StartTestResponse;
 import com.kiovant.englishme.dto.TestResultResponse;
 import com.kiovant.englishme.entity.Question;
@@ -19,22 +20,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Integration test end-to-end cho Trụ 3 — Placement Test thích ứng CEFR.
+ * Integration test end-to-end cho Trụ 3 — Placement Test thích ứng CEFR (CAT + IRT 1PL).
  *
  * Chạy với:
  *  - H2 in-memory (profile "test"), tắt Flyway, Hibernate create-drop
  *  - ApplicationContext thật → JPA + transaction + service đầy đủ
- *  - Seed dữ liệu trực tiếp qua repository (4 câu/cấp A1–B2, skill_category lowercase)
+ *  - Seed pool đủ A1–C1 (mỗi cấp ≥ vài câu grammar + vocabulary, có difficulty)
  *
- * Kịch bản:
- *  1. Tạo user demo
- *  2. startTest -> nhận sessionId + 16 câu hỏi A1–B2 + notice
- *  3. answerQuestion — đúng A1+A2, sai B1+B2 (weighted R = 12/40 = 0.30 -> A2)
- *  4. completeTest -> resultLevel = A2 theo Weighted Difficulty Scoring (§A.1)
+ * Kịch bản: start (1 câu) → vòng lặp answer cho tới isDone → complete map θ → CEFR.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -52,6 +50,9 @@ class PlacementTestFlowTest {
 
     private User user;
 
+    private static final Map<String, Double> B = Map.of(
+            "A1", -2.0, "A2", -1.0, "B1", 0.0, "B2", 1.0, "C1", 2.0);
+
     @BeforeEach
     void setUp() {
         user = new User();
@@ -64,12 +65,12 @@ class PlacementTestFlowTest {
         user.setLongestStreak(0);
         userRepository.save(user);
 
-        // Seed 4 câu/cấp A1–B2 (mỗi cấp = 2 grammar + 2 vocabulary), skill_category LOWERCASE.
-        for (String level : new String[]{"A1", "A2", "B1", "B2"}) {
-            seedQuestion(level, "grammar", "A");
-            seedQuestion(level, "grammar", "B");
-            seedQuestion(level, "vocabulary", "A");
-            seedQuestion(level, "vocabulary", "B");
+        // Seed pool đủ cho CAT 15 câu: mỗi cấp A1–C1 = 4 grammar + 4 vocabulary.
+        for (String level : new String[]{"A1", "A2", "B1", "B2", "C1"}) {
+            for (int i = 0; i < 4; i++) {
+                seedQuestion(level, "grammar", "A");
+                seedQuestion(level, "vocabulary", "A");
+            }
         }
     }
 
@@ -77,7 +78,7 @@ class PlacementTestFlowTest {
         Question q = new Question();
         q.setCefrLevel(level);
         q.setSkillCategory(skill);
-        q.setQuestion("Sample " + level + "/" + skill);
+        q.setQuestion("Sample " + level + "/" + skill + "/" + UUID.randomUUID());
         Map<String, String> options = new LinkedHashMap<>();
         options.put("A", "alpha");
         options.put("B", "bravo");
@@ -86,57 +87,78 @@ class PlacementTestFlowTest {
         q.setOptions(options);
         q.setCorrectAnswer(correct);
         q.setExplanation("Because.");
+        q.setDifficulty(B.get(level));
         questionRepository.save(q);
     }
 
     @Test
-    @DisplayName("Full flow: start -> answer x N -> complete trả CEFR theo weighted scoring")
-    void fullPlacementTestFlowReturnsWeightedCefr() {
-        // 1. Start — đề rút từ pool A1–B2 (16 câu nếu pool đủ) + notice cap B2.
+    @DisplayName("Full CAT flow: start → answer cho tới isDone → complete; trả lời đúng hết → level cao (B2/C1)")
+    void fullCatFlowConvergesHigh() {
         StartTestResponse start = placementTestService.startTest(user.getFirebaseUid());
         assertNotNull(start.sessionId());
-        assertEquals(start.questions().size(), start.totalQuestions());
-        assertTrue(start.totalQuestions() >= 4, "Phải có ít nhất 4 câu hỏi");
+        assertNotNull(start.firstQuestion());
+        assertEquals(15, start.maxQuestions());
         assertNotNull(start.notice());
-        assertTrue(start.notice().contains("B2"), "notice phải nêu rõ giới hạn B2");
 
-        // 2. Answer — đúng A1+A2, sai B1+B2. Weighted: earned = w(A1)*nA1 + w(A2)*nA2.
+        // Trả lời ĐÚNG mọi câu → θ leo lên → hội tụ B2/C1.
+        QuestionDto current = start.firstQuestion();
         int answered = 0;
-        for (var qDto : start.questions()) {
-            Question q = questionRepository.findById(qDto.id()).orElseThrow();
-            boolean answerCorrect = "A1".equals(q.getCefrLevel()) || "A2".equals(q.getCefrLevel());
-            String selected = answerCorrect
-                    ? q.getCorrectAnswer()
-                    : ("A".equals(q.getCorrectAnswer()) ? "B" : "A");
-            AnswerQuestionResponse ans = placementTestService.answerQuestion(
+        TestResultResponse result = null;
+        while (current != null) {
+            Question q = questionRepository.findById(current.id()).orElseThrow();
+            CatAnswerResponse ans = placementTestService.answerQuestion(
                     user.getFirebaseUid(),
                     start.sessionId(),
-                    new AnswerQuestionRequest(q.getId(), selected)
+                    new AnswerQuestionRequest(q.getId(), q.getCorrectAnswer())
             );
             answered++;
             assertEquals(answered, ans.answeredCount());
-            assertEquals(start.totalQuestions(), ans.totalQuestions());
+            assertEquals(15, ans.maxQuestions());
+            assertTrue(ans.isCorrect());
+            if (ans.isDone()) {
+                assertNull(ans.nextQuestion());
+                break;
+            }
+            current = ans.nextQuestion();
         }
+        assertEquals(15, answered, "CAT dừng đúng sau maxQuestions câu");
 
-        // 3. Complete — pool đủ A1–B2 (4/cấp): R = (1*4 + 2*4)/40 = 0.30 -> A2 (cap B2 không kích hoạt).
-        TestResultResponse result = placementTestService.completeTest(user.getFirebaseUid(), start.sessionId());
+        result = placementTestService.completeTest(user.getFirebaseUid(), start.sessionId());
         assertNotNull(result);
-        assertEquals(start.totalQuestions(), result.totalQuestions());
-        assertEquals("A2", result.resultLevel(),
-                "Đúng A1+A2, sai B1+B2 -> R=0.30 -> band A2 theo weighted scoring");
-        assertFalse(result.canGoHigherThanB2());
+        assertTrue(result.finalTheta() > 0.5, "trả lời đúng hết → θ cuối cao");
+        assertTrue(result.resultLevel().equals("B2") || result.resultLevel().equals("C1"),
+                "θ cao → B2 hoặc C1, nhận được: " + result.resultLevel());
 
-        // 4. User được set cefrLevel + isOnboarded
         User reloaded = userRepository.findById(user.getId()).orElseThrow();
-        assertEquals("A2", reloaded.getCefrLevel());
+        assertEquals(result.resultLevel(), reloaded.getCefrLevel());
         assertEquals(Boolean.TRUE, reloaded.getIsOnboarded());
     }
 
     @Test
-    @DisplayName("Trả lời lại câu đã trả lời -> IllegalStateException")
+    @DisplayName("Trả lời SAI hết → θ tụt → level thấp (A1/A2)")
+    void allWrongConvergesLow() {
+        StartTestResponse start = placementTestService.startTest(user.getFirebaseUid());
+        QuestionDto current = start.firstQuestion();
+        while (current != null) {
+            Question q = questionRepository.findById(current.id()).orElseThrow();
+            String wrong = "A".equals(q.getCorrectAnswer()) ? "B" : "A";
+            CatAnswerResponse ans = placementTestService.answerQuestion(
+                    user.getFirebaseUid(), start.sessionId(),
+                    new AnswerQuestionRequest(q.getId(), wrong));
+            if (ans.isDone()) break;
+            current = ans.nextQuestion();
+        }
+        TestResultResponse result = placementTestService.completeTest(user.getFirebaseUid(), start.sessionId());
+        assertTrue(result.finalTheta() < -0.5, "sai hết → θ cuối thấp");
+        assertTrue(result.resultLevel().equals("A1") || result.resultLevel().equals("A2"),
+                "θ thấp → A1 hoặc A2, nhận được: " + result.resultLevel());
+    }
+
+    @Test
+    @DisplayName("Trả lời lại câu đã trả lời → IllegalStateException")
     void duplicateAnswerIsRejected() {
         StartTestResponse start = placementTestService.startTest(user.getFirebaseUid());
-        var q = start.questions().get(0);
+        var q = start.firstQuestion();
 
         placementTestService.answerQuestion(user.getFirebaseUid(), start.sessionId(), new AnswerQuestionRequest(q.id(), "A"));
         assertThrows(IllegalStateException.class, () ->
@@ -145,27 +167,31 @@ class PlacementTestFlowTest {
     }
 
     @Test
-    @DisplayName("Complete xong rồi answer tiếp -> IllegalStateException")
+    @DisplayName("Complete xong rồi answer tiếp → IllegalStateException")
     void answerAfterCompleteIsRejected() {
         StartTestResponse start = placementTestService.startTest(user.getFirebaseUid());
-
-        // Trả lời hết
-        for (var qDto : start.questions()) {
-            placementTestService.answerQuestion(user.getFirebaseUid(), start.sessionId(), new AnswerQuestionRequest(qDto.id(), "A"));
+        QuestionDto current = start.firstQuestion();
+        while (current != null) {
+            Question q = questionRepository.findById(current.id()).orElseThrow();
+            CatAnswerResponse ans = placementTestService.answerQuestion(
+                    user.getFirebaseUid(), start.sessionId(),
+                    new AnswerQuestionRequest(q.getId(), q.getCorrectAnswer()));
+            if (ans.isDone()) break;
+            current = ans.nextQuestion();
         }
         placementTestService.completeTest(user.getFirebaseUid(), start.sessionId());
 
-        var firstQuestion = start.questions().get(0);
+        var firstQuestion = start.firstQuestion();
         assertThrows(IllegalStateException.class, () ->
                 placementTestService.answerQuestion(user.getFirebaseUid(), start.sessionId(), new AnswerQuestionRequest(firstQuestion.id(), "B"))
         );
     }
 
     @Test
-    @DisplayName("User B đụng session của user A -> not found (chống IDOR)")
+    @DisplayName("User B đụng session của user A → not found (chống IDOR)")
     void foreignUserCannotTouchSession() {
         StartTestResponse start = placementTestService.startTest(user.getFirebaseUid());
-        var q = start.questions().get(0);
+        var q = start.firstQuestion();
 
         User other = new User();
         other.setFirebaseUid("uid-it-2");
