@@ -13,11 +13,10 @@ import com.google.protobuf.ByteString;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
-import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Google Cloud Speech-to-Text: nhận audio bytes -> trả transcript text.
@@ -25,12 +24,13 @@ import java.io.InputStream;
  * Đáp ứng đề cương MT4 ("Google Speech-to-Text API"). Transcript sau đó được
  * {@link PronunciationAssessmentService} chấm bằng Levenshtein như luồng assess-text.
  *
- * Cấu hình (application.properties / env):
- *   englishme.ai.stt.enabled        — bật/tắt (mặc định false).
- *   englishme.ai.stt.credentials    — đường dẫn service account JSON (hoặc để trống
- *                                      và dùng env GOOGLE_APPLICATION_CREDENTIALS).
- *   englishme.ai.stt.language       — mã ngôn ngữ (mặc định en-US).
- *   englishme.ai.stt.sample-rate    — sample rate Hz client gửi (mặc định 16000).
+ * Cấu hình đọc RUNTIME từ app_config (admin bật/tắt + dán key trên /admin/config,
+ * không cần build/restart — giống {@link LlmClient}):
+ *   STT_ENABLED          — bật/tắt (mặc định false).
+ *   STT_CREDENTIALS_JSON — nội dung service account JSON. Trống -> Application Default
+ *                          Credentials (env GOOGLE_APPLICATION_CREDENTIALS).
+ *   STT_LANGUAGE         — mã ngôn ngữ (mặc định en-US).
+ *   STT_SAMPLE_RATE      — sample rate Hz client gửi (mặc định 16000).
  *
  * Thiếu cấu hình / lỗi -> {@link #isConfigured()} = false, controller fallback
  * sang luồng assess-text (mobile gửi transcript on-device).
@@ -40,44 +40,44 @@ public class GoogleSttService {
 
     private static final Logger log = LoggerFactory.getLogger(GoogleSttService.class);
 
-    private final boolean enabled;
-    private final String credentialsPath;
-    private final String languageCode;
-    private final int sampleRateHz;
+    public static final String KEY_ENABLED = "STT_ENABLED";
+    public static final String KEY_CREDENTIALS_JSON = "STT_CREDENTIALS_JSON";
+    public static final String KEY_LANGUAGE = "STT_LANGUAGE";
+    public static final String KEY_SAMPLE_RATE = "STT_SAMPLE_RATE";
+
+    private final AppConfigService appConfigService;
 
     /**
      * SpeechClient tái sử dụng giữa các request (thread-safe theo docs Google).
-     * Trước đây mỗi lần transcribe tạo client mới = đọc lại credentials file +
-     * TLS handshake + auth — chậm và lãng phí. Lazy init double-checked; init
-     * fail thì để null, lần gọi sau thử lại.
+     * Tạo client = đọc credentials + TLS handshake + auth, đắt -> cache lại.
+     * Vì credentials giờ đọc runtime từ DB, admin đổi key thì client cũ phải bỏ:
+     * lưu kèm dấu vân tay (fingerprint) của JSON đang dùng; mỗi lần dùng so với
+     * giá trị DB hiện tại, khác -> đóng client cũ + build lại.
      */
     private volatile SpeechClient client;
+    private volatile String clientFingerprint;
 
-    public GoogleSttService(
-            @Value("${englishme.ai.stt.enabled:false}") boolean enabled,
-            @Value("${englishme.ai.stt.credentials:}") String credentialsPath,
-            @Value("${englishme.ai.stt.language:en-US}") String languageCode,
-            @Value("${englishme.ai.stt.sample-rate:16000}") int sampleRateHz
-    ) {
-        this.enabled = enabled;
-        this.credentialsPath = credentialsPath;
-        this.languageCode = languageCode;
-        this.sampleRateHz = sampleRateHz;
+    public GoogleSttService(AppConfigService appConfigService) {
+        this.appConfigService = appConfigService;
     }
 
     /** Bật STT chưa. Controller hỏi trước để quyết fallback assess-text. */
     public boolean isConfigured() {
-        return enabled;
+        return enabled();
+    }
+
+    private boolean enabled() {
+        return "true".equalsIgnoreCase(appConfigService.getOr(KEY_ENABLED, "false").trim());
     }
 
     /**
      * Nhận diện audio -> transcript. Trả chuỗi rỗng nếu không nhận ra/lỗi
      * (controller coi rỗng = thất bại, fallback).
      *
-     * @param audioBytes nội dung file audio (LINEAR16/WAV PCM mono, sample rate = sample-rate).
+     * @param audioBytes nội dung file audio (LINEAR16/WAV PCM mono, sample rate = STT_SAMPLE_RATE).
      */
     public String transcribe(byte[] audioBytes) {
-        if (!enabled) {
+        if (!enabled()) {
             return "";
         }
         if (audioBytes == null || audioBytes.length == 0) {
@@ -87,8 +87,8 @@ public class GoogleSttService {
             SpeechClient client = getOrCreateClient();
             RecognitionConfig config = RecognitionConfig.newBuilder()
                     .setEncoding(RecognitionConfig.AudioEncoding.LINEAR16)
-                    .setSampleRateHertz(sampleRateHz)
-                    .setLanguageCode(languageCode)
+                    .setSampleRateHertz(appConfigService.getIntOr(KEY_SAMPLE_RATE, 16000))
+                    .setLanguageCode(appConfigService.getOr(KEY_LANGUAGE, "en-US").trim())
                     .setEnableAutomaticPunctuation(true)
                     .build();
             RecognitionAudio audio = RecognitionAudio.newBuilder()
@@ -116,18 +116,31 @@ public class GoogleSttService {
         }
     }
 
+    /**
+     * Trả client khớp credentials DB hiện tại. JSON đổi (fingerprint khác) -> đóng
+     * client cũ, build lại. Double-checked trên monitor của bean.
+     */
     private SpeechClient getOrCreateClient() throws Exception {
+        String credentialsJson = appConfigService.getOr(KEY_CREDENTIALS_JSON, "");
+        String fingerprint = fingerprint(credentialsJson);
+
         SpeechClient local = client;
-        if (local == null) {
-            synchronized (this) {
-                local = client;
-                if (local == null) {
-                    local = buildClient();
-                    client = local;
-                }
-            }
+        if (local != null && fingerprint.equals(clientFingerprint)) {
+            return local;
         }
-        return local;
+        synchronized (this) {
+            if (client != null && fingerprint.equals(clientFingerprint)) {
+                return client;
+            }
+            if (client != null) {
+                client.close();
+                client = null;
+            }
+            SpeechClient built = buildClient(credentialsJson);
+            client = built;
+            clientFingerprint = fingerprint;
+            return built;
+        }
     }
 
     @PreDestroy
@@ -138,11 +151,14 @@ public class GoogleSttService {
         }
     }
 
-    /** Tạo SpeechClient: nếu có credentials path thì nạp, không thì dùng ADC (env). */
-    private SpeechClient buildClient() throws Exception {
-        if (credentialsPath != null && !credentialsPath.isBlank()) {
-            try (InputStream in = new ByteArrayInputStream(java.nio.file.Files.readAllBytes(
-                    java.nio.file.Path.of(credentialsPath.trim())))) {
+    /**
+     * Tạo SpeechClient: có JSON credentials thì nạp từ chuỗi, không thì dùng ADC
+     * (env GOOGLE_APPLICATION_CREDENTIALS).
+     */
+    private SpeechClient buildClient(String credentialsJson) throws Exception {
+        if (credentialsJson != null && !credentialsJson.isBlank()) {
+            try (ByteArrayInputStream in =
+                         new ByteArrayInputStream(credentialsJson.getBytes(StandardCharsets.UTF_8))) {
                 GoogleCredentials credentials = GoogleCredentials.fromStream(in);
                 SpeechSettings settings = SpeechSettings.newBuilder()
                         .setCredentialsProvider(FixedCredentialsProvider.create(credentials))
@@ -152,5 +168,11 @@ public class GoogleSttService {
         }
         // Application Default Credentials (env GOOGLE_APPLICATION_CREDENTIALS).
         return SpeechClient.create();
+    }
+
+    /** Vân tay phân biệt credentials để biết khi nào rebuild client. Không log nội dung. */
+    private static String fingerprint(String credentialsJson) {
+        String s = credentialsJson == null ? "" : credentialsJson.trim();
+        return s.length() + ":" + Integer.toHexString(s.hashCode());
     }
 }

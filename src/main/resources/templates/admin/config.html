@@ -29,17 +29,18 @@
         <div th:if="${successMessage != null}" class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl px-6 py-4" th:text="${successMessage}"></div>
         <div th:if="${errorMessage != null}" class="bg-red-50 border border-red-200 text-red-800 rounded-2xl px-6 py-4" th:text="${errorMessage}"></div>
 
-        <!-- Nhóm theo tiền tố key: LLM_ → Mô hình AI; AI_PROMPT_ → Prompt; AI_ (khác) → Tham số AI; còn lại → Khác. -->
-        <div th:each="group : ${ {'Mô hình AI (LLM)','Prompt chức năng','Tham số AI & giới hạn','Khác'} }"
+        <!-- Nhóm theo tiền tố key: LLM_ → Mô hình AI; STT_ → Speech-to-Text; AI_PROMPT_ → Prompt; AI_ (khác) → Tham số AI; còn lại → Khác. -->
+        <div th:each="group : ${ {'Mô hình AI (LLM)','Speech-to-Text (STT)','Prompt chức năng','Tham số AI & giới hạn','Khác'} }"
              th:with="groupConfigs=${configs == null ? null : #lists.toList(configs).?[
                           (#strings.startsWith(configKey,'LLM_') ? 'Mô hình AI (LLM)'
-                           : (#strings.startsWith(configKey,'AI_PROMPT_') ? 'Prompt chức năng'
-                              : (#strings.startsWith(configKey,'AI_') ? 'Tham số AI & giới hạn' : 'Khác'))) == group]}"
+                           : (#strings.startsWith(configKey,'STT_') ? 'Speech-to-Text (STT)'
+                              : (#strings.startsWith(configKey,'AI_PROMPT_') ? 'Prompt chức năng'
+                                 : (#strings.startsWith(configKey,'AI_') ? 'Tham số AI & giới hạn' : 'Khác')))) == group]}"
              th:if="${groupConfigs != null and !groupConfigs.isEmpty()}" class="space-y-4">
             <h2 class="text-lg font-bold text-slate-700 mt-2" th:text="${group}"></h2>
             <div th:each="cfg : ${groupConfigs}" class="bg-surface-container-lowest rounded-2xl p-6"
                  th:with="isSecret=${cfg.secret},
-                          isPrompt=${cfg.configKey != null and #strings.startsWith(cfg.configKey,'AI_PROMPT_')},
+                          isMultiline=${(cfg.configKey != null and #strings.startsWith(cfg.configKey,'AI_PROMPT_')) or cfg.valueType == 'json'},
                           rawValue=${cfg.configValue != null ? cfg.configValue : ''}">
                 <div class="flex items-start justify-between gap-4 mb-4">
                     <div>
@@ -53,16 +54,18 @@
                     <p th:if="${cfg.updatedAt != null}" class="text-xs text-slate-400 whitespace-nowrap">Cập nhật: <span th:text="${#temporals.format(cfg.updatedAt,'dd/MM/yyyy HH:mm')}"></span><span th:if="${cfg.updatedByEmail != null}"> bởi <span th:text="${cfg.updatedByEmail}"></span></span>
                     </p>
                 </div>
-                <form th:if="${isPrompt}" method="post" th:action="@{/admin/config}" class="space-y-3">
+                <form th:if="${isMultiline}" method="post" th:action="@{/admin/config}" class="space-y-3">
 <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                     <input type="hidden" name="key" th:value="${cfg.configKey}">
                     <textarea name="value" rows="10"
-                        class="w-full font-mono text-xs border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300" th:text="${rawValue}"></textarea>
+                        th:placeholder="${isSecret and !#strings.isEmpty(rawValue) ? 'Đã có giá trị (ẩn). Dán giá trị mới để thay.' : ''}"
+                        class="w-full font-mono text-xs border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        th:text="${isSecret ? '' : rawValue}"></textarea>
                     <div class="flex justify-end">
                         <button type="submit" class="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90">Lưu</button>
                     </div>
                 </form>
-                <form th:unless="${isPrompt}" method="post" th:action="@{/admin/config}" class="flex gap-3"
+                <form th:unless="${isMultiline}" method="post" th:action="@{/admin/config}" class="flex gap-3"
                       th:with="displayValue=${(isSecret and !#strings.isEmpty(rawValue)) ? '••••••••' : rawValue}">
 <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
                     <input type="hidden" name="key" th:value="${cfg.configKey}">
