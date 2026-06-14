@@ -1,5 +1,6 @@
 package com.kiovant.englishme.controller;
 
+import com.kiovant.englishme.entity.AppConfig;
 import com.kiovant.englishme.service.AppConfigService;
 import com.kiovant.englishme.service.LlmClient;
 import jakarta.servlet.http.HttpSession;
@@ -12,6 +13,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -28,8 +32,47 @@ public class AdminConfigController {
 
     @GetMapping
     public String configPage(Model model) {
-        model.addAttribute("configs", appConfigService.findAll());
+        model.addAttribute("configGroups", groupByPrefix(appConfigService.findAll()));
         return "admin/config";
+    }
+
+    /**
+     * Gom config theo tiền tố key thành nhóm hiển thị (giữ thứ tự nhóm cố định).
+     * Trước đây gom bằng SpEL lồng ternary trong template — fragile, không test được.
+     * Đưa về Java: rõ ràng, đúng SOLID, template chỉ lặp.
+     */
+    private Map<String, List<AppConfig>> groupByPrefix(List<AppConfig> configs) {
+        // LinkedHashMap để thứ tự nhóm cố định; bỏ nhóm rỗng khi render ở template.
+        Map<String, List<AppConfig>> groups = new LinkedHashMap<>();
+        groups.put("Mô hình AI (LLM)", new ArrayList<>());
+        groups.put("Speech-to-Text (STT)", new ArrayList<>());
+        groups.put("Prompt chức năng", new ArrayList<>());
+        groups.put("Tham số AI & giới hạn", new ArrayList<>());
+        groups.put("Khác", new ArrayList<>());
+
+        for (AppConfig cfg : configs) {
+            groups.get(groupNameOf(cfg.getConfigKey())).add(cfg);
+        }
+        return groups;
+    }
+
+    private String groupNameOf(String key) {
+        if (key == null) {
+            return "Khác";
+        }
+        if (key.startsWith("LLM_")) {
+            return "Mô hình AI (LLM)";
+        }
+        if (key.startsWith("STT_")) {
+            return "Speech-to-Text (STT)";
+        }
+        if (key.startsWith("AI_PROMPT_")) {
+            return "Prompt chức năng";
+        }
+        if (key.startsWith("AI_")) {
+            return "Tham số AI & giới hạn";
+        }
+        return "Khác";
     }
 
     @PostMapping

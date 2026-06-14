@@ -29,16 +29,11 @@
         <div th:if="${successMessage != null}" class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl px-6 py-4" th:text="${successMessage}"></div>
         <div th:if="${errorMessage != null}" class="bg-red-50 border border-red-200 text-red-800 rounded-2xl px-6 py-4" th:text="${errorMessage}"></div>
 
-        <!-- Nhóm theo tiền tố key: LLM_ → Mô hình AI; STT_ → Speech-to-Text; AI_PROMPT_ → Prompt; AI_ (khác) → Tham số AI; còn lại → Khác. -->
-        <div th:each="group : ${ {'Mô hình AI (LLM)','Speech-to-Text (STT)','Prompt chức năng','Tham số AI & giới hạn','Khác'} }"
-             th:with="groupConfigs=${configs == null ? null : #lists.toList(configs).?[
-                          (#strings.startsWith(#this.configKey,'LLM_') ? 'Mô hình AI (LLM)'
-                           : (#strings.startsWith(#this.configKey,'STT_') ? 'Speech-to-Text (STT)'
-                              : (#strings.startsWith(#this.configKey,'AI_PROMPT_') ? 'Prompt chức năng'
-                                 : (#strings.startsWith(#this.configKey,'AI_') ? 'Tham số AI & giới hạn' : 'Khác')))) == group]}"
-             th:if="${groupConfigs != null and !groupConfigs.isEmpty()}" class="space-y-4">
-            <h2 class="text-lg font-bold text-slate-700 mt-2" th:text="${group}"></h2>
-            <div th:each="cfg : ${groupConfigs}" class="bg-surface-container-lowest rounded-2xl p-6"
+        <!-- Nhóm gom sẵn ở AdminConfigController.groupByPrefix (giữ thứ tự, bỏ nhóm rỗng). -->
+        <div th:each="group : ${configGroups}"
+             th:if="${group.value != null and !group.value.isEmpty()}" class="space-y-4">
+            <h2 class="text-lg font-bold text-slate-700 mt-2" th:text="${group.key}"></h2>
+            <div th:each="cfg : ${group.value}" class="bg-surface-container-lowest rounded-2xl p-6"
                  th:with="isSecret=${cfg.secret},
                           isMultiline=${(cfg.configKey != null and #strings.startsWith(cfg.configKey,'AI_PROMPT_')) or cfg.valueType == 'json'},
                           rawValue=${cfg.configValue != null ? cfg.configValue : ''}">
