@@ -25,13 +25,13 @@ public interface QuestionRepository extends JpaRepository<Question, UUID> {
     List<Question> findRandomByCefrLevel(@Param("level") String level, @Param("limit") int limit);
 
     // ── CAT (Computerized Adaptive Testing) ─────────────────────────────────
-    // Pool câu placement (chỉ grammar + vocabulary) loại trừ câu đã hỏi.
+    // Pool câu placement (grammar + vocabulary + reading) loại trừ câu đã hỏi.
     // Service tự tính |b_i - θ| trên kết quả → không cần ORDER BY ở SQL.
-    @Query("SELECT q FROM Question q WHERE q.skillCategory IN ('grammar', 'vocabulary') "
+    @Query("SELECT q FROM Question q WHERE q.skillCategory IN ('grammar', 'vocabulary', 'reading') "
             + "AND q.id NOT IN :askedIds")
     List<Question> findForCat(@Param("askedIds") List<UUID> askedIds);
 
     // Biến thể cho lần đầu (askedIds rỗng) — tránh SQL "NOT IN ()" lỗi.
-    @Query("SELECT q FROM Question q WHERE q.skillCategory IN ('grammar', 'vocabulary')")
+    @Query("SELECT q FROM Question q WHERE q.skillCategory IN ('grammar', 'vocabulary', 'reading')")
     List<Question> findAllForCat();
 }

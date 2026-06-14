@@ -274,6 +274,39 @@ class PlacementTestServiceTest {
     }
 
     @Test
+    @DisplayName("selectNextQuestion balance 3 skill: skill ít câu nhất được ưu tiên khi |b-θ| hoà")
+    void selectNextQuestionBalancesAcrossThreeSkills() {
+        // Câu đầu là grammar. Pool kế có cả grammar/vocabulary/reading cùng b=0 (|b-θ| hoà).
+        Question firstGrammar = buildQuestion("B1", "grammar", "A", 0.0);
+        TestSession session = new TestSession();
+        session.setUser(user);
+        session.setStatus(TestSession.TestStatus.IN_PROGRESS);
+        session.setTheta(0.0);
+        session.setMaxQuestions(15);
+        session.setQuestionIds(new ArrayList<>(List.of(firstGrammar.getId())));
+
+        Question poolVocab = buildQuestion("B1", "vocabulary", "A", 0.0);
+        Question poolReading = buildQuestion("B1", "reading", "A", 0.0);
+        Question poolGrammar = buildQuestion("B1", "grammar", "A", 0.0);
+
+        when(testSessionRepository.findByIdAndUser_FirebaseUid(any(), eq("uid-1"))).thenReturn(Optional.of(session));
+        when(questionRepository.findById(firstGrammar.getId())).thenReturn(Optional.of(firstGrammar));
+        when(testAnswerRepository.findByTestSessionAndQuestion(session, firstGrammar)).thenReturn(Optional.empty());
+        when(testAnswerRepository.countByTestSession(session)).thenReturn(1L);
+        when(questionRepository.findAllById(anyList())).thenReturn(List.of(firstGrammar)); // đã hỏi: 1 grammar
+        when(questionRepository.findForCat(anyList())).thenReturn(List.of(poolGrammar, poolVocab, poolReading));
+        when(testSessionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CatAnswerResponse response = service.answerQuestion(
+                "uid-1", UUID.randomUUID(), new AnswerQuestionRequest(firstGrammar.getId(), "A"));
+
+        // grammar đã có 1, vocabulary/reading = 0 → ưu tiên 1 trong 2 cái 0, KHÔNG chọn grammar.
+        assertNotNull(response.nextQuestion());
+        assertNotEquals("grammar", response.nextQuestion().skillCategory(),
+                "skill đã hỏi (grammar) không được ưu tiên khi có skill chưa hỏi cùng độ khó");
+    }
+
+    @Test
     @DisplayName("selfSelectLevel: level hợp lệ → set cefr + onboarded; level lạ → reject")
     void selfSelectLevelValidatesCefr() {
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));

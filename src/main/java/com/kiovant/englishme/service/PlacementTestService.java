@@ -239,9 +239,12 @@ public class PlacementTestService {
         return 1.0 / (1.0 + Math.exp(-(theta - b)));
     }
 
+    // Các kỹ năng đánh giá trong placement (cân đều). Listening bỏ — chưa có audio host.
+    private static final List<String> CAT_SKILLS = List.of("grammar", "vocabulary", "reading");
+
     /**
      * Chọn câu kế tiếp: trong pool (loại câu đã hỏi) lấy câu có |b_i - θ| nhỏ nhất.
-     * Tiebreak: ưu tiên skill đang bị hỏi ít hơn để balance grammar/vocabulary.
+     * Tiebreak: ưu tiên skill đang bị hỏi ÍT NHẤT để cân đều grammar/vocabulary/reading.
      */
     private Question selectNextQuestion(double theta, List<UUID> askedIds, Map<String, Integer> skillCounts) {
         List<Question> pool = (askedIds == null || askedIds.isEmpty())
@@ -249,10 +252,10 @@ public class PlacementTestService {
                 : questionRepository.findForCat(askedIds);
         if (pool.isEmpty()) return null;
 
-        int grammar = skillCounts.getOrDefault("grammar", 0);
-        int vocab = skillCounts.getOrDefault("vocabulary", 0);
-        // Skill đang ít hơn được ưu tiên khi |b_i - θ| hoà.
-        String preferredSkill = grammar <= vocab ? "grammar" : "vocabulary";
+        // Skill đang ít câu nhất được ưu tiên khi |b_i - θ| hoà.
+        String preferredSkill = CAT_SKILLS.stream()
+                .min(Comparator.comparingInt(s -> skillCounts.getOrDefault(s, 0)))
+                .orElse("grammar");
 
         Question best = null;
         double bestDist = Double.MAX_VALUE;
@@ -305,7 +308,8 @@ public class PlacementTestService {
                 q.getCefrLevel(),
                 q.getSkillCategory(),
                 q.getQuestion(),
-                q.getOptions()
+                q.getOptions(),
+                q.getPassage()
         );
     }
 

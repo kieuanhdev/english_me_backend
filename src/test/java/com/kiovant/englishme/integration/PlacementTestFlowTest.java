@@ -65,11 +65,12 @@ class PlacementTestFlowTest {
         user.setLongestStreak(0);
         userRepository.save(user);
 
-        // Seed pool đủ cho CAT 15 câu: mỗi cấp A1–C1 = 4 grammar + 4 vocabulary.
+        // Seed pool đủ cho CAT 15 câu: mỗi cấp A1–C1 = 4 grammar + 4 vocabulary + 4 reading.
         for (String level : new String[]{"A1", "A2", "B1", "B2", "C1"}) {
             for (int i = 0; i < 4; i++) {
                 seedQuestion(level, "grammar", "A");
                 seedQuestion(level, "vocabulary", "A");
+                seedQuestion(level, "reading", "A");
             }
         }
     }
@@ -87,6 +88,9 @@ class PlacementTestFlowTest {
         q.setOptions(options);
         q.setCorrectAnswer(correct);
         q.setExplanation("Because.");
+        if ("reading".equals(skill)) {
+            q.setPassage("A short reading passage for " + level + ".");
+        }
         q.setDifficulty(B.get(level));
         questionRepository.save(q);
     }

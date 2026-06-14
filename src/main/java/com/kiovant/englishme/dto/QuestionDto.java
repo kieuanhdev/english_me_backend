@@ -8,5 +8,7 @@ public record QuestionDto(
         String cefrLevel,
         String skillCategory,
         String question,
-        Map<String, String> options
+        Map<String, String> options,
+        // Đoạn văn cho câu reading (null với grammar/vocabulary).
+        String passage
 ) {}
