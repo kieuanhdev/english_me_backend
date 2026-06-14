@@ -102,13 +102,54 @@ class ExerciseServiceTest {
     @Test
     @DisplayName("createSession pool thiếu câu (5 < 10) -> 404")
     void createSessionThrowsWhenNotEnoughQuestions() {
-        when(questionRepository.findRandomByCategory("vocabulary", 10))
+        // Không có câu yếu, random chỉ trả 5 câu -> dưới cap 10.
+        when(questionRepository.findWeakByCategory(eq(user.getId()), eq("vocabulary"), anyInt()))
+                .thenReturn(List.of());
+        when(questionRepository.findRandomByCategoryExcluding(eq("vocabulary"), any(), anyInt()))
                 .thenReturn(List.of(question("A"), question("B"), question("A"), question("B"), question("A")));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.createSession(UID, "vocabulary", 10));
         assertEquals(HttpStatus.NOT_FOUND, ex.getStatusCode());
         verify(sessionRepository, never()).save(any());
+    }
+
+    // ── createSession: adaptive selection ─────────────────────────────────
+
+    @Test
+    @DisplayName("Adaptive: ưu tiên câu YẾU (từng sai) tối đa 50%, fill phần còn lại bằng random mới")
+    void createSessionPrioritisesWeakQuestions() {
+        List<ExerciseQuestion> weak = List.of(question("A"), question("A"), question("A"));
+        // cap=10 -> weakCap=5; chỉ có 3 câu yếu -> fill 7 câu random.
+        when(questionRepository.findWeakByCategory(user.getId(), "vocabulary", 5)).thenReturn(weak);
+        List<ExerciseQuestion> fill = new ArrayList<>();
+        for (int i = 0; i < 7; i++) fill.add(question("B"));
+        when(questionRepository.findRandomByCategoryExcluding(eq("vocabulary"), any(), eq(7))).thenReturn(fill);
+
+        var res = service.createSession(UID, "vocabulary", 10);
+
+        assertEquals(10, res.questions().size());
+        // 3 câu đầu là câu yếu (giữ thứ tự weak-first).
+        for (int i = 0; i < 3; i++) {
+            assertEquals(weak.get(i).getId().toString(), res.questions().get(i).id());
+        }
+        verify(questionRepository).findWeakByCategory(user.getId(), "vocabulary", 5);
+    }
+
+    @Test
+    @DisplayName("Adaptive: user mới (0 câu yếu) -> toàn bộ random, excludeIds dùng sentinel")
+    void createSessionFallsBackToRandomForNewUser() {
+        when(questionRepository.findWeakByCategory(eq(user.getId()), eq("vocabulary"), anyInt()))
+                .thenReturn(List.of());
+        List<ExerciseQuestion> fill = new ArrayList<>();
+        for (int i = 0; i < 10; i++) fill.add(question("A"));
+        when(questionRepository.findRandomByCategoryExcluding(eq("vocabulary"), any(), eq(10))).thenReturn(fill);
+
+        var res = service.createSession(UID, "vocabulary", 10);
+
+        assertEquals(10, res.questions().size());
+        verify(questionRepository).findRandomByCategoryExcluding(eq("vocabulary"), any(), eq(10));
+        verify(questionRepository, never()).findRandomByCategory(anyString(), anyInt());
     }
 
     // ── completeSession: chấm điểm ────────────────────────────────────────

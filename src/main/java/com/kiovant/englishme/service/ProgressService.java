@@ -93,11 +93,15 @@ public class ProgressService {
         for (UserSkillXp row : userSkillXpRepository.findByUserId(user.getId())) {
             skillXp.put(row.getSkill(), row.getXp() == null ? 0 : row.getXp());
         }
+        // 6 kỹ năng curriculum (khớp skill_code lesson) + pronunciation (nguồn STT riêng).
         List<SkillScore> skills = List.of(
                 new SkillScore("vocabulary", skillXp.getOrDefault("vocabulary", 0)),
                 new SkillScore("grammar", skillXp.getOrDefault("grammar", 0)),
-                new SkillScore("pronunciation", skillXp.getOrDefault("pronunciation", 0)),
-                new SkillScore("listening", skillXp.getOrDefault("listening", 0))
+                new SkillScore("reading", skillXp.getOrDefault("reading", 0)),
+                new SkillScore("listening", skillXp.getOrDefault("listening", 0)),
+                new SkillScore("speaking", skillXp.getOrDefault("speaking", 0)),
+                new SkillScore("writing", skillXp.getOrDefault("writing", 0)),
+                new SkillScore("pronunciation", skillXp.getOrDefault("pronunciation", 0))
         );
 
         WeekSummary week = new WeekSummary(weekXp, activeDays, 0);

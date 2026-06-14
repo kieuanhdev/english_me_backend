@@ -80,13 +80,13 @@ public class CheckpointService {
 
         double unitProgress = computeUnitProgress(user.getId(), level);
         double required = test.getRequiredUnitProgress().doubleValue();
-        boolean unlocked = unitProgress >= required;
+        // Cho phép thi NGAY ("Thi luôn / bỏ qua") — không gác theo độ phủ unit nữa.
+        // Ai muốn thử lên cấp mà chưa học hết unit vẫn vào thi được.
+        boolean unlocked = true;
         boolean alreadyPassed = attemptRepository.existsByUserIdAndLevelCodeAndPassedTrue(user.getId(), level);
         String nextLevel = nextLevelOf(level);
 
-        List<Map<String, Object>> questions = unlocked
-                ? buildQuestions(level, test.getQuestionCount())
-                : List.of();
+        List<Map<String, Object>> questions = buildQuestions(level, test.getQuestionCount());
 
         return new CheckpointState(
                 level, nextLevel, test.getTitle(), unlocked,
@@ -106,12 +106,7 @@ public class CheckpointService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "No checkpoint for level " + level));
 
-        // Gate độ phủ unit — chống nộp khi chưa đủ điều kiện.
-        double unitProgress = computeUnitProgress(user.getId(), level);
-        if (unitProgress < test.getRequiredUnitProgress().doubleValue()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "CHECKPOINT_LOCKED");
-        }
-
+        // Không còn gate độ phủ unit — cho thi luôn để thử lên cấp (bỏ qua học).
         // BE chấm từ đáp án thô (lọc theo câu quiz thật của level).
         Map<String, LearningLessonActivity> byId = quizActivitiesOfLevel(level).stream()
                 .collect(Collectors.toMap(LearningLessonActivity::getId, a -> a, (x, y) -> x));

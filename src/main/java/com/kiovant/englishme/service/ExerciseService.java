@@ -34,6 +34,8 @@ public class ExerciseService {
     private static final int DEFAULT_SIZE = 10;
     private static final int MAX_SIZE = 50;
     private static final Set<String> ALLOWED_CATEGORIES = Set.of("vocabulary", "grammar");
+    /** Tỉ lệ tối đa câu "yếu" (từng sai) trong 1 buổi — phần còn lại là câu mới để không nhàm. */
+    private static final double WEAK_RATIO = 0.5;
 
     private final UserRepository userRepository;
     private final ExerciseQuestionRepository questionRepository;
@@ -63,7 +65,7 @@ public class ExerciseService {
 
         User user = loadUser(firebaseUid);
 
-        List<ExerciseQuestion> picked = questionRepository.findRandomByCategory(cat, cap);
+        List<ExerciseQuestion> picked = selectAdaptive(user, cat, cap);
         if (picked.size() < cap) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Not enough questions available for category: " + cat);
         }
@@ -166,7 +168,9 @@ public class ExerciseService {
                         "correct", correct,
                         "total", total,
                         "accuracy", accuracy
-                )
+                ),
+                // category là 'vocabulary'|'grammar' → cộng XP đúng skill thay vì luôn grammar.
+                session.getCategory()
         );
 
         return new ExerciseCompleteResponse(
@@ -183,6 +187,30 @@ public class ExerciseService {
                 results,
                 xpResult.bonuses()
         );
+    }
+
+    /**
+     * Adaptive selection: ưu tiên câu user TỪNG SAI (điểm yếu thật), tối đa {@link #WEAK_RATIO}
+     * tổng số câu, phần còn lại fill random câu mới (loại trùng). User mới chưa có lịch sử sai
+     * -> rỗng weak -> toàn bộ random (đúng hành vi cũ, không vỡ onboarding).
+     */
+    private List<ExerciseQuestion> selectAdaptive(User user, String cat, int cap) {
+        int weakCap = (int) Math.floor(cap * WEAK_RATIO);
+        List<ExerciseQuestion> weak = weakCap > 0
+                ? questionRepository.findWeakByCategory(user.getId(), cat, weakCap)
+                : List.of();
+
+        if (weak.size() >= cap) {
+            return new ArrayList<>(weak.subList(0, cap));
+        }
+
+        List<ExerciseQuestion> picked = new ArrayList<>(weak);
+        int remaining = cap - picked.size();
+        List<UUID> excludeIds = picked.isEmpty()
+                ? List.of(new UUID(0L, 0L)) // NOT IN (:list) rỗng = lỗi SQL -> sentinel không tồn tại
+                : picked.stream().map(ExerciseQuestion::getId).toList();
+        picked.addAll(questionRepository.findRandomByCategoryExcluding(cat, excludeIds, remaining));
+        return picked;
     }
 
     private static String normalizeCategory(String raw) {

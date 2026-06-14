@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -54,6 +55,23 @@ public class XpService {
             "lesson", "grammar",
             "exercise", "grammar"
     );
+
+    /** Kỹ năng hợp lệ cho per-skill XP (khớp skill_code của learning_lessons + skills seed). */
+    private static final Set<String> CANONICAL_SKILLS = Set.of(
+            "vocabulary", "grammar", "reading", "listening", "speaking", "writing", "pronunciation");
+
+    /**
+     * Suy ra skill được cộng XP: ưu tiên {@code skillOverride} (skill_code thật của
+     * lesson/exercise) nếu hợp lệ; ngược lại fallback theo sourceType. Trả null nếu
+     * không xác định được (vd 'test' đa kỹ năng) → không cộng per-skill.
+     */
+    private String resolveSkill(String sourceType, String skillOverride) {
+        if (skillOverride != null) {
+            String s = skillOverride.trim().toLowerCase();
+            if (CANONICAL_SKILLS.contains(s)) return s;
+        }
+        return SOURCE_TYPE_TO_SKILL.get(sourceType);
+    }
 
     private final UserRepository userRepository;
     private final XpLedgerRepository ledgerRepository;
@@ -111,6 +129,24 @@ public class XpService {
                                String sourceId,
                                String idempotencyKey,
                                Map<String, Object> metadata) {
+        return grant(userId, amount, sourceType, sourceId, idempotencyKey, metadata, null);
+    }
+
+    /**
+     * Như {@link #grant(UUID, int, String, String, String, Map)} nhưng cho phép
+     * chỉ định {@code skillOverride} — kỹ năng được cộng XP thật sự (vd lesson
+     * skill_code = 'reading'/'listening'/...). Khi null → suy ra từ
+     * {@link #SOURCE_TYPE_TO_SKILL}. Dùng cho lesson/exercise vì 1 sourceType
+     * 'lesson' có thể thuộc nhiều skill khác nhau theo nội dung.
+     */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public XpGrantResult grant(UUID userId,
+                               int amount,
+                               String sourceType,
+                               String sourceId,
+                               String idempotencyKey,
+                               Map<String, Object> metadata,
+                               String skillOverride) {
         if (amount <= 0) {
             return readOnlyResult(userId, 0, false, false);
         }
@@ -140,7 +176,7 @@ public class XpService {
 
         // Lần đầu cộng: cộng dồn per-skill XP (nếu sourceType map ra skill). Idempotency
         // đã đảm bảo ở tầng ledger phía trên -> không double-count khi retry.
-        String skill = SOURCE_TYPE_TO_SKILL.get(sourceType);
+        String skill = resolveSkill(sourceType, skillOverride);
         if (skill != null) {
             skillXpRepository.upsertAdd(userId, skill, amount);
         }

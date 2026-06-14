@@ -14,6 +14,31 @@ public interface ExerciseQuestionRepository extends JpaRepository<ExerciseQuesti
     List<ExerciseQuestion> findRandomByCategory(String category, int size);
 
     /**
+     * Adaptive: câu trong {@code category} mà user TỪNG trả lời SAI và CHƯA bao giờ
+     * trả lời đúng — tức điểm yếu thật của user. Câu nào còn sai nhiều ưu tiên trước.
+     * Dùng để mở đầu buổi luyện bằng chính lỗi của user thay vì câu random.
+     */
+    @Query(value = """
+            SELECT q.* FROM exercise_question q
+            JOIN exercise_answer a ON a.question_id = q.id
+            JOIN exercise_session s ON s.id = a.session_id
+            WHERE q.category = :category AND s.user_id = :userId
+            GROUP BY q.id
+            HAVING SUM(CASE WHEN a.is_correct THEN 1 ELSE 0 END) = 0
+            ORDER BY COUNT(*) DESC, random()
+            LIMIT :size
+            """, nativeQuery = true)
+    List<ExerciseQuestion> findWeakByCategory(UUID userId, String category, int size);
+
+    /** Random câu trong {@code category} nhưng loại trừ các id đã chọn (để fill sau weak). */
+    @Query(value = """
+            SELECT * FROM exercise_question
+            WHERE category = :category AND id NOT IN (:excludeIds)
+            ORDER BY random() LIMIT :size
+            """, nativeQuery = true)
+    List<ExerciseQuestion> findRandomByCategoryExcluding(String category, List<UUID> excludeIds, int size);
+
+    /**
      * Admin search. {@code levelUpper} đã được uppercase và {@code keywordPattern}
      * đã được lowercase + escape wildcard (\% \_ \\) + bọc '%...%' ở caller — query
      * không gọi UPPER/LOWER trên param để tránh lỗi "function lower(bytea) does not

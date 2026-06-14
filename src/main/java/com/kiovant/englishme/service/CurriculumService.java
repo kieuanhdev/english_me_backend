@@ -356,7 +356,9 @@ public class CurriculumService {
                     lessonId,
                     "lesson:" + lessonId + ":first_pass",
                     Map.of("score", score, "lessonId", lessonId,
-                            "unitId", lesson.getUnitId() == null ? "" : lesson.getUnitId())
+                            "unitId", lesson.getUnitId() == null ? "" : lesson.getUnitId()),
+                    // Cộng XP đúng kỹ năng của bài (reading/listening/...) thay vì luôn grammar.
+                    lesson.getSkillCode()
             );
             actualXp = xp.xpEarned();
             lp.setXpEarned((lp.getXpEarned() == null ? 0 : lp.getXpEarned()) + actualXp);
