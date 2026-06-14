@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/layout/fragments :: head}"></head>
+<body class="bg-surface text-on-surface">
+<aside th:replace="~{admin/layout/fragments :: sidebar('badges')}"></aside>
+<main class="ml-64 min-h-screen">
+    <div th:replace="~{admin/layout/fragments :: topbar}"></div>
+
+    <div class="p-8 space-y-8">
+        <section class="primary-gradient text-white rounded-3xl p-10 relative overflow-hidden">
+            <h1 class="text-4xl font-headline font-black mb-3">Thành tựu (Badge)</h1>
+            <p class="max-w-3xl text-indigo-100">
+                Tạo và quản lý huy hiệu. Badge đang <strong>Bật</strong> sẽ tự động cấp cho học viên khi đạt điều kiện
+                (mỗi lần cộng XP hệ thống sẽ rà lại).
+            </p>
+        </section>
+
+        <div th:if="${successMessage != null}" class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl px-6 py-4" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage != null}" class="bg-red-50 border border-red-200 text-red-800 rounded-2xl px-6 py-4" th:text="${errorMessage}"></div>
+
+        <div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl px-6 py-4 text-sm leading-relaxed">
+            <p class="font-bold mb-2">Loại điều kiện</p>
+            <ul class="space-y-1 list-disc list-inside">
+                <li><code>streak</code> — chuỗi ngày học liên tiếp ≥ ngưỡng (vd 7, 10, 20, 40).</li>
+                <li><code>total_xp</code> — tổng XP ≥ ngưỡng (vd 1000).</li>
+                <li><code>cefr_level</code> — đạt bậc CEFR ≥ ngưỡng. Bậc: A1=1, A2=2, B1=3, B2=4, C1=5, C2=6.</li>
+                <li><code>first_lesson</code> — hoàn thành bài học đầu tiên (không cần ngưỡng).</li>
+            </ul>
+        </div>
+
+        <!-- Tạo badge mới -->
+        <section class="bg-surface-container-lowest rounded-2xl p-6 space-y-4">
+            <h2 class="text-lg font-bold text-slate-800">Tạo badge mới</h2>
+            <form method="post" th:action="@{/admin/badges}" class="space-y-4">
+                <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Tên *</label>
+                        <input type="text" name="name" required maxlength="100"
+                               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Icon URL</label>
+                        <input type="text" name="iconUrl"
+                               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Mô tả</label>
+                    <input type="text" name="description"
+                           class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Loại điều kiện</label>
+                        <select name="conditionType"
+                                class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                            <option th:each="t : ${conditionTypes}" th:value="${t}" th:text="${t}"></option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Ngưỡng</label>
+                        <input type="number" min="1" name="conditionValueRaw" placeholder="vd 10"
+                               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                    </div>
+                    <label class="flex items-center gap-2 text-sm font-semibold text-slate-700 pb-2">
+                        <input type="checkbox" name="isActive" value="on" checked
+                               class="w-4 h-4 rounded border-slate-300 text-primary focus:ring-indigo-300">
+                        Bật
+                    </label>
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90">Tạo badge</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Danh sách badge (mỗi badge 1 form sửa) -->
+        <div class="space-y-4">
+            <form th:each="b : ${badges}" method="post" th:action="@{/admin/badges}"
+                  class="bg-surface-container-lowest rounded-2xl p-6 space-y-4">
+                <input type="hidden" name="_csrf" th:value="${session.CSRF_TOKEN}"/>
+                <input type="hidden" name="id" th:value="${b.id}">
+
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <code class="text-sm font-bold text-primary bg-indigo-50 px-2 py-0.5 rounded" th:text="${b.conditionType}"></code>
+                        <span class="text-xs font-bold text-slate-600" th:if="${b.conditionValue != null}" th:text="'≥ ' + ${b.conditionValue}"></span>
+                        <span th:unless="${b.isActive}" class="text-[10px] font-bold uppercase tracking-widest bg-red-100 text-red-700 px-2 py-0.5 rounded-full">tắt</span>
+                    </div>
+                    <button type="submit" formaction="/admin/badges/delete"
+                            onclick="return confirm('Xóa badge này? Mọi lượt đã cấp cũng bị gỡ.');"
+                            class="text-xs font-bold text-red-600 hover:underline">Xóa</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Tên *</label>
+                        <input type="text" name="name" required maxlength="100" th:value="${b.name}"
+                               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Icon URL</label>
+                        <input type="text" name="iconUrl" th:value="${b.iconUrl}"
+                               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Mô tả</label>
+                    <input type="text" name="description" th:value="${b.description}"
+                           class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Loại điều kiện</label>
+                        <select name="conditionType"
+                                class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                            <option th:each="t : ${conditionTypes}" th:value="${t}" th:text="${t}" th:selected="${t == b.conditionType}"></option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">Ngưỡng</label>
+                        <input type="number" min="1" name="conditionValueRaw" th:value="${b.conditionValue}"
+                               class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                    </div>
+                    <label class="flex items-center gap-2 text-sm font-semibold text-slate-700 pb-2">
+                        <input type="checkbox" name="isActive" value="on" th:checked="${b.isActive}"
+                               class="w-4 h-4 rounded border-slate-300 text-primary focus:ring-indigo-300">
+                        Bật
+                    </label>
+                </div>
+                <div class="flex justify-end pt-2 border-t border-slate-100">
+                    <button type="submit" class="px-5 py-2 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90">Lưu</button>
+                </div>
+            </form>
+            <div th:if="${badges == null or badges.isEmpty()}" class="bg-slate-50 border border-slate-200 rounded-2xl px-6 py-8 text-center text-slate-500">
+                Chưa có badge nào.
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

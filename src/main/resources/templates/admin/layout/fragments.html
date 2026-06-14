@@ -78,6 +78,8 @@
            th:classappend="${active == 'placement-test'} ? 'bg-indigo-50 text-primary' : 'text-slate-600 hover:bg-slate-100'"><span class="material-symbols-outlined">quiz</span>Placement Test</a>
         <a th:href="@{/admin/xp-rules}" class="flex items-center gap-3 px-4 py-3 rounded-xl"
            th:classappend="${active == 'xp-rules'} ? 'bg-indigo-50 text-primary' : 'text-slate-600 hover:bg-slate-100'"><span class="material-symbols-outlined">bolt</span>Cấu hình XP</a>
+        <a th:href="@{/admin/badges}" class="flex items-center gap-3 px-4 py-3 rounded-xl"
+           th:classappend="${active == 'badges'} ? 'bg-indigo-50 text-primary' : 'text-slate-600 hover:bg-slate-100'"><span class="material-symbols-outlined">military_tech</span>Thành tựu</a>
         <a th:href="@{/admin/config}" class="flex items-center gap-3 px-4 py-3 rounded-xl"
            th:classappend="${active == 'config'} ? 'bg-indigo-50 text-primary' : 'text-slate-600 hover:bg-slate-100'"><span class="material-symbols-outlined">smart_toy</span>Cấu hình AI</a>
     </nav>

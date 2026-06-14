@@ -12,6 +12,8 @@ import com.kiovant.englishme.repository.UserRepository;
 import com.kiovant.englishme.repository.UserSkillXpRepository;
 import com.kiovant.englishme.repository.XpHistoryRepository;
 import com.kiovant.englishme.repository.XpLedgerRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -37,6 +39,8 @@ import java.util.UUID;
 @Service
 public class XpService {
 
+    private static final Logger log = LoggerFactory.getLogger(XpService.class);
+
     /** Fallback nếu xp_rules thiếu row 'daily_goal_bonus' (vd. trước khi V22 chạy). */
     private static final int DAILY_GOAL_BONUS_FALLBACK = 5;
 
@@ -57,6 +61,7 @@ public class XpService {
     private final XpHistoryRepository xpHistoryRepository;
     private final UserSkillXpRepository skillXpRepository;
     private final XpRuleService xpRuleService;
+    private final BadgeService badgeService;
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
@@ -66,6 +71,7 @@ public class XpService {
                      XpHistoryRepository xpHistoryRepository,
                      UserSkillXpRepository skillXpRepository,
                      XpRuleService xpRuleService,
+                     BadgeService badgeService,
                      ObjectMapper objectMapper,
                      Clock clock) {
         this.userRepository = userRepository;
@@ -74,6 +80,7 @@ public class XpService {
         this.xpHistoryRepository = xpHistoryRepository;
         this.skillXpRepository = skillXpRepository;
         this.xpRuleService = xpRuleService;
+        this.badgeService = badgeService;
         this.objectMapper = objectMapper;
         this.clock = clock;
     }
@@ -170,6 +177,14 @@ public class XpService {
                         "Đạt mục tiêu ngày (" + daily.targetXp() + " XP)"
                 ));
             }
+        }
+
+        // Auto-award badge sau khi total_xp/streak đã chốt (cùng transaction). Lỗi cấp
+        // badge KHÔNG được làm hỏng việc cộng XP -> nuốt exception, chỉ log.
+        try {
+            badgeService.awardEligible(user);
+        } catch (Exception ex) {
+            log.warn("awardEligible lỗi cho user {}: {}", userId, ex.getMessage());
         }
 
         return new XpGrantResult(amount, newTotal, daily.earnedXp(), streakUpdated, false, bonuses);

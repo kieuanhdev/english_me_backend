@@ -49,6 +49,7 @@ class XpServiceTest {
     private XpHistoryRepository xpHistoryRepository;
     private UserSkillXpRepository skillXpRepository;
     private XpRuleService xpRuleService;
+    private BadgeService badgeService;
     private XpService service;
 
     private User user;
@@ -62,10 +63,11 @@ class XpServiceTest {
         xpHistoryRepository = mock(XpHistoryRepository.class);
         skillXpRepository = mock(UserSkillXpRepository.class);
         xpRuleService = mock(XpRuleService.class);
+        badgeService = mock(BadgeService.class);
         service = new XpService(
                 userRepository, ledgerRepository, dailyGoalRepository,
                 xpHistoryRepository, skillXpRepository, xpRuleService,
-                new ObjectMapper(), FIXED_CLOCK);
+                badgeService, new ObjectMapper(), FIXED_CLOCK);
 
         userId = UUID.randomUUID();
         user = new User();

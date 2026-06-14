@@ -13,4 +13,7 @@ public interface UserBadgeRepository extends JpaRepository<UserBadge, UUID> {
     boolean existsByUser_IdAndBadge_Id(UUID userId, UUID badgeId);
 
     void deleteByUser_Id(UUID userId);
+
+    /** Gỡ mọi lượt đã cấp của 1 badge — gọi trước khi xóa badge (FK không cascade). */
+    void deleteByBadge_Id(UUID badgeId);
 }

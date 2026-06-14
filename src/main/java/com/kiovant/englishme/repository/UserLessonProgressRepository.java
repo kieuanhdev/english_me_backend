@@ -13,6 +13,9 @@ import java.util.UUID;
 public interface UserLessonProgressRepository extends JpaRepository<UserLessonProgress, UserLessonProgressId> {
     List<UserLessonProgress> findByUserIdAndPathId(UUID userId, String pathId);
 
+    /** Số bài user đã hoàn thành — cho badge 'first_lesson' (>= 1). */
+    long countByUserIdAndStatus(UUID userId, String status);
+
     List<UserLessonProgress> findByUserIdAndLessonIdIn(UUID userId, List<String> lessonIds);
 
     /**
