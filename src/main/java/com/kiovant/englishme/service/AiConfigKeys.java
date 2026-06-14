@@ -19,6 +19,7 @@ public final class AiConfigKeys {
     public static final String PROMPT_CHAT = "AI_PROMPT_CHAT";
     public static final String PROMPT_SUMMARY = "AI_PROMPT_SUMMARY";
     public static final String PROMPT_PRACTICE = "AI_PROMPT_PRACTICE";
+    public static final String PROMPT_GRAMMAR_PRACTICE = "AI_PROMPT_GRAMMAR_PRACTICE";
     public static final String PROMPT_PRONUN = "AI_PROMPT_PRONUN";
 
     // Tham số sinh
