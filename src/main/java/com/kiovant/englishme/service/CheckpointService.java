@@ -147,6 +147,14 @@ public class CheckpointService {
                 ul.setCurrentLevel(toLevel);
                 ul.setLastLevelUpAt(Instant.now());
                 userLevelRepository.save(ul);
+                // Đồng bộ luôn User.cefrLevel — đây là level mà dashboard/Home và 4
+                // engine kỹ năng (dictation/reading/writing/...) đọc để chọn nội dung
+                // theo trình độ. Nếu chỉ nâng user_level.current_level mà bỏ quên
+                // cefrLevel thì lên cấp ở giáo trình KHÔNG kéo theo độ khó của 4 kỹ năng.
+                if (CEFR_ORDER.indexOf(user.getCefrLevel()) < CEFR_ORDER.indexOf(toLevel)) {
+                    user.setCefrLevel(toLevel);
+                    userRepository.save(user);
+                }
                 leveledUp = true;
                 openFirstUnitOfLevel(user.getId(), toLevel);
             } else {

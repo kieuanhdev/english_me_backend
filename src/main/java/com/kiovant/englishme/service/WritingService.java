@@ -47,7 +47,7 @@ public class WritingService {
               "prompt": "<the writing task written in Vietnamese, telling the learner what to write in English; specify expected length in sentences>",
               "minWords": <suggested minimum word count as integer>
             }
-            The task must suit level %s: simple everyday topics for A1/A2, opinions/experiences for B1/B2, abstract/argumentative for C1/C2.""";
+            The task must suit level %s: simple everyday topics for A1/A2, opinions/experiences for B1/B2, abstract/argumentative for C1/C2.%s""";
 
     private static final String GRADE_SYSTEM = """
             You are an English writing examiner. The learner (CEFR level %s) was given this task:
@@ -67,52 +67,86 @@ public class WritingService {
     private final LlmClient llmClient;
     private final AppConfigService appConfigService;
     private final UserRepository userRepository;
+    private final LessonContentSource lessonContentSource;
     private final XpService xpService;
     private final ObjectMapper objectMapper;
 
     public WritingService(LlmClient llmClient,
                           AppConfigService appConfigService,
                           UserRepository userRepository,
+                          LessonContentSource lessonContentSource,
                           XpService xpService,
                           ObjectMapper objectMapper) {
         this.llmClient = llmClient;
         this.appConfigService = appConfigService;
         this.userRepository = userRepository;
+        this.lessonContentSource = lessonContentSource;
         this.xpService = xpService;
         this.objectMapper = objectMapper;
     }
 
     // ── Sinh đề ──────────────────────────────────────────────────────────────
 
-    public WritingPromptResponse generatePrompt(String firebaseUid, String level) {
-        loadUser(firebaseUid);
+    public WritingPromptResponse generatePrompt(String firebaseUid, String level, String lessonId) {
+        User user = loadUser(firebaseUid);
         String lv = normalizeLevel(level);
         String promptId = UUID.randomUUID().toString();
 
+        // Đề viết bám chủ đề + từ vựng bài giáo trình user đã/đang học (B xoay quanh A).
+        LessonContentSource.LessonMaterial material = (lessonId != null && !lessonId.isBlank())
+                ? lessonContentSource.forLesson(lessonId)
+                : lessonContentSource.forLevel(user.getId(), lv);
+        String lessonHint = writingLessonHint(material);
+
         if (!llmClient.isConfigured()) {
-            return fallbackPrompt(promptId, lv);
+            return fallbackPrompt(promptId, lv, material);
         }
         try {
             String content = llmClient.chatCompletion(
-                    List.of(Map.of("role", "system", "content", PROMPT_SYSTEM.formatted(lv, lv))),
+                    List.of(Map.of("role", "system", "content", PROMPT_SYSTEM.formatted(lv, lv, lessonHint))),
                     appConfigService.getDoubleOr(AiConfigKeys.CHAT_TEMPERATURE, DEFAULT_PROMPT_TEMPERATURE),
                     DEFAULT_PROMPT_MAX_TOKENS,
                     true);
             if (content == null || content.isBlank()) {
-                return fallbackPrompt(promptId, lv);
+                return fallbackPrompt(promptId, lv, material);
             }
             JsonNode p = objectMapper.readTree(content);
             String title = p.path("title").asText("Bài viết");
             String prompt = p.path("prompt").asText("");
             int minWords = Math.max(0, p.path("minWords").asInt(0));
             if (prompt.isBlank()) {
-                return fallbackPrompt(promptId, lv);
+                return fallbackPrompt(promptId, lv, material);
             }
             return new WritingPromptResponse(promptId, lv, title, prompt, minWords);
         } catch (Exception ex) {
             log.error("LLM sinh đề viết lỗi, fallback: {}", ex.getMessage());
-            return fallbackPrompt(promptId, lv);
+            return fallbackPrompt(promptId, lv, material);
         }
+    }
+
+    /**
+     * Câu chỉ dẫn thêm cho system prompt: gắn chủ đề + từ vựng bài học để đề viết
+     * "ôn lại" cái user vừa học. Rỗng khi chưa có bài học làm nguồn.
+     */
+    private String writingLessonHint(LessonContentSource.LessonMaterial material) {
+        if (material == null || material.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder("\nGround the task in what the learner just studied.");
+        if (!material.topics().isEmpty()) {
+            sb.append(" Recent lesson topics: ")
+              .append(String.join(", ", material.topics().subList(0, Math.min(3, material.topics().size()))))
+              .append('.');
+        }
+        if (!material.vocab().isEmpty()) {
+            List<String> words = new ArrayList<>();
+            for (LessonContentSource.VocabItem v : material.vocab()) {
+                if (!v.word().isBlank()) words.add(v.word());
+                if (words.size() >= 8) break;
+            }
+            if (!words.isEmpty()) {
+                sb.append(" Encourage using these learned words: ").append(String.join(", ", words)).append('.');
+            }
+        }
+        return sb.toString();
     }
 
     // ── Chấm bài ─────────────────────────────────────────────────────────────
@@ -204,7 +238,17 @@ public class WritingService {
         return out;
     }
 
-    private WritingPromptResponse fallbackPrompt(String promptId, String level) {
+    private WritingPromptResponse fallbackPrompt(String promptId, String level, LessonContentSource.LessonMaterial material) {
+        // Chưa cấu hình LLM: vẫn bám bài học gần nhất nếu có (đề viết về chủ đề lesson).
+        if (material != null && !material.topics().isEmpty()) {
+            String topic = material.topics().get(0);
+            return new WritingPromptResponse(
+                    promptId, level, "Viết về: " + topic,
+                    "Viết 3-5 câu tiếng Anh về chủ đề \"" + topic
+                            + "\" mà bạn vừa học, dùng các từ vựng trong bài.",
+                    30
+            );
+        }
         return new WritingPromptResponse(
                 promptId, level, "Giới thiệu bản thân",
                 "Viết 3-4 câu tiếng Anh giới thiệu về bản thân: tên, tuổi, sở thích và công việc/học tập.",

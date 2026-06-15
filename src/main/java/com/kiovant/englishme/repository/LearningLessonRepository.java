@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface LearningLessonRepository extends JpaRepository<LearningLesson, String> {
     List<LearningLesson> findByLevelCodeAndSkillCodeAndIsActiveTrueOrderByIdAsc(String levelCode, String skillCode);
@@ -19,6 +20,23 @@ public interface LearningLessonRepository extends JpaRepository<LearningLesson, 
 
     /** Tất cả lesson active thuộc các Unit cho trước (dùng rút đề checkpoint theo level). */
     List<LearningLesson> findByUnitIdInAndIsActiveTrue(List<String> unitIds);
+
+    /**
+     * Lesson user ĐÃ/ĐANG học ở một level — nguồn nội dung cho 4 kỹ năng (B) xoay
+     * quanh bài giáo trình (A). JOIN user_lesson_progress để chỉ lấy bài đã chạm
+     * tới (completed hoặc in_progress), bài học gần nhất xếp trước.
+     */
+    @Query("""
+            SELECT l FROM LearningLesson l, UserLessonProgress p
+            WHERE p.lessonId = l.id
+              AND p.userId = :userId
+              AND l.levelCode = :level
+              AND l.isActive = true
+              AND p.status IN ('completed', 'in_progress')
+            ORDER BY p.completedAt DESC NULLS LAST, l.lessonOrder ASC
+            """)
+    List<LearningLesson> findStudiedByUserAndLevel(@Param("userId") UUID userId,
+                                                   @Param("level") String level);
 
     /**
      * Admin: list lessons với filter optional level/skill/keyword.

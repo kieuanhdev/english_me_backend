@@ -32,47 +32,86 @@ public class DictationService {
 
     private final UserRepository userRepository;
     private final DictationSentenceRepository sentenceRepository;
+    private final LessonContentSource lessonContentSource;
     private final XpService xpService;
     private final XpRuleService xpRuleService;
 
     public DictationService(UserRepository userRepository,
                             DictationSentenceRepository sentenceRepository,
+                            LessonContentSource lessonContentSource,
                             XpService xpService,
                             XpRuleService xpRuleService) {
         this.userRepository = userRepository;
         this.sentenceRepository = sentenceRepository;
+        this.lessonContentSource = lessonContentSource;
         this.xpService = xpService;
         this.xpRuleService = xpRuleService;
     }
 
     @Transactional(readOnly = true)
-    public DictationSessionResponse createSession(String firebaseUid, String level, int size) {
-        loadUser(firebaseUid); // chỉ xác thực user tồn tại
+    public DictationSessionResponse createSession(String firebaseUid, String level, int size, String lessonId) {
+        User user = loadUser(firebaseUid);
         int cap = clampSize(size);
-
         String levelUpper = (level == null || level.isBlank()) ? null : level.trim().toUpperCase();
-        List<DictationSentence> picked = levelUpper == null
-                ? List.of()
-                : sentenceRepository.findRandomByLevel(levelUpper, cap);
-        if (picked.size() < cap) {
-            // Thiếu câu đúng level → nới ra mọi level để phiên không rỗng.
-            picked = sentenceRepository.findRandom(cap);
+
+        // 1) Ưu tiên CÂU TỪ BÀI GIÁO TRÌNH user đã/đang học (B xoay quanh A).
+        //    Vào từ 1 lesson cụ thể → đúng câu lesson đó; ngược lại → mọi bài đã học cùng level.
+        LessonContentSource.LessonMaterial material = (lessonId != null && !lessonId.isBlank())
+                ? lessonContentSource.forLesson(lessonId)
+                : lessonContentSource.forLevel(user.getId(), levelUpper);
+
+        List<DictationSentenceResponse> items = lessonSentences(material, levelUpper, cap);
+
+        // 2) Fallback: chưa học bài nào (hoặc lesson rỗng câu) → câu seed theo level.
+        if (items.isEmpty()) {
+            List<DictationSentence> picked = levelUpper == null
+                    ? List.of()
+                    : sentenceRepository.findRandomByLevel(levelUpper, cap);
+            if (picked.size() < cap) {
+                // Thiếu câu đúng level → nới ra mọi level để phiên không rỗng.
+                picked = sentenceRepository.findRandom(cap);
+            }
+            items = picked.stream()
+                    .map(s -> new DictationSentenceResponse(
+                            s.getId().toString(),
+                            s.getCefrLevel(),
+                            s.getText(),
+                            s.getHint(),
+                            s.getAudioUrl()))
+                    .toList();
         }
-        if (picked.isEmpty()) {
+
+        if (items.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No dictation sentences available");
         }
 
-        List<DictationSentenceResponse> items = picked.stream()
-                .map(s -> new DictationSentenceResponse(
-                        s.getId().toString(),
-                        s.getCefrLevel(),
-                        s.getText(),
-                        s.getHint(),
-                        s.getAudioUrl()))
-                .toList();
-
         String sessionId = UUID.randomUUID().toString();
         return new DictationSessionResponse(sessionId, levelUpper, items.size(), items);
+    }
+
+    /**
+     * Dựng câu chép chính tả từ nguyên liệu bài học. Lọc câu quá ngắn/quá dài để
+     * hợp luyện nghe (3–18 từ), khử trùng lặp, cấp id ngẫu nhiên (client chỉ dùng
+     * {@code text} để chấm). Nghĩa tiếng Việt làm gợi ý (hint).
+     */
+    private List<DictationSentenceResponse> lessonSentences(
+            LessonContentSource.LessonMaterial material, String levelUpper, int cap) {
+        if (material.isEmpty()) return List.of();
+        java.util.LinkedHashMap<String, DictationSentenceResponse> out = new java.util.LinkedHashMap<>();
+        for (LessonContentSource.SentenceItem s : material.sentences()) {
+            String text = s.en().trim();
+            int words = text.isBlank() ? 0 : text.split("\\s+").length;
+            if (words < 3 || words > 18) continue;
+            String key = text.toLowerCase();
+            out.putIfAbsent(key, new DictationSentenceResponse(
+                    UUID.randomUUID().toString(),
+                    levelUpper,
+                    text,
+                    s.vi().isBlank() ? null : s.vi(),
+                    null));
+            if (out.size() >= cap) break;
+        }
+        return List.copyOf(out.values());
     }
 
     @Transactional

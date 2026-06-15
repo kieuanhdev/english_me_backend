@@ -24,10 +24,11 @@ public class DictationApiController {
     public DictationSessionResponse createSession(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestParam(required = false) String level,
-            @RequestParam(defaultValue = "5") int size
+            @RequestParam(defaultValue = "5") int size,
+            @RequestParam(required = false) String lessonId
     ) {
         FirebaseToken token = authHelper.verifyBearer(authorization);
-        return dictationService.createSession(token.getUid(), level, size);
+        return dictationService.createSession(token.getUid(), level, size, lessonId);
     }
 
     @PostMapping("/sessions/complete")

@@ -28,10 +28,11 @@ public class WritingApiController {
     @GetMapping("/prompt")
     public WritingPromptResponse prompt(
             @RequestHeader(value = "Authorization", required = false) String authorization,
-            @RequestParam(required = false) String level
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String lessonId
     ) {
         FirebaseToken token = authHelper.verifyBearer(authorization);
-        return writingService.generatePrompt(token.getUid(), level);
+        return writingService.generatePrompt(token.getUid(), level, lessonId);
     }
 
     /** Chấm bài viết + cộng XP. */
