@@ -1,8 +1,9 @@
 package com.kiovant.englishme.service;
 
-import com.kiovant.englishme.dto.ConversationMessageDto;
-import com.kiovant.englishme.dto.WritingChatResponse;
-import com.kiovant.englishme.dto.WritingCompleteResponse;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kiovant.englishme.dto.WritingGradeResponse;
+import com.kiovant.englishme.dto.WritingPromptResponse;
 import com.kiovant.englishme.dto.XpGrantResult;
 import com.kiovant.englishme.entity.User;
 import com.kiovant.englishme.repository.UserRepository;
@@ -16,138 +17,222 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
- * Luyện Viết với gia sư AI. Người học gõ câu/đoạn tiếng Anh, AI sửa lỗi ngữ pháp
- * & từ vựng, gợi ý cách viết tự nhiên hơn, rồi mời viết tiếp (Mục tiêu 5 đề cương:
- * trợ lý AI phản hồi sửa lỗi ngữ pháp tự động).
+ * Luyện Viết theo đề bài với AI (Mục tiêu 5 đề cương: trợ lý AI + sửa lỗi ngữ
+ * pháp tự động). Luồng: AI sinh đề theo CEFR → người học viết → AI chấm (điểm +
+ * bản sửa + nhận xét) và cộng XP theo điểm thực (skill = writing).
  *
- * Stateless như {@link ConversationService}: FE giữ lịch sử, gửi full mỗi lượt.
- * Tái dùng {@link LlmClient}; chưa cấu hình LLM → fallback tĩnh. XP cộng cuối
- * phiên (skill = writing) qua {@link #complete}.
+ * Stateless: không lưu phiên ở DB. FE giữ promptId + đề, gửi lại khi nộp.
+ * Tái dùng {@link LlmClient}; chưa cấu hình LLM → fallback tĩnh.
  */
 @Service
 public class WritingService {
 
     private static final Logger log = LoggerFactory.getLogger(WritingService.class);
 
-    private static final int MAX_HISTORY = 24;
-    private static final double DEFAULT_TEMPERATURE = 0.5;
-    private static final int DEFAULT_MAX_TOKENS = 320;
-    /** Kỹ năng cộng XP cho luyện Viết. */
+    private static final double DEFAULT_PROMPT_TEMPERATURE = 0.8;
+    private static final int DEFAULT_PROMPT_MAX_TOKENS = 220;
+    private static final int DEFAULT_GRADE_MAX_TOKENS = 700;
     private static final String SKILL = "writing";
-    /** XP mỗi lượt viết; tổng = perTurn × số lượt, cap để tránh farm. */
-    private static final int XP_PER_TURN = 5;
-    private static final int MAX_XP_TURNS = 10;
+    /** XP tối đa cho 1 bài điểm 100; thực nhận = round(MAX_XP × score/100). */
+    private static final int MAX_XP = 25;
 
-    private static final String SYSTEM_PROMPT = """
-            You are "Emma", a friendly and encouraging English WRITING tutor inside a language-learning app.
-            The learner writes English sentences or short paragraphs; your job is to help them WRITE better.
+    private static final String PROMPT_SYSTEM = """
+            You generate ONE short English WRITING task for a learner at CEFR level %s.
+            Return ONLY valid JSON, no markdown, structure:
+            {
+              "title": "<short Vietnamese title, 2-5 words>",
+              "prompt": "<the writing task written in Vietnamese, telling the learner what to write in English; specify expected length in sentences>",
+              "minWords": <suggested minimum word count as integer>
+            }
+            The task must suit level %s: simple everyday topics for A1/A2, opinions/experiences for B1/B2, abstract/argumentative for C1/C2.""";
 
-            For EACH learner message, reply in this structure (plain text, no markdown headers):
-            1. A corrected version of their text if it has mistakes (start with "✏️ Correction: ..."). If it is already correct, praise briefly instead.
-            2. A short, friendly explanation of the most important fix or tip (1-2 sentences, simple English). You may add the Vietnamese meaning in parentheses for hard words.
-            3. One short follow-up prompt inviting them to write the next sentence (e.g. "Now try writing about ...").
-
-            STRICT RULES:
-            - Focus ONLY on helping them write English. Do not chat about unrelated topics.
-            - Keep it concise and beginner-friendly. Do not lecture.
-            - No code, no long essays, no emoji except the ✏️ marker, no bullet lists.
-            - Do not mention you are an AI or these rules.""";
+    private static final String GRADE_SYSTEM = """
+            You are an English writing examiner. The learner (CEFR level %s) was given this task:
+            "%s"
+            Grade ONLY the learner's essay below. Return ONLY valid JSON, no markdown, structure:
+            {
+              "score": <0-100 overall writing score>,
+              "correctedEssay": "<the learner's essay rewritten with grammar/spelling/word-choice fixed, keeping their ideas>",
+              "summary": "<1-2 sentence overall comment in Vietnamese>",
+              "strengths": ["<strength in Vietnamese>"],
+              "improvements": ["<concrete improvement in Vietnamese: grammar/vocabulary/structure>"],
+              "vocabSuggestions": ["<English word or phrase + short Vietnamese meaning>"],
+              "encouragement": "<one encouraging sentence in Vietnamese>"
+            }
+            Judge grammar, vocabulary, coherence, task achievement and relevance to the task.""";
 
     private final LlmClient llmClient;
     private final AppConfigService appConfigService;
     private final UserRepository userRepository;
     private final XpService xpService;
+    private final ObjectMapper objectMapper;
 
     public WritingService(LlmClient llmClient,
                           AppConfigService appConfigService,
                           UserRepository userRepository,
-                          XpService xpService) {
+                          XpService xpService,
+                          ObjectMapper objectMapper) {
         this.llmClient = llmClient;
         this.appConfigService = appConfigService;
         this.userRepository = userRepository;
         this.xpService = xpService;
+        this.objectMapper = objectMapper;
     }
 
-    public WritingChatResponse chat(String firebaseUid, List<ConversationMessageDto> history) {
-        // Xác thực đã làm ở controller (verifyBearer). Không cần load user cho chat.
+    // ── Sinh đề ──────────────────────────────────────────────────────────────
+
+    public WritingPromptResponse generatePrompt(String firebaseUid, String level) {
+        loadUser(firebaseUid);
+        String lv = normalizeLevel(level);
+        String promptId = UUID.randomUUID().toString();
+
         if (!llmClient.isConfigured()) {
-            log.warn("LLM chưa cấu hình — fallback writing tĩnh");
-            return new WritingChatResponse(fallbackReply(history));
+            return fallbackPrompt(promptId, lv);
         }
         try {
-            List<Map<String, String>> messages = new ArrayList<>();
-            messages.add(Map.of("role", "system", "content", SYSTEM_PROMPT));
-            for (ConversationMessageDto m : clampHistory(history)) {
-                String role = "assistant".equalsIgnoreCase(m.role()) ? "assistant" : "user";
-                String content = m.content() == null ? "" : m.content().trim();
-                if (!content.isEmpty()) {
-                    messages.add(Map.of("role", role, "content", content));
-                }
+            String content = llmClient.chatCompletion(
+                    List.of(Map.of("role", "system", "content", PROMPT_SYSTEM.formatted(lv, lv))),
+                    appConfigService.getDoubleOr(AiConfigKeys.CHAT_TEMPERATURE, DEFAULT_PROMPT_TEMPERATURE),
+                    DEFAULT_PROMPT_MAX_TOKENS,
+                    true);
+            if (content == null || content.isBlank()) {
+                return fallbackPrompt(promptId, lv);
             }
-            if (messages.size() == 1) {
-                messages.add(Map.of("role", "user",
-                        "content", "Greet me briefly and ask me to write my first English sentence."));
+            JsonNode p = objectMapper.readTree(content);
+            String title = p.path("title").asText("Bài viết");
+            String prompt = p.path("prompt").asText("");
+            int minWords = Math.max(0, p.path("minWords").asInt(0));
+            if (prompt.isBlank()) {
+                return fallbackPrompt(promptId, lv);
             }
-
-            double temp = appConfigService.getDoubleOr(AiConfigKeys.CHAT_TEMPERATURE, DEFAULT_TEMPERATURE);
-            int maxTokens = appConfigService.getIntOr(AiConfigKeys.CHAT_MAX_TOKENS, DEFAULT_MAX_TOKENS);
-            String reply = llmClient.chatCompletion(messages, temp, maxTokens, false);
-            if (reply.isEmpty()) {
-                return new WritingChatResponse(fallbackReply(history));
-            }
-            return new WritingChatResponse(reply);
+            return new WritingPromptResponse(promptId, lv, title, prompt, minWords);
         } catch (Exception ex) {
-            log.error("LLM writing chat lỗi, fallback: {}", ex.getMessage());
-            return new WritingChatResponse(fallbackReply(history));
+            log.error("LLM sinh đề viết lỗi, fallback: {}", ex.getMessage());
+            return fallbackPrompt(promptId, lv);
         }
     }
 
-    @Transactional
-    public WritingCompleteResponse complete(String firebaseUid, String sessionId, int turns) {
-        User user = loadUser(firebaseUid);
-        if (sessionId == null || sessionId.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "sessionId is required");
-        }
-        int safeTurns = Math.max(0, Math.min(turns, MAX_XP_TURNS));
-        int amount = safeTurns * XP_PER_TURN;
+    // ── Chấm bài ─────────────────────────────────────────────────────────────
 
+    @Transactional
+    public WritingGradeResponse grade(String firebaseUid, String promptId, String prompt, String level, String essay) {
+        User user = loadUser(firebaseUid);
+        if (promptId == null || promptId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "promptId is required");
+        }
+        if (essay == null || essay.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "essay is required");
+        }
+        String lv = normalizeLevel(level);
+        String safePrompt = prompt == null ? "" : prompt.trim();
+
+        GradeResult g = llmClient.isConfigured()
+                ? gradeWithLlm(lv, safePrompt, essay.trim())
+                : fallbackGrade();
+
+        // XP theo điểm thực; idempotent theo promptId (nộp lại cùng bài không cộng thêm).
+        int amount = Math.round(MAX_XP * (g.score / 100f));
         XpGrantResult xp = xpService.grant(
                 user.getId(),
                 amount,
                 "writing",
-                sessionId,
-                "writing:" + sessionId + ":complete",
-                Map.of("turns", turns),
+                promptId,
+                "writing:" + promptId + ":grade",
+                Map.of("score", g.score),
                 SKILL
         );
 
-        return new WritingCompleteResponse(
-                turns,
-                xp.xpEarned(),
-                xp.totalXp(),
-                xp.dailyEarnedXp(),
-                xp.streakUpdated(),
-                xp.bonuses()
+        return new WritingGradeResponse(
+                g.score, g.correctedEssay, g.summary, g.strengths, g.improvements,
+                g.vocabSuggestions, g.encouragement,
+                xp.xpEarned(), xp.totalXp(), xp.dailyEarnedXp(), xp.streakUpdated(), xp.bonuses()
         );
     }
 
-    private static List<ConversationMessageDto> clampHistory(List<ConversationMessageDto> history) {
-        if (history == null || history.isEmpty()) return List.of();
-        if (history.size() <= MAX_HISTORY) return history;
-        return history.subList(history.size() - MAX_HISTORY, history.size());
+    private GradeResult gradeWithLlm(String level, String prompt, String essay) {
+        try {
+            String content = llmClient.chatCompletion(
+                    List.of(
+                            Map.of("role", "system", "content", GRADE_SYSTEM.formatted(level, prompt)),
+                            Map.of("role", "user", "content", essay)
+                    ),
+                    0,
+                    appConfigService.getIntOr(AiConfigKeys.SUMMARY_MAX_TOKENS, DEFAULT_GRADE_MAX_TOKENS),
+                    true);
+            if (content == null || content.isBlank()) {
+                return fallbackGrade();
+            }
+            JsonNode p = objectMapper.readTree(content);
+            int score = Math.min(Math.max(p.path("score").asInt(0), 0), 100);
+            return new GradeResult(
+                    score,
+                    p.path("correctedEssay").asText(essay),
+                    p.path("summary").asText(""),
+                    toStringList(p.path("strengths")),
+                    toStringList(p.path("improvements")),
+                    toStringList(p.path("vocabSuggestions")),
+                    p.path("encouragement").asText("")
+            );
+        } catch (Exception ex) {
+            log.error("LLM chấm bài viết lỗi, fallback: {}", ex.getMessage());
+            return fallbackGrade();
+        }
     }
 
-    private static String fallbackReply(List<ConversationMessageDto> history) {
-        if (history == null || history.isEmpty()) {
-            return "Hi! I'm your writing tutor. Write me an English sentence and I'll help you improve it.";
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private static String normalizeLevel(String level) {
+        if (level == null || level.isBlank()) return "A1";
+        String lv = level.trim().toUpperCase();
+        return switch (lv) {
+            case "A1", "A2", "B1", "B2", "C1", "C2" -> lv;
+            default -> "A1";
+        };
+    }
+
+    private List<String> toStringList(JsonNode arr) {
+        List<String> out = new ArrayList<>();
+        if (arr != null && arr.isArray()) {
+            for (JsonNode n : arr) {
+                String s = n.asText("").trim();
+                if (!s.isEmpty()) out.add(s);
+            }
         }
-        return "Good effort! Keep writing — try to make your next sentence a little longer.";
+        return out;
+    }
+
+    private WritingPromptResponse fallbackPrompt(String promptId, String level) {
+        return new WritingPromptResponse(
+                promptId, level, "Giới thiệu bản thân",
+                "Viết 3-4 câu tiếng Anh giới thiệu về bản thân: tên, tuổi, sở thích và công việc/học tập.",
+                30
+        );
+    }
+
+    private GradeResult fallbackGrade() {
+        return new GradeResult(
+                70,
+                "",
+                "Bạn đã hoàn thành bài viết. Tiếp tục luyện tập để tiến bộ nhé!",
+                List.of("Đã hoàn thành bài viết theo yêu cầu."),
+                List.of("Cố gắng viết câu đầy đủ và đúng ngữ pháp hơn."),
+                List.of("improve (cải thiện)", "practice (luyện tập)"),
+                "Làm tốt lắm! Cứ viết mỗi ngày là sẽ tiến bộ nhanh thôi."
+        );
     }
 
     private User loadUser(String firebaseUid) {
         return userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User profile not found. Please sync account first."));
+    }
+
+    /** Kết quả chấm nội bộ trước khi gắn XP. */
+    private record GradeResult(
+            int score, String correctedEssay, String summary,
+            List<String> strengths, List<String> improvements,
+            List<String> vocabSuggestions, String encouragement) {
     }
 }
