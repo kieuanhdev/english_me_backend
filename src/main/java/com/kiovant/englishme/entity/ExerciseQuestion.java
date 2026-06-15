@@ -41,4 +41,12 @@ public class ExerciseQuestion {
 
     @Column(length = 10)
     private String level;
+
+    /** Đoạn văn cho câu reading (đọc hiểu). Null với vocabulary/grammar. */
+    @Column(columnDefinition = "TEXT")
+    private String passage;
+
+    /** URL audio (nếu có). Reading/listening tái dùng — hiện để trống, client TTS. */
+    @Column(name = "audio_url", columnDefinition = "TEXT")
+    private String audioUrl;
 }

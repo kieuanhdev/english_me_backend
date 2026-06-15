@@ -14,6 +14,19 @@ public interface ExerciseQuestionRepository extends JpaRepository<ExerciseQuesti
     List<ExerciseQuestion> findRandomByCategory(String category, int size);
 
     /**
+     * Reading/listening: lấy câu theo category + level (CEFR của user). Khác
+     * vocabulary/grammar (không lọc level) vì kho reading thưa hơn và muốn cá
+     * nhân hóa theo trình độ. Thiếu câu đúng level → caller nới ra
+     * {@link #findRandomByCategoryExcluding} (mọi level) để tránh NOT_FOUND.
+     */
+    @Query(value = """
+            SELECT * FROM exercise_question
+            WHERE category = :category AND UPPER(level) = :levelUpper
+            ORDER BY random() LIMIT :size
+            """, nativeQuery = true)
+    List<ExerciseQuestion> findRandomByCategoryAndLevel(String category, String levelUpper, int size);
+
+    /**
      * Adaptive: câu trong {@code category} mà user TỪNG trả lời SAI và CHƯA bao giờ
      * trả lời đúng — tức điểm yếu thật của user. Câu nào còn sai nhiều ưu tiên trước.
      * Dùng để mở đầu buổi luyện bằng chính lỗi của user thay vì câu random.

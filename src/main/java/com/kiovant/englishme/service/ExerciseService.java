@@ -33,7 +33,9 @@ public class ExerciseService {
 
     private static final int DEFAULT_SIZE = 10;
     private static final int MAX_SIZE = 50;
-    private static final Set<String> ALLOWED_CATEGORIES = Set.of("vocabulary", "grammar");
+    private static final Set<String> ALLOWED_CATEGORIES = Set.of("vocabulary", "grammar", "reading");
+    /** Category được cá nhân hóa theo level (CEFR user); kho câu thưa hơn vocab/grammar. */
+    private static final Set<String> LEVEL_AWARE_CATEGORIES = Set.of("reading");
     /** Tỉ lệ tối đa câu "yếu" (từng sai) trong 1 buổi — phần còn lại là câu mới để không nhàm. */
     private static final double WEAK_RATIO = 0.5;
 
@@ -60,13 +62,18 @@ public class ExerciseService {
 
     @Transactional
     public ExerciseSessionResponse createSession(String firebaseUid, String category, int size) {
+        return createSession(firebaseUid, category, size, null);
+    }
+
+    @Transactional
+    public ExerciseSessionResponse createSession(String firebaseUid, String category, int size, String level) {
         String cat = normalizeCategory(category);
         int cap = clampSize(size);
 
         User user = loadUser(firebaseUid);
 
-        List<ExerciseQuestion> picked = selectAdaptive(user, cat, cap);
-        if (picked.size() < cap) {
+        List<ExerciseQuestion> picked = selectAdaptive(user, cat, cap, level);
+        if (picked.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Not enough questions available for category: " + cat);
         }
 
@@ -87,7 +94,9 @@ public class ExerciseService {
                         toOptionsMap(q.getOptions()),
                         q.getCorrectAnswer(),
                         q.getExplanation(),
-                        q.getHint()))
+                        q.getHint(),
+                        q.getPassage(),
+                        q.getAudioUrl()))
                 .toList();
 
         return new ExerciseSessionResponse(session.getId(), cat, picked.size(), questions);
@@ -194,7 +203,26 @@ public class ExerciseService {
      * tổng số câu, phần còn lại fill random câu mới (loại trùng). User mới chưa có lịch sử sai
      * -> rỗng weak -> toàn bộ random (đúng hành vi cũ, không vỡ onboarding).
      */
-    private List<ExerciseQuestion> selectAdaptive(User user, String cat, int cap) {
+    private List<ExerciseQuestion> selectAdaptive(User user, String cat, int cap, String level) {
+        // Category cá nhân hóa theo level (reading): kho thưa → bỏ adaptive weak,
+        // ưu tiên câu đúng level user; thiếu thì nới ra mọi level để không rỗng.
+        if (LEVEL_AWARE_CATEGORIES.contains(cat)) {
+            String levelUpper = (level == null || level.isBlank()) ? null : level.trim().toUpperCase();
+            List<ExerciseQuestion> byLevel = levelUpper == null
+                    ? List.of()
+                    : questionRepository.findRandomByCategoryAndLevel(cat, levelUpper, cap);
+            if (byLevel.size() >= cap) {
+                return new ArrayList<>(byLevel.subList(0, cap));
+            }
+            List<ExerciseQuestion> picked = new ArrayList<>(byLevel);
+            int remaining = cap - picked.size();
+            List<UUID> excludeIds = picked.isEmpty()
+                    ? List.of(new UUID(0L, 0L))
+                    : picked.stream().map(ExerciseQuestion::getId).toList();
+            picked.addAll(questionRepository.findRandomByCategoryExcluding(cat, excludeIds, remaining));
+            return picked;
+        }
+
         int weakCap = (int) Math.floor(cap * WEAK_RATIO);
         List<ExerciseQuestion> weak = weakCap > 0
                 ? questionRepository.findWeakByCategory(user.getId(), cat, weakCap)
@@ -219,7 +247,7 @@ public class ExerciseService {
         }
         String cat = raw.trim().toLowerCase();
         if (!ALLOWED_CATEGORIES.contains(cat)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "category must be 'vocabulary' or 'grammar'");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "category must be one of " + ALLOWED_CATEGORIES);
         }
         return cat;
     }

@@ -27,10 +27,11 @@ public class ExerciseApiController {
     public ExerciseSessionResponse createSession(
             @RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestParam String category,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String level
     ) {
         FirebaseToken token = authHelper.verifyBearer(authorization);
-        return exerciseService.createSession(token.getUid(), category, size);
+        return exerciseService.createSession(token.getUid(), category, size, level);
     }
 
     @PostMapping("/sessions/{sessionId}/complete")

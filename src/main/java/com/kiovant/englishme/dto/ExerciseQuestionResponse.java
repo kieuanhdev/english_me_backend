@@ -11,6 +11,8 @@ public record ExerciseQuestionResponse(
         Map<String, String> options,
         String correctAnswer,
         String explanation,
-        String hint
+        String hint,
+        String passage,
+        String audioUrl
 ) {
 }
