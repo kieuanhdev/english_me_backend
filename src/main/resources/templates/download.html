@@ -5,217 +5,493 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>EnglishMe — Học tiếng Anh thông minh</title>
     <meta name="description"
-          content="EnglishMe — ứng dụng học tiếng Anh cá nhân hóa: flashcard lặp lại ngắt quãng (SM-2), chấm phát âm AI, và bài test xếp trình độ CEFR thích ứng."/>
+          content="EnglishMe — ứng dụng học tiếng Anh cá nhân hóa: flashcard lặp lại ngắt quãng (SM-2), chấm phát âm bằng AI, và bài test xếp trình độ CEFR thích ứng."/>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
     <style>
         :root {
-            --primary: #2F6BFF;
-            --primary-dark: #1E4FCC;
-            --text: #1F2430;
-            --muted: #6B7280;
-            --surface: #F7F8FC;
-            --border: #E5E8F0;
+            --primary: #24389C;
+            --primary-2: #3F51B5;
+            --accent: #E67E22;
+            --accent-2: #F39C12;
+            --ink: #1A1C1C;
+            --muted: #5B6B7C;
+            --surface: #F9F9FB;
+            --border: #E7E9F2;
+            --success: #43A047;
+            --radius: 20px;
+            --shadow-sm: 0 4px 16px rgba(36, 56, 156, 0.06);
+            --shadow-md: 0 16px 40px rgba(36, 56, 156, 0.12);
+            --shadow-lg: 0 28px 64px rgba(36, 56, 156, 0.22);
         }
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            margin: 0;
+            font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             background: var(--surface);
-            color: var(--text);
-            line-height: 1.65;
+            color: var(--ink);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
+        a { text-decoration: none; color: inherit; }
+        .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+        /* ===== Nav ===== */
+        nav {
+            position: sticky; top: 0; z-index: 50;
+            background: rgba(249, 249, 251, 0.8);
+            backdrop-filter: saturate(180%) blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+        nav .row {
+            display: flex; align-items: center; justify-content: space-between;
+            height: 68px;
+        }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 19px; }
+        .brand .mark {
+            width: 36px; height: 36px; border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-2));
+            display: grid; place-items: center; color: #fff; font-size: 19px;
+        }
+        .nav-links { display: flex; gap: 28px; align-items: center; }
+        .nav-links a { color: var(--muted); font-weight: 500; font-size: 15px; transition: color .2s; }
+        .nav-links a:hover { color: var(--primary); }
+        .nav-cta {
+            background: var(--primary); color: #fff !important;
+            padding: 9px 18px; border-radius: 999px; font-weight: 600; font-size: 14px;
+            transition: transform .15s, box-shadow .2s;
+        }
+        .nav-cta:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+        @media (max-width: 768px) { .nav-links a:not(.nav-cta) { display: none; } }
 
         /* ===== Hero ===== */
-        .hero {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: #fff;
-            padding: 64px 24px 80px;
-            text-align: center;
+        .hero { position: relative; padding: 72px 0 96px; overflow: hidden; }
+        .hero::before {
+            content: ""; position: absolute; top: -200px; right: -120px;
+            width: 560px; height: 560px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(63, 81, 181, 0.18), transparent 70%);
+            z-index: 0;
         }
-        .hero .logo {
-            width: 88px; height: 88px;
-            border-radius: 22px;
-            background: rgba(255, 255, 255, 0.16);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 44px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(4px);
+        .hero::after {
+            content: ""; position: absolute; bottom: -160px; left: -120px;
+            width: 460px; height: 460px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(230, 126, 34, 0.12), transparent 70%);
+            z-index: 0;
         }
-        .hero h1 { margin: 0 0 12px; font-size: 36px; letter-spacing: -0.5px; }
-        .hero .tagline {
-            margin: 0 auto 32px;
-            max-width: 560px;
-            font-size: 18px;
-            opacity: 0.92;
+        .hero .row {
+            position: relative; z-index: 1;
+            display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: center;
         }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            background: #fff;
-            color: var(--primary);
-            font-size: 17px;
-            font-weight: 600;
-            padding: 14px 32px;
-            border-radius: 999px;
-            text-decoration: none;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
-            transition: transform 0.15s ease;
+        .pill {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: #fff; border: 1px solid var(--border); border-radius: 999px;
+            padding: 7px 16px; font-size: 13px; font-weight: 600; color: var(--primary);
+            box-shadow: var(--shadow-sm); margin-bottom: 22px;
         }
-        .btn:hover { transform: translateY(-2px); }
-        .btn.disabled {
-            background: rgba(255, 255, 255, 0.3);
-            color: rgba(255, 255, 255, 0.7);
-            cursor: not-allowed;
-            box-shadow: none;
+        .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+        .hero h1 { font-size: 52px; font-weight: 800; line-height: 1.1; letter-spacing: -1.2px; margin-bottom: 20px; }
+        .hero h1 .grad {
+            background: linear-gradient(120deg, var(--primary), var(--primary-2), var(--accent));
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
         }
-        .ver { margin-top: 14px; font-size: 13px; opacity: 0.8; }
+        .hero p.sub { font-size: 18px; color: var(--muted); max-width: 480px; margin-bottom: 32px; }
+        .cta-group { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+        .btn-primary {
+            display: inline-flex; align-items: center; gap: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-2));
+            color: #fff; font-weight: 700; font-size: 16px;
+            padding: 15px 30px; border-radius: 999px;
+            box-shadow: var(--shadow-md); transition: transform .18s, box-shadow .25s;
+        }
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+        .btn-primary.disabled {
+            background: #C7CCDD; box-shadow: none; cursor: not-allowed;
+        }
+        .btn-primary.disabled:hover { transform: none; }
+        .btn-ghost {
+            display: inline-flex; align-items: center; gap: 8px;
+            color: var(--primary); font-weight: 600; font-size: 15px;
+            padding: 15px 22px; border-radius: 999px; border: 1px solid var(--border); background: #fff;
+            transition: border-color .2s, transform .15s;
+        }
+        .btn-ghost:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .meta-line { margin-top: 18px; font-size: 13px; color: var(--muted); display: flex; gap: 18px; flex-wrap: wrap; }
+        .meta-line span { display: inline-flex; align-items: center; gap: 6px; }
+
+        /* ===== Phone mockup ===== */
+        .phone-wrap { display: grid; place-items: center; position: relative; }
+        .phone {
+            width: 280px; height: 580px; border-radius: 42px;
+            background: linear-gradient(160deg, var(--primary), var(--primary-2));
+            padding: 12px; box-shadow: var(--shadow-lg);
+            position: relative; transform: rotate(-3deg);
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float { 0%,100% { transform: rotate(-3deg) translateY(0); } 50% { transform: rotate(-3deg) translateY(-14px); } }
+        .phone .notch {
+            position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+            width: 120px; height: 26px; background: rgba(0,0,0,0.85); border-radius: 0 0 16px 16px; z-index: 3;
+        }
+        .screen {
+            width: 100%; height: 100%; border-radius: 32px; background: var(--surface);
+            overflow: hidden; display: flex; flex-direction: column;
+        }
+        .screen .top {
+            background: linear-gradient(135deg, var(--primary), var(--primary-2));
+            color: #fff; padding: 44px 20px 22px;
+        }
+        .screen .top .hi { font-size: 13px; opacity: .85; }
+        .screen .top .name { font-size: 20px; font-weight: 700; margin-top: 2px; }
+        .screen .streak {
+            margin-top: 16px; background: rgba(255,255,255,0.16); border-radius: 14px;
+            padding: 12px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600;
+        }
+        .screen .body { padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+        .mini-card {
+            background: #fff; border-radius: 16px; padding: 14px; box-shadow: var(--shadow-sm);
+            display: flex; align-items: center; gap: 12px;
+        }
+        .mini-card .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; flex: 0 0 40px; }
+        .mini-card .t { font-size: 13px; font-weight: 700; }
+        .mini-card .s { font-size: 11px; color: var(--muted); }
+        .bar { height: 6px; border-radius: 4px; background: var(--border); margin-top: 6px; overflow: hidden; }
+        .bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--primary), var(--primary-2)); }
+
+        /* ===== Section shells ===== */
+        section.block { padding: 80px 0; }
+        .section-head { text-align: center; max-width: 640px; margin: 0 auto 52px; }
+        .section-head .tag {
+            font-size: 13px; font-weight: 700; color: var(--accent);
+            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+        }
+        .section-head h2 { font-size: 36px; font-weight: 800; letter-spacing: -0.8px; margin-bottom: 14px; }
+        .section-head p { font-size: 17px; color: var(--muted); }
 
         /* ===== Features ===== */
-        .features {
-            max-width: 960px;
-            margin: -40px auto 0;
-            padding: 0 24px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+        .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .feat {
+            background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 32px 28px; box-shadow: var(--shadow-sm);
+            transition: transform .25s, box-shadow .25s, border-color .25s;
         }
-        .card {
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 28px 24px;
-            box-shadow: 0 8px 24px rgba(31, 36, 48, 0.06);
+        .feat:hover { transform: translateY(-6px); box-shadow: var(--shadow-md); border-color: transparent; }
+        .feat .ic {
+            width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center;
+            font-size: 28px; margin-bottom: 18px; color: #fff;
         }
-        .card .icon { font-size: 32px; margin-bottom: 12px; }
-        .card h3 { margin: 0 0 8px; font-size: 17px; color: var(--primary); }
-        .card p { margin: 0; font-size: 14px; color: var(--muted); }
+        .feat:nth-child(1) .ic { background: linear-gradient(135deg, #24389C, #3F51B5); }
+        .feat:nth-child(2) .ic { background: linear-gradient(135deg, #E67E22, #F39C12); }
+        .feat:nth-child(3) .ic { background: linear-gradient(135deg, #43A047, #2E7D32); }
+        .feat h3 { font-size: 19px; font-weight: 700; margin-bottom: 8px; }
+        .feat p { font-size: 15px; color: var(--muted); }
 
-        /* ===== Install steps ===== */
-        .steps {
-            max-width: 760px;
-            margin: 56px auto 0;
-            padding: 0 24px;
+        /* ===== Stats ===== */
+        .stats {
+            background: linear-gradient(135deg, var(--primary), var(--primary-2));
+            border-radius: 28px; padding: 48px 32px; color: #fff;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; text-align: center;
+            box-shadow: var(--shadow-md);
         }
-        .steps h2 { font-size: 22px; margin: 0 0 20px; text-align: center; }
-        .step {
-            display: flex;
-            gap: 16px;
-            align-items: flex-start;
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px 18px;
-            margin-bottom: 12px;
+        .stats .n { font-size: 40px; font-weight: 800; letter-spacing: -1px; }
+        .stats .l { font-size: 14px; opacity: .85; margin-top: 4px; }
+
+        /* ===== How ===== */
+        .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; counter-reset: step; }
+        .how {
+            background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 30px 26px; position: relative;
         }
-        .step .num {
-            flex: 0 0 32px;
-            width: 32px; height: 32px;
-            border-radius: 50%;
-            background: var(--primary);
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 15px;
+        .how::before {
+            counter-increment: step; content: counter(step, decimal-leading-zero);
+            font-size: 40px; font-weight: 800; color: var(--border); display: block; margin-bottom: 12px;
         }
-        .step .txt { font-size: 15px; }
-        .step .txt strong { display: block; margin-bottom: 2px; }
-        .step .txt span { color: var(--muted); font-size: 13px; }
+        .how h4 { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+        .how p { font-size: 14px; color: var(--muted); }
+
+        /* ===== FAQ ===== */
+        .faq { max-width: 760px; margin: 0 auto; }
+        details {
+            background: #fff; border: 1px solid var(--border); border-radius: 14px;
+            padding: 0 22px; margin-bottom: 12px; transition: box-shadow .2s;
+        }
+        details[open] { box-shadow: var(--shadow-sm); }
+        summary {
+            list-style: none; cursor: pointer; padding: 18px 0; font-weight: 600; font-size: 16px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: "+"; font-size: 24px; color: var(--primary); font-weight: 400; transition: transform .2s; }
+        details[open] summary::after { transform: rotate(45deg); }
+        details p { padding: 0 0 18px; color: var(--muted); font-size: 15px; }
+
+        /* ===== CTA band ===== */
+        .cta-band {
+            background: linear-gradient(135deg, var(--primary), var(--primary-2));
+            border-radius: 28px; padding: 56px 40px; text-align: center; color: #fff;
+            box-shadow: var(--shadow-md);
+        }
+        .cta-band h2 { font-size: 34px; font-weight: 800; margin-bottom: 14px; letter-spacing: -0.6px; }
+        .cta-band p { font-size: 17px; opacity: .9; margin-bottom: 28px; }
+        .cta-band .btn-white {
+            display: inline-flex; align-items: center; gap: 10px;
+            background: #fff; color: var(--primary); font-weight: 700; font-size: 16px;
+            padding: 15px 34px; border-radius: 999px; transition: transform .18s;
+        }
+        .cta-band .btn-white:hover { transform: translateY(-3px); }
+        .cta-band .btn-white.disabled { background: rgba(255,255,255,.3); color: rgba(255,255,255,.7); cursor: not-allowed; }
+        .cta-band .btn-white.disabled:hover { transform: none; }
 
         /* ===== Footer ===== */
-        .footer {
-            max-width: 760px;
-            margin: 56px auto 0;
-            text-align: center;
-            color: var(--muted);
-            font-size: 13px;
-            padding: 0 24px 48px;
-        }
-        .footer a { color: var(--primary); text-decoration: none; }
+        footer { background: #0F1430; color: #B8BFD9; padding: 48px 0 32px; margin-top: 80px; }
+        footer .row { display: flex; justify-content: space-between; align-items: flex-start; gap: 32px; flex-wrap: wrap; }
+        footer .brand { color: #fff; margin-bottom: 12px; }
+        footer .desc { font-size: 14px; max-width: 320px; line-height: 1.7; }
+        footer .links { display: flex; gap: 48px; flex-wrap: wrap; }
+        footer .col h5 { color: #fff; font-size: 14px; margin-bottom: 14px; font-weight: 700; }
+        footer .col a { display: block; font-size: 14px; margin-bottom: 10px; color: #B8BFD9; transition: color .2s; }
+        footer .col a:hover { color: #fff; }
+        footer .bottom { border-top: 1px solid rgba(255,255,255,0.1); margin-top: 40px; padding-top: 24px; font-size: 13px; text-align: center; }
 
-        @media (max-width: 720px) {
-            .features { grid-template-columns: 1fr; }
-            .hero h1 { font-size: 28px; }
+        /* ===== Reveal animation ===== */
+        .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+        .reveal.in { opacity: 1; transform: none; }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 900px) {
+            .hero .row { grid-template-columns: 1fr; text-align: center; }
+            .hero h1 { font-size: 40px; }
+            .pill, .cta-group, .meta-line { justify-content: center; }
+            .hero p.sub { margin-left: auto; margin-right: auto; }
+            .phone-wrap { order: -1; margin-bottom: 24px; }
+            .feat-grid, .how-grid { grid-template-columns: 1fr; }
+            .stats { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 520px) {
+            .hero h1 { font-size: 32px; }
+            .section-head h2 { font-size: 28px; }
+            .stats { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <!-- Hero -->
-    <section class="hero">
-        <div class="logo">📘</div>
-        <h1>EnglishMe</h1>
-        <p class="tagline">
-            Học tiếng Anh cá nhân hóa: flashcard lặp lại ngắt quãng,
-            chấm phát âm bằng AI, và bài test xếp trình độ CEFR thích ứng.
-        </p>
+    <!-- NAV -->
+    <nav>
+        <div class="wrap row">
+            <a href="#" class="brand"><span class="mark">📘</span> EnglishMe</a>
+            <div class="nav-links">
+                <a href="#features">Tính năng</a>
+                <a href="#how">Cách dùng</a>
+                <a href="#faq">Hỏi đáp</a>
+                <a th:if="${apkAvailable}" class="nav-cta" th:href="@{/downloads/englishme.apk}" download>Tải app</a>
+            </div>
+        </div>
+    </nav>
 
-        <a th:if="${apkAvailable}" class="btn" th:href="@{/downloads/englishme.apk}" download>
-            ⬇️ Tải app cho Android (.apk)
-        </a>
-        <span th:unless="${apkAvailable}" class="btn disabled">
-            ⏳ Bản tải về sắp ra mắt
-        </span>
+    <!-- HERO -->
+    <header class="hero">
+        <div class="wrap row">
+            <div>
+                <span class="pill"><span class="dot"></span> Miễn phí · Dành cho Android</span>
+                <h1>Học tiếng Anh <span class="grad">thông minh</span> hơn mỗi ngày</h1>
+                <p class="sub">
+                    EnglishMe cá nhân hóa lộ trình của bạn bằng flashcard lặp lại ngắt quãng,
+                    chấm phát âm bằng AI và bài test xếp trình độ CEFR thích ứng.
+                </p>
+                <div class="cta-group">
+                    <a th:if="${apkAvailable}" class="btn-primary" th:href="@{/downloads/englishme.apk}" download>
+                        ⬇️ Tải app (.apk)
+                    </a>
+                    <span th:unless="${apkAvailable}" class="btn-primary disabled">⏳ Sắp ra mắt</span>
+                    <a href="#features" class="btn-ghost">Xem tính năng →</a>
+                </div>
+                <div class="meta-line">
+                    <span>✅ Android 7.0 trở lên</span>
+                    <span>📦 Cài đặt nhanh</span>
+                    <span>🔒 Đăng nhập an toàn</span>
+                </div>
+            </div>
 
-        <div class="ver" th:if="${apkAvailable}">
-            Android 7.0 trở lên
+            <!-- Phone mockup -->
+            <div class="phone-wrap">
+                <div class="phone">
+                    <div class="notch"></div>
+                    <div class="screen">
+                        <div class="top">
+                            <div class="hi">Chào buổi sáng,</div>
+                            <div class="name">Kiều Anh 👋</div>
+                            <div class="streak">🔥 Chuỗi 7 ngày · Giữ phong độ nhé!</div>
+                        </div>
+                        <div class="body">
+                            <div class="mini-card">
+                                <div class="ic" style="background:#EEF0FB;">🃏</div>
+                                <div>
+                                    <div class="t">Ôn flashcard hôm nay</div>
+                                    <div class="s">12 thẻ đến hạn</div>
+                                    <div class="bar"><i style="width:64%;"></i></div>
+                                </div>
+                            </div>
+                            <div class="mini-card">
+                                <div class="ic" style="background:#FFF3E0;">🎙️</div>
+                                <div>
+                                    <div class="t">Luyện phát âm</div>
+                                    <div class="s">Điểm gần nhất: 92/100</div>
+                                </div>
+                            </div>
+                            <div class="mini-card">
+                                <div class="ic" style="background:#EDF7EE;">📊</div>
+                                <div>
+                                    <div class="t">Trình độ hiện tại</div>
+                                    <div class="s">B1 · Sắp lên B2</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- FEATURES -->
+    <section class="block" id="features">
+        <div class="wrap">
+            <div class="section-head reveal">
+                <div class="tag">Tính năng cốt lõi</div>
+                <h2>Ba công nghệ học tập đứng sau EnglishMe</h2>
+                <p>Không chỉ ghi nhớ — app giúp bạn học đúng cách, đúng thời điểm.</p>
+            </div>
+            <div class="feat-grid">
+                <div class="feat reveal">
+                    <div class="ic">🃏</div>
+                    <h3>Flashcard SM-2</h3>
+                    <p>Thuật toán lặp lại ngắt quãng tự tính thời điểm ôn tối ưu, giúp bạn nhớ từ vựng lâu nhất với ít công sức nhất.</p>
+                </div>
+                <div class="feat reveal">
+                    <div class="ic">🎙️</div>
+                    <h3>Chấm phát âm AI</h3>
+                    <p>Nói vào micro, AI phân tích từng âm tiết, cho điểm chi tiết và gợi ý chính xác chỗ cần sửa.</p>
+                </div>
+                <div class="feat reveal">
+                    <div class="ic">📊</div>
+                    <h3>Test xếp trình độ CEFR</h3>
+                    <p>Bài kiểm tra thích ứng đo đúng trình độ A1–C2, từ đó dựng lộ trình học riêng phù hợp với bạn.</p>
+                </div>
+            </div>
         </div>
     </section>
 
-    <!-- Features -->
-    <section class="features">
-        <div class="card">
-            <div class="icon">🃏</div>
-            <h3>Flashcard SM-2</h3>
-            <p>Thuật toán lặp lại ngắt quãng tự xếp lịch ôn để bạn nhớ từ vựng lâu nhất.</p>
-        </div>
-        <div class="card">
-            <div class="icon">🎙️</div>
-            <h3>Chấm phát âm AI</h3>
-            <p>Nói vào micro, AI đánh giá độ chuẩn từng âm và gợi ý sửa ngay.</p>
-        </div>
-        <div class="card">
-            <div class="icon">📊</div>
-            <h3>Test xếp trình độ CEFR</h3>
-            <p>Bài test thích ứng đo đúng trình độ A1–C2, dựng lộ trình học riêng cho bạn.</p>
-        </div>
-    </section>
-
-    <!-- Install steps -->
-    <section class="steps" th:if="${apkAvailable}">
-        <h2>Cách cài đặt</h2>
-        <div class="step">
-            <div class="num">1</div>
-            <div class="txt">
-                <strong>Tải file APK</strong>
-                <span>Bấm nút tải ở trên, file sẽ lưu vào thư mục Download của máy.</span>
-            </div>
-        </div>
-        <div class="step">
-            <div class="num">2</div>
-            <div class="txt">
-                <strong>Cho phép cài từ nguồn ngoài</strong>
-                <span>Khi máy hỏi, bật "Cho phép từ nguồn này" trong Cài đặt → Bảo mật.</span>
-            </div>
-        </div>
-        <div class="step">
-            <div class="num">3</div>
-            <div class="txt">
-                <strong>Mở file và cài đặt</strong>
-                <span>Bấm vào file APK vừa tải, chọn Cài đặt, rồi mở EnglishMe và bắt đầu học.</span>
+    <!-- STATS -->
+    <section class="block" style="padding-top:0;">
+        <div class="wrap">
+            <div class="stats reveal">
+                <div><div class="n">6</div><div class="l">Cấp độ CEFR (A1–C2)</div></div>
+                <div><div class="n">SM-2</div><div class="l">Thuật toán ghi nhớ</div></div>
+                <div><div class="n">AI</div><div class="l">Chấm phát âm tự động</div></div>
+                <div><div class="n">100%</div><div class="l">Miễn phí sử dụng</div></div>
             </div>
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <p>
-            EnglishMe — Đồ án tốt nghiệp · Nguyễn Kiều Anh<br/>
-            <a th:href="@{/terms}">Điều khoản sử dụng</a> ·
-            <a th:href="@{/privacy}">Chính sách quyền riêng tư</a>
-        </p>
+    <!-- HOW -->
+    <section class="block" id="how">
+        <div class="wrap">
+            <div class="section-head reveal">
+                <div class="tag">Cài đặt</div>
+                <h2>Bắt đầu chỉ trong 3 bước</h2>
+                <p>Tải về và mở app là học được ngay, không cần cấu hình phức tạp.</p>
+            </div>
+            <div class="how-grid">
+                <div class="how reveal">
+                    <h4>Tải file APK</h4>
+                    <p>Bấm nút tải, file sẽ lưu vào thư mục Download trên điện thoại của bạn.</p>
+                </div>
+                <div class="how reveal">
+                    <h4>Cho phép cài đặt</h4>
+                    <p>Khi máy hỏi, bật "Cho phép từ nguồn này" trong Cài đặt → Bảo mật để cài file.</p>
+                </div>
+                <div class="how reveal">
+                    <h4>Mở app và học</h4>
+                    <p>Bấm vào file vừa tải để cài, sau đó mở EnglishMe, đăng nhập và bắt đầu hành trình.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="block" id="faq">
+        <div class="wrap">
+            <div class="section-head reveal">
+                <div class="tag">Hỏi đáp</div>
+                <h2>Câu hỏi thường gặp</h2>
+            </div>
+            <div class="faq reveal">
+                <details open>
+                    <summary>App có miễn phí không?</summary>
+                    <p>Có. EnglishMe hoàn toàn miễn phí. Đây là sản phẩm đồ án tốt nghiệp, bạn chỉ cần tải về và đăng nhập là dùng được mọi tính năng.</p>
+                </details>
+                <details>
+                    <summary>Vì sao máy báo "không cài được ứng dụng"?</summary>
+                    <p>Vì app cài từ file APK ngoài cửa hàng. Hãy vào Cài đặt → Bảo mật và bật "Cho phép cài từ nguồn này" cho trình duyệt hoặc trình quản lý file, rồi cài lại.</p>
+                </details>
+                <details>
+                    <summary>App chạy trên iPhone được không?</summary>
+                    <p>Hiện tại bản tải về chỉ hỗ trợ Android (7.0 trở lên). Bản iOS chưa có.</p>
+                </details>
+                <details>
+                    <summary>Dữ liệu học của tôi có được lưu không?</summary>
+                    <p>Có. Tiến độ học, chuỗi ngày (streak) và trình độ được đồng bộ với tài khoản của bạn, đăng nhập trên máy khác vẫn giữ nguyên.</p>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA BAND -->
+    <section class="block" style="padding-bottom:0;">
+        <div class="wrap">
+            <div class="cta-band reveal">
+                <h2>Sẵn sàng học tiếng Anh mỗi ngày?</h2>
+                <p>Tải EnglishMe ngay và bắt đầu chuỗi ngày học đầu tiên của bạn.</p>
+                <a th:if="${apkAvailable}" class="btn-white" th:href="@{/downloads/englishme.apk}" download>⬇️ Tải app miễn phí</a>
+                <span th:unless="${apkAvailable}" class="btn-white disabled">⏳ Sắp ra mắt</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="wrap row">
+            <div>
+                <div class="brand"><span class="mark">📘</span> EnglishMe</div>
+                <p class="desc">Ứng dụng học tiếng Anh cá nhân hóa — đồ án tốt nghiệp của Nguyễn Kiều Anh, lớp 64KTPM4.</p>
+            </div>
+            <div class="links">
+                <div class="col">
+                    <h5>Sản phẩm</h5>
+                    <a href="#features">Tính năng</a>
+                    <a href="#how">Cài đặt</a>
+                    <a href="#faq">Hỏi đáp</a>
+                </div>
+                <div class="col">
+                    <h5>Pháp lý</h5>
+                    <a th:href="@{/terms}">Điều khoản sử dụng</a>
+                    <a th:href="@{/privacy}">Chính sách quyền riêng tư</a>
+                </div>
+            </div>
+        </div>
+        <div class="wrap bottom">
+            © 2026 EnglishMe · Nguyễn Kiều Anh · Đồ án tốt nghiệp
+        </div>
     </footer>
+
+    <script>
+        // Scroll reveal — vanilla, no deps
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+            });
+        }, { threshold: 0.12 });
+        document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+    </script>
 </body>
 </html>
