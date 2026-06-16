@@ -12,10 +12,10 @@ import com.kiovant.englishme.entity.Badge;
 import com.kiovant.englishme.entity.User;
 import com.kiovant.englishme.entity.UserBadge;
 import com.kiovant.englishme.entity.UserDailyGoal;
-import com.kiovant.englishme.entity.UserSkillXp;
 import com.kiovant.englishme.entity.XpHistory;
 import com.kiovant.englishme.entity.XpLedger;
 import com.kiovant.englishme.repository.BadgeRepository;
+import com.kiovant.englishme.repository.LearningLessonRepository;
 import com.kiovant.englishme.repository.UserBadgeRepository;
 import com.kiovant.englishme.repository.UserDailyGoalRepository;
 import com.kiovant.englishme.repository.UserRepository;
@@ -57,6 +57,7 @@ public class ProgressService {
     private final XpLedgerRepository xpLedgerRepository;
     private final UserDailyGoalRepository userDailyGoalRepository;
     private final UserSkillXpRepository userSkillXpRepository;
+    private final LearningLessonRepository learningLessonRepository;
     private final Clock clock;
 
     public ProgressService(UserRepository userRepository,
@@ -66,6 +67,7 @@ public class ProgressService {
                            XpLedgerRepository xpLedgerRepository,
                            UserDailyGoalRepository userDailyGoalRepository,
                            UserSkillXpRepository userSkillXpRepository,
+                           LearningLessonRepository learningLessonRepository,
                            Clock clock) {
         this.userRepository = userRepository;
         this.xpHistoryRepository = xpHistoryRepository;
@@ -74,6 +76,7 @@ public class ProgressService {
         this.xpLedgerRepository = xpLedgerRepository;
         this.userDailyGoalRepository = userDailyGoalRepository;
         this.userSkillXpRepository = userSkillXpRepository;
+        this.learningLessonRepository = learningLessonRepository;
         this.clock = clock;
     }
 
@@ -87,21 +90,24 @@ public class ProgressService {
         int weekXp = xpHistoryRepository.sumXpBetween(user.getId(), weekStart, today);
         int activeDays = xpHistoryRepository.countActiveDaysBetween(user.getId(), weekStart, today);
 
-        // Per-skill XP thật từ user_skill_xp (V47). XpService.grant cộng dồn theo skill
-        // mỗi lần grant. Skill chưa có nguồn XP (vd listening) -> không có row -> 0.
-        Map<String, Integer> skillXp = new HashMap<>();
-        for (UserSkillXp row : userSkillXpRepository.findByUserId(user.getId())) {
-            skillXp.put(row.getSkill(), row.getXp() == null ? 0 : row.getXp());
-        }
-        // 6 kỹ năng curriculum (khớp skill_code lesson) + pronunciation (nguồn STT riêng).
+        // % kỹ năng = số lesson ĐÃ HOÀN THÀNH / TỔNG số lesson active của skill ở
+        // level user. Phản ánh tiến độ học thật, không skill nào tự nhảy 100% khi mới
+        // học (khác cách cũ chuẩn hóa theo peak XP). Lesson skill_code chỉ có
+        // listening/speaking/reading/writing; vocabulary/grammar/pronunciation không
+        // gắn lesson → total=0 → client ẩn bar.
+        String level = user.getCefrLevel();
+        Map<String, Integer> totalBySkill = countsToMap(
+                learningLessonRepository.countActiveBySkillAtLevel(level));
+        Map<String, Integer> doneBySkill = countsToMap(
+                learningLessonRepository.countCompletedBySkillAtLevel(user.getId(), level));
         List<SkillScore> skills = List.of(
-                new SkillScore("vocabulary", skillXp.getOrDefault("vocabulary", 0)),
-                new SkillScore("grammar", skillXp.getOrDefault("grammar", 0)),
-                new SkillScore("reading", skillXp.getOrDefault("reading", 0)),
-                new SkillScore("listening", skillXp.getOrDefault("listening", 0)),
-                new SkillScore("speaking", skillXp.getOrDefault("speaking", 0)),
-                new SkillScore("writing", skillXp.getOrDefault("writing", 0)),
-                new SkillScore("pronunciation", skillXp.getOrDefault("pronunciation", 0))
+                lessonSkill("vocabulary", doneBySkill, totalBySkill),
+                lessonSkill("grammar", doneBySkill, totalBySkill),
+                lessonSkill("reading", doneBySkill, totalBySkill),
+                lessonSkill("listening", doneBySkill, totalBySkill),
+                lessonSkill("speaking", doneBySkill, totalBySkill),
+                lessonSkill("writing", doneBySkill, totalBySkill),
+                lessonSkill("pronunciation", doneBySkill, totalBySkill)
         );
 
         WeekSummary week = new WeekSummary(weekXp, activeDays, 0);
@@ -262,5 +268,22 @@ public class ProgressService {
     private User loadUser(String firebaseUid) {
         return userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    /** Gộp kết quả GROUP BY [skillCode, count] thành map skillCode→count. */
+    private static Map<String, Integer> countsToMap(List<Object[]> rows) {
+        Map<String, Integer> map = new HashMap<>();
+        for (Object[] r : rows) {
+            if (r.length < 2 || r[0] == null) continue;
+            map.put(r[0].toString(), ((Number) r[1]).intValue());
+        }
+        return map;
+    }
+
+    /** SkillScore với score=lesson đã hoàn thành, maxScore=tổng lesson của skill. */
+    private static SkillScore lessonSkill(String code,
+                                          Map<String, Integer> done,
+                                          Map<String, Integer> total) {
+        return new SkillScore(code, done.getOrDefault(code, 0), total.getOrDefault(code, 0));
     }
 }

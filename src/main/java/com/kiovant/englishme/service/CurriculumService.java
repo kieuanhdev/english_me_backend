@@ -206,6 +206,12 @@ public class CurriculumService {
         double unitProgress = totalLessons > 0 ? (double) completedLessons / totalLessons : 0.0;
         boolean unitCompleted = up != null && "completed".equals(up.getStatus());
 
+        // Bài kế tiếp trong unit (theo lessonOrder) để nút "Bài tiếp theo" hiện
+        // đúng khi mở lại bài đã hoàn thành mà chưa phải bài cuối.
+        String nextLessonId = lesson.getUnitId() == null
+                ? null
+                : findNextLessonInUnit(lesson.getUnitId(), lessonId);
+
         return new LessonDetail(
                 lesson.getId(), lesson.getUnitId(), lesson.getLevelCode(), lesson.getSkillCode(),
                 lesson.getTitle(), lesson.getSubtitle(), lesson.getXpReward(),
@@ -217,6 +223,7 @@ public class CurriculumService {
                 lastScore,
                 unitProgress,
                 unitCompleted,
+                nextLessonId,
                 lesson.getTheoryContent() != null ? lesson.getTheoryContent() : Map.of(),
                 exercises, quiz
         );

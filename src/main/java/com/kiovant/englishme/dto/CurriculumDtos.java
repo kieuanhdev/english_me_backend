@@ -76,6 +76,7 @@ public final class CurriculumDtos {
             int lastScore,                     // điểm lần nộp gần nhất
             double unitProgress,               // tiến độ unit hiện tại (0..1) — dựng lại summary
             boolean unitCompleted,             // unit đã hoàn thành toàn bộ chưa
+            String nextLessonId,               // bài kế trong unit (null nếu bài cuối) — nút "Bài tiếp"
             Map<String, Object> theory,        // nguyên theory_content JSONB
             List<Map<String, Object>> exercises, // phase=practice (payload + meta)
             List<Map<String, Object>> quiz       // phase=quiz

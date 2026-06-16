@@ -39,6 +39,36 @@ public interface LearningLessonRepository extends JpaRepository<LearningLesson, 
                                                    @Param("level") String level);
 
     /**
+     * Tổng số lesson active theo skill ở 1 level → mẫu số cho % kỹ năng.
+     * Trả [skillCode, total]. Skill không có lesson → không xuất hiện trong list.
+     */
+    @Query("""
+            SELECT l.skillCode, COUNT(l)
+            FROM LearningLesson l
+            WHERE l.levelCode = :level AND l.isActive = true
+            GROUP BY l.skillCode
+            """)
+    List<Object[]> countActiveBySkillAtLevel(@Param("level") String level);
+
+    /**
+     * Số lesson user ĐÃ HOÀN THÀNH theo skill ở 1 level → tử số cho % kỹ năng.
+     * Chỉ tính status 'completed' (in_progress không tính là làm xong).
+     * Trả [skillCode, completed].
+     */
+    @Query("""
+            SELECT l.skillCode, COUNT(l)
+            FROM LearningLesson l, UserLessonProgress p
+            WHERE p.lessonId = l.id
+              AND p.userId = :userId
+              AND l.levelCode = :level
+              AND l.isActive = true
+              AND p.status = 'completed'
+            GROUP BY l.skillCode
+            """)
+    List<Object[]> countCompletedBySkillAtLevel(@Param("userId") UUID userId,
+                                                @Param("level") String level);
+
+    /**
      * Admin: list lessons với filter optional level/skill/keyword.
      * Truyền null cho field nào để bỏ qua filter đó. Keyword đã được lowercase ở caller
      * (xem AdminLessonController) — query không gọi LOWER trên param để tránh
