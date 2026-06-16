@@ -65,7 +65,7 @@ class ExerciseServiceTest {
         when(answerRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(xpRuleService.computeAccuracyBased(eq("exercise"), anyInt(), anyInt())).thenReturn(10);
         when(xpService.grant(any(), anyInt(), anyString(), anyString(), anyString(), any()))
-                .thenReturn(new XpGrantResult(10, 110L, 10, false, false, List.of()));
+                .thenReturn(new XpGrantResult(10, 110L, 10, false, false, List.of(), List.of()));
     }
 
     private ExerciseQuestion question(String correct) {
