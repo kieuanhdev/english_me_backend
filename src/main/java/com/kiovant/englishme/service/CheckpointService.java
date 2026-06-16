@@ -126,6 +126,7 @@ public class CheckpointService {
         String toLevel = nextLevelOf(level);
         boolean leveledUp = false;
         int xpEarned = 0;
+        java.util.List<XpGrantResult.BadgeAward> newBadges = java.util.List.of();
 
         UserLevel ul = userLevelRepository.findById(user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User level not found"));
@@ -141,6 +142,7 @@ public class CheckpointService {
                     "level:" + fromLevel + ":up",
                     Map.of("fromLevel", fromLevel, "toLevel", toLevel, "score", score));
             xpEarned = xp.xpEarned();
+            newBadges = xp.newBadges();  // badge cefr_level thường unlock đúng lúc lên cấp
 
             // Nâng current_level nếu đang thấp hơn toLevel.
             if (CEFR_ORDER.indexOf(ul.getCurrentLevel()) < CEFR_ORDER.indexOf(toLevel)) {
@@ -174,7 +176,7 @@ public class CheckpointService {
         attemptRepository.save(attempt);
 
         return new CheckpointResult(passed, score, test.getPassScore(),
-                leveledUp, fromLevel, toLevel, xpEarned);
+                leveledUp, fromLevel, toLevel, xpEarned, newBadges);
     }
 
     // ═══════════════════════════════════════════════════════════════════

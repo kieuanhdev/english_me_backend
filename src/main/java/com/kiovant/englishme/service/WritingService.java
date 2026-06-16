@@ -182,7 +182,8 @@ public class WritingService {
         return new WritingGradeResponse(
                 g.score, g.correctedEssay, g.summary, g.strengths, g.improvements,
                 g.vocabSuggestions, g.encouragement,
-                xp.xpEarned(), xp.totalXp(), xp.dailyEarnedXp(), xp.streakUpdated(), xp.bonuses()
+                xp.xpEarned(), xp.totalXp(), xp.dailyEarnedXp(), xp.streakUpdated(),
+                xp.bonuses(), xp.newBadges()
         );
     }
 

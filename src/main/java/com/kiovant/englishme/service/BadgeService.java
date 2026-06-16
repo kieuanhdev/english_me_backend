@@ -63,16 +63,18 @@ public class BadgeService {
      * Chạy trong cùng transaction của caller (REQUIRED) — an toàn vì chỉ INSERT
      * user_badge mới, không động total_xp.
      *
-     * @return số badge vừa cấp (mới).
+     * @return danh sách badge VỪA cấp (mới) — rỗng nếu không có badge mới. FE
+     *         dùng để hiện popup ăn mừng ngay khi mở khoá (trước đây chỉ trả số
+     *         đếm → FE không biết badge nào để show).
      */
     @Transactional(propagation = Propagation.REQUIRED)
-    public int awardEligible(User user) {
+    public List<Badge> awardEligible(User user) {
         if (user == null || user.getId() == null) {
-            return 0;
+            return List.of();
         }
         List<Badge> active = badgeRepository.findByIsActiveTrue();
         if (active.isEmpty()) {
-            return 0;
+            return List.of();
         }
 
         int currentStreak = user.getCurrentStreak() == null ? 0 : user.getCurrentStreak();
@@ -81,7 +83,7 @@ public class BadgeService {
         Integer cefrRank = null;
         Long completedLessons = null;
 
-        int awarded = 0;
+        List<Badge> awarded = new java.util.ArrayList<>();
         for (Badge b : active) {
             String type = b.getConditionType();
             int threshold = b.getConditionValue() == null ? 0 : b.getConditionValue();
@@ -111,7 +113,7 @@ public class BadgeService {
                 ub.setUser(user);
                 ub.setBadge(b);
                 userBadgeRepository.save(ub);
-                awarded++;
+                awarded.add(b);
                 log.info("Badge '{}' awarded to user {}", b.getName(), user.getId());
             }
         }

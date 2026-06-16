@@ -170,6 +170,7 @@ public class XpService {
                     dailyEarned,
                     false,
                     true,
+                    List.of(),
                     List.of()
             );
         }
@@ -217,13 +218,17 @@ public class XpService {
 
         // Auto-award badge sau khi total_xp/streak đã chốt (cùng transaction). Lỗi cấp
         // badge KHÔNG được làm hỏng việc cộng XP -> nuốt exception, chỉ log.
+        List<XpGrantResult.BadgeAward> newBadges = new ArrayList<>();
         try {
-            badgeService.awardEligible(user);
+            for (var b : badgeService.awardEligible(user)) {
+                newBadges.add(new XpGrantResult.BadgeAward(
+                        b.getName(), b.getDescription(), b.getIconUrl()));
+            }
         } catch (Exception ex) {
             log.warn("awardEligible lỗi cho user {}: {}", userId, ex.getMessage());
         }
 
-        return new XpGrantResult(amount, newTotal, daily.earnedXp(), streakUpdated, false, bonuses);
+        return new XpGrantResult(amount, newTotal, daily.earnedXp(), streakUpdated, false, bonuses, newBadges);
     }
 
     /**
@@ -241,6 +246,7 @@ public class XpService {
                 daily,
                 streakUpdated,
                 alreadyGranted,
+                List.of(),
                 List.of()
         );
     }

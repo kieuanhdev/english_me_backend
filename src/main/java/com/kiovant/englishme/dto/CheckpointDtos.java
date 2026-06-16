@@ -35,6 +35,7 @@ public final class CheckpointDtos {
             boolean leveledUp,
             String fromLevel,
             String toLevel,
-            int xpEarned
+            int xpEarned,
+            java.util.List<XpGrantResult.BadgeAward> newBadges
     ) {}
 }

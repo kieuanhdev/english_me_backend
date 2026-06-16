@@ -195,6 +195,16 @@ public class CurriculumService {
         boolean theoryViewed = lp != null && Boolean.TRUE.equals(lp.getTheoryViewed());
         boolean practiceCompleted = lp != null && Boolean.TRUE.equals(lp.getPracticeCompleted());
         String status = lp != null ? lp.getStatus() : "available";
+        int bestScore = lp != null && lp.getBestScore() != null ? lp.getBestScore() : 0;
+        int lastScore = lp != null && lp.getLastScore() != null ? lp.getLastScore() : 0;
+
+        // Tiến độ unit để FE dựng lại màn Kết quả khi mở bài đã hoàn thành.
+        UserUnitProgress up = unitProgressRepository
+                .findById(new UserUnitProgressId(user.getId(), lesson.getUnitId())).orElse(null);
+        int totalLessons = up != null && up.getTotalLessons() != null ? up.getTotalLessons() : 0;
+        int completedLessons = up != null && up.getCompletedLessons() != null ? up.getCompletedLessons() : 0;
+        double unitProgress = totalLessons > 0 ? (double) completedLessons / totalLessons : 0.0;
+        boolean unitCompleted = up != null && "completed".equals(up.getStatus());
 
         return new LessonDetail(
                 lesson.getId(), lesson.getUnitId(), lesson.getLevelCode(), lesson.getSkillCode(),
@@ -203,6 +213,10 @@ public class CurriculumService {
                 theoryViewed,
                 practiceCompleted,
                 status,
+                bestScore,
+                lastScore,
+                unitProgress,
+                unitCompleted,
                 lesson.getTheoryContent() != null ? lesson.getTheoryContent() : Map.of(),
                 exercises, quiz
         );
@@ -384,7 +398,7 @@ public class CurriculumService {
 
         return new LessonResult(
                 passed, score, actualXp, unitProgress, unitCompleted, nextLessonId,
-                xp.totalXp(), xp.dailyEarnedXp(), xp.streakUpdated(), xp.bonuses());
+                xp.totalXp(), xp.dailyEarnedXp(), xp.streakUpdated(), xp.bonuses(), xp.newBadges());
     }
 
     // ═══════════════════════════════════════════════════════════════════

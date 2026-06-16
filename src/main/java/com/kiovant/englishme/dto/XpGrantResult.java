@@ -11,6 +11,8 @@ import java.util.List;
  * - streakUpdated: true nếu hôm nay là ngày đầu kiếm XP (current_streak vừa tăng).
  * - alreadyGranted: true nếu request này là retry (FE không bắt buộc đọc).
  * - bonuses: các bonus được cộng kèm (daily_goal_bonus, streak_bonus, ...).
+ * - newBadges: badge VỪA mở khoá trong lần cộng XP này (rỗng nếu không có) —
+ *   FE hiện popup ăn mừng ngay, không bắt user vào hồ sơ mới biết.
  */
 public record XpGrantResult(
         int xpEarned,
@@ -18,7 +20,10 @@ public record XpGrantResult(
         int dailyEarnedXp,
         boolean streakUpdated,
         boolean alreadyGranted,
-        List<Bonus> bonuses
+        List<Bonus> bonuses,
+        List<BadgeAward> newBadges
 ) {
     public record Bonus(String type, int amount, String label) {}
+
+    public record BadgeAward(String name, String description, String iconUrl) {}
 }

@@ -205,7 +205,8 @@ public class StudySessionService {
                 session.getXpEarned(),      // sessionXp = pending XP tích lũy
                 reviewed,
                 session.getTotalCards(),
-                java.util.List.of()
+                java.util.List.of(),        // bonuses (per-thẻ không grant)
+                java.util.List.of()         // newBadges (cấp ở getSummary cuối phiên)
         );
     }
 
@@ -261,7 +262,8 @@ public class StudySessionService {
                 session.getCompletedAt(),
                 xpResult != null ? xpResult.totalXp() : null,
                 xpResult != null && xpResult.streakUpdated(),
-                xpResult != null ? xpResult.bonuses() : java.util.List.of()
+                xpResult != null ? xpResult.bonuses() : java.util.List.of(),
+                xpResult != null ? xpResult.newBadges() : java.util.List.of()
         );
     }
 

@@ -72,6 +72,10 @@ public final class CurriculumDtos {
             boolean theoryViewed,
             boolean practiceCompleted,         // đã làm xong luyện tập → vào thẳng quiz
             String status,                     // locked | available | in_progress | completed
+            int bestScore,                     // điểm cao nhất đã đạt (0 nếu chưa nộp)
+            int lastScore,                     // điểm lần nộp gần nhất
+            double unitProgress,               // tiến độ unit hiện tại (0..1) — dựng lại summary
+            boolean unitCompleted,             // unit đã hoàn thành toàn bộ chưa
             Map<String, Object> theory,        // nguyên theory_content JSONB
             List<Map<String, Object>> exercises, // phase=practice (payload + meta)
             List<Map<String, Object>> quiz       // phase=quiz
@@ -88,6 +92,7 @@ public final class CurriculumDtos {
             long totalXp,
             int dailyEarnedXp,
             boolean streakUpdated,
-            List<XpGrantResult.Bonus> bonuses
+            List<XpGrantResult.Bonus> bonuses,
+            List<XpGrantResult.BadgeAward> newBadges  // badge vừa mở khoá → FE popup
     ) {}
 }

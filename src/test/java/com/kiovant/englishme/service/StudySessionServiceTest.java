@@ -84,7 +84,7 @@ class StudySessionServiceTest {
         when(sessionRepository.save(any(StudySession.class))).thenAnswer(inv -> inv.getArgument(0));
         when(progressRepository.save(any(FlashcardProgress.class))).thenAnswer(inv -> inv.getArgument(0));
         when(xpService.readOnlyResult(any(), anyInt(), anyBoolean(), anyBoolean()))
-                .thenReturn(new XpGrantResult(0, 100L, 0, false, false, List.of()));
+                .thenReturn(new XpGrantResult(0, 100L, 0, false, false, List.of(), List.of()));
     }
 
     private Flashcard card(String word) {
@@ -250,7 +250,7 @@ class StudySessionServiceTest {
         session.setMasteredCards(1);
         session.setXpEarned(3);
         when(xpService.grant(any(), anyInt(), anyString(), anyString(), anyString(), any()))
-                .thenReturn(new XpGrantResult(3, 103L, 3, true, false, List.of()));
+                .thenReturn(new XpGrantResult(3, 103L, 3, true, false, List.of(), List.of()));
 
         StudySessionSummaryResponse first = service.getSummary(UID, session.getId());
 

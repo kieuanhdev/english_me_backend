@@ -17,6 +17,7 @@ public record UserTestSubmitResponse(
         boolean streakUpdated,
         int timeTakenSeconds,
         String cefrSuggestion,
-        List<XpGrantResult.Bonus> bonuses
+        List<XpGrantResult.Bonus> bonuses,
+        List<XpGrantResult.BadgeAward> newBadges
 ) {
 }

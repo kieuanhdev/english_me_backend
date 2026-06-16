@@ -147,7 +147,8 @@ public class DictationService {
                 xp.totalXp(),
                 xp.dailyEarnedXp(),
                 xp.streakUpdated(),
-                xp.bonuses()
+                xp.bonuses(),
+                xp.newBadges()
         );
     }
 

@@ -194,7 +194,8 @@ public class ExerciseService {
                 xpResult.dailyEarnedXp(),
                 xpResult.streakUpdated(),
                 results,
-                xpResult.bonuses()
+                xpResult.bonuses(),
+                xpResult.newBadges()
         );
     }
 

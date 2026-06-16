@@ -184,7 +184,8 @@ public class UserTestService {
                 xpResult.streakUpdated(),
                 safeTime,
                 cefrSuggestion,
-                xpResult.bonuses()
+                xpResult.bonuses(),
+                xpResult.newBadges()
         );
     }
 

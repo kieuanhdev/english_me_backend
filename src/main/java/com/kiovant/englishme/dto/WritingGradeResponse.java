@@ -25,6 +25,7 @@ public record WritingGradeResponse(
         long totalXp,
         int dailyEarnedXp,
         boolean streakUpdated,
-        List<XpGrantResult.Bonus> bonuses
+        List<XpGrantResult.Bonus> bonuses,
+        List<XpGrantResult.BadgeAward> newBadges
 ) {
 }

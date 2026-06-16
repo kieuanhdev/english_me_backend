@@ -20,6 +20,7 @@ public record StudySessionSummaryResponse(
         // ProfileController + streak + bonus 1 lần ở màn tổng kết.
         Long totalXp,
         Boolean streakUpdated,
-        List<XpGrantResult.Bonus> bonuses
+        List<XpGrantResult.Bonus> bonuses,
+        List<XpGrantResult.BadgeAward> newBadges
 ) {
 }

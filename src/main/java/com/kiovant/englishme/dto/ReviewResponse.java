@@ -17,6 +17,7 @@ public record ReviewResponse(
         Integer sessionXp,
         Integer reviewedCount,
         Integer totalCards,
-        List<XpGrantResult.Bonus> bonuses
+        List<XpGrantResult.Bonus> bonuses,
+        List<XpGrantResult.BadgeAward> newBadges
 ) {
 }
